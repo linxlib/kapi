@@ -41,3 +41,7 @@ func (h *HelloController) World1(c *kapi.Context) {
 }
 ```
 4. 运行
+
+# k
+#### 介绍
+这是本框架提供的命令行工具, 代码基本来自 `github.com/gogf/gf-cli`, 目前包含 安装、运行、编译三个部分， 后续会加入其它功能
