@@ -46,7 +46,7 @@ var (
 	package {{.PkgName}}
 	
 	import (
-		"api_base/lib/kapi"
+		"gitee.com/kirile/kapi"
 	)
 	 
 	func init() {
