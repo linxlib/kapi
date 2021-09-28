@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// MiddlewareContext 对象调用前后执行中间件参数
-type MiddlewareContext struct {
+// InterceptorContext 对象调用前后执行中间件参数
+type InterceptorContext struct {
 	C        *gin.Context
 	FuncName string          // 函数名
 	Req      interface{}     // 调用前的请求参数
@@ -18,42 +18,31 @@ type MiddlewareContext struct {
 
 // Interceptor 对象调用前后执行中间件(支持总的跟对象单独添加)
 type Interceptor interface {
-	GinBefore(req *MiddlewareContext) bool
-	GinAfter(req *MiddlewareContext) bool
+	GinBefore(req *InterceptorContext) bool
+	GinAfter(req *InterceptorContext) bool
 }
 
-// DefaultGinBeforeAfter 创建一个默认 BeforeAfter Middleware
+// DefaultGinBeforeAfter 默认 BeforeAfter Middleware
 type DefaultGinBeforeAfter struct {
 }
 
 type timeTrace struct{}
 
 // GinBefore call之前调用
-func (d *DefaultGinBeforeAfter) GinBefore(req *MiddlewareContext) bool {
+func (d *DefaultGinBeforeAfter) GinBefore(req *InterceptorContext) bool {
 	req.Context = context.WithValue(req.Context, timeTrace{}, time.Now())
 	return true
 }
 
 // GinAfter call之后调用
-func (d *DefaultGinBeforeAfter) GinAfter(req *MiddlewareContext) bool {
-	//begin := (req.Context.Value(timeTrace{})).(time.Time)
-	//now := time.Now()
-	//log.Info(fmt.Sprintf("[middleware] call[%v] [%v]", req.FuncName, now.Sub(begin)))
-
-	msg := MessageBody{
-		Code:  "SUCCESS",
-		Msg:   "",
-		Count: 0,
-		Data:  nil,
-	}
+func (d *DefaultGinBeforeAfter) GinAfter(req *InterceptorContext) bool {
+	begin := (req.Context.Value(timeTrace{})).(time.Time)
+	now := time.Now()
+	_log.Infof("[middleware] call[%v] [%v]", req.FuncName, now.Sub(begin))
 	if req.Error != nil {
-		msg.Code = "FAIL"
-		msg.Msg = req.Error.Error()
+		_, req.Resp = defaultGetResult(RESULT_CODE_ERROR, req.Error.Error(), 0, nil)
 	} else {
-		msg.Data = req.Resp
+		_, req.Resp = defaultGetResult(RESULT_CODE_SUCCESS, "", 0, req.Resp)
 	}
-
-	req.Resp = msg // 设置resp 结果
-
 	return true
 }

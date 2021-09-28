@@ -38,8 +38,9 @@ func (m *Model) analysisStructInfo(info *StructInfo) {
 			// ---------------end
 			//query
 			v, b := tag.Lookup("query")
-			info.Items[i].IsQuery = b
+			//info.Items[i].IsQuery = b
 			if b {
+				info.Items[i].ParamType = ParamTypeQuery
 				info.Items[i].Name = v
 			}
 

@@ -3,7 +3,7 @@ package ast
 import (
 	"fmt"
 	"gitee.com/kirile/kapi/doc"
-	"gitee.com/kirile/kapi/tools"
+	"gitee.com/kirile/kapi/internal"
 	"go/ast"
 	"go/token"
 	"reflect"
@@ -26,7 +26,7 @@ func (a *structAnalysis) ParseStruct(astPkg *ast.Package, structName string) (in
 		return nil
 	}
 
-	if tools.IsInternalType(structName) { // 内部类型
+	if internal.IsInternalType(structName) { // 内部类型
 		return &doc.StructInfo{
 			Name: structName,
 		}
@@ -175,7 +175,7 @@ func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, sinfo *ast.StructT
 
 func (a *structAnalysis) dealSelectorExpr(exp *ast.SelectorExpr, info *doc.ElementInfo, importMP map[string]string) { // 非本文件包
 	info.Type = exp.Sel.Name
-	if !tools.IsInternalType(info.Type) { // 非基础类型(time)
+	if !internal.IsInternalType(info.Type) { // 非基础类型(time)
 		if x, ok := exp.X.(*ast.Ident); ok {
 			if v, ok := importMP[x.Name]; ok {
 				objFile := EvalSymlinks(a.ModPkg, a.ModFile, v)
@@ -191,7 +191,7 @@ func (a *structAnalysis) dealSelectorExpr(exp *ast.SelectorExpr, info *doc.Eleme
 
 func (a *structAnalysis) dealIdent(astPkg *ast.Package, exp *ast.Ident, info *doc.ElementInfo) { // 本文件
 	info.Type = exp.Name
-	if !tools.IsInternalType(info.Type) { // 非基础类型
+	if !internal.IsInternalType(info.Type) { // 非基础类型
 		info.TypeRef = a.ParseStruct(astPkg, info.Type)
 	}
 }

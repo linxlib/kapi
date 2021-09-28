@@ -1,11 +1,53 @@
 package kapi
 
-// MessageBody 自定义的响应body类型
-type MessageBody struct {
+// messageBody 自定义的响应body类型
+type messageBody struct {
 	Code  interface{} `json:"code"`
 	Msg   string      `json:"msg"`
 	Count int64       `json:"count,omitempty"`
 	Data  interface{} `json:"data"`
+}
+
+type RESULT_CODE int
+
+const (
+	RESULT_CODE_SUCCESS RESULT_CODE = iota //SuccessExit DataExit ListExit 时
+	RESULT_CODE_FAIL                       // FailExit
+	RESULT_CODE_ERROR                      //FailExit时传参error
+)
+
+// RegisterFuncGetResult 注册返回json结构的func
+func RegisterFuncGetResult(i FuncGetResult) {
+	defaultGetResult = i
+}
+
+type FuncGetResult = func(code RESULT_CODE, msg string, count int64, data interface{}) (int, interface{})
+
+var defaultGetResult = _defaultGetResult
+
+func _defaultGetResult(code RESULT_CODE, msg string, count int64, data interface{}) (int, interface{}) {
+	if code == RESULT_CODE_SUCCESS {
+		return 200, messageBody{
+			Code:  "SUCCESS",
+			Msg:   msg,
+			Count: count,
+			Data:  data,
+		}
+	} else if code == RESULT_CODE_ERROR {
+		return 500, messageBody{
+			Code:  "FAIL",
+			Msg:   msg,
+			Count: count,
+			Data:  data,
+		}
+	} else {
+		return 400, messageBody{
+			Code:  "FAIL",
+			Msg:   msg,
+			Count: count,
+			Data:  data,
+		}
+	}
 }
 
 //WriteJSON 写入json对象
@@ -14,51 +56,26 @@ func (c *Context) WriteJSON(obj interface{}) {
 }
 
 func (c *Context) writeMessage(msg string) {
-	c.JSON(200, MessageBody{
-		Code:  "SUCCESS",
-		Msg:   msg,
-		Count: 0,
-		Data:  nil,
-	})
+	c.JSON(defaultGetResult(RESULT_CODE_SUCCESS, msg, 0, nil))
 }
 func (c *Context) writeError(err error) {
-	c.JSON(500, MessageBody{
-		Code:  "FAIL",
-		Msg:   err.Error(),
-		Count: 0,
-		Data:  nil,
-	})
+	c.JSON(defaultGetResult(RESULT_CODE_ERROR, err.Error(), 0, nil))
 }
 func (c *Context) writeErrorDetail(err interface{}) {
-	c.JSON(200, MessageBody{
-		Code:  "FAIL",
-		Msg:   "",
-		Count: 0,
-		Data:  err,
-	})
+	c.JSON(defaultGetResult(RESULT_CODE_ERROR, "", 0, err))
 }
 func (c *Context) writeFailMsg(msg string) {
-	c.JSON(200, MessageBody{
-		Code:  "FAIL",
-		Msg:   msg,
-		Count: 0,
-		Data:  nil,
-	})
+	c.JSON(defaultGetResult(RESULT_CODE_FAIL, msg, 0, nil))
 }
-
 func (c *Context) writeList(count int64, list interface{}) {
-	c.JSON(200, MessageBody{
-		Code:  "SUCCESS",
-		Msg:   "",
-		Count: count,
-		Data:  list,
-	})
+	c.JSON(defaultGetResult(RESULT_CODE_SUCCESS, "", count, list))
 }
 
 func (c *Context) ListExit(count int64, list interface{}) {
 	c.writeList(count, list)
 	c.Exit()
 }
+
 func (c *Context) DataExit(data interface{}) {
 	c.writeList(0, data)
 	c.Exit()

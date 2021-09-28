@@ -1,17 +1,17 @@
 # kapi
 
-#### 介绍
+## 介绍
 基于gin的扩展, 支持 //@POST 式注释路由, 解析结构体并生成swagger文档
 
-#### 特性
+## 特性
 1. 使用注释路由
 2. 更简单的swagger文档生成方式
 
 
-#### 注意
+## 注意
 由于使用了go 1.16新增的embed特性, 因此只能在1.16以上版本使用
 
-#### 快速开始
+## 快速开始
 1. 在go module项目基础上创建routers目录, 并在其中的`router.go`创建
 ```go
 func Register(b *kapi.KApi, r *gin.Engine) {
@@ -46,6 +46,15 @@ func (h *HelloController) World1(c *kapi.Context) {
 4. 运行
 
 具体可查看example文件夹
+
+## TODO
+
+- [ ] 增加一种注册controller的方式，在包的init中注册
+- [x] 修改为func方式配置kapi
+- [ ] 换个地方生成gen_code.go  
+- [ ] 注册成gRPC服务
+- [x] controller 增加 //@ROUTE 用于标记整个controller的path
+
 
 # k
 #### 介绍
@@ -90,3 +99,5 @@ _/    _/  _/    _/  _/        _/_/_/
 
 #### 介绍
 app包, 包装了xorm mysql 和 redis的初始化连接以及一些简单的封装方法. 还包括了一个toml读取的辅助
+
+目前此包单独发布，app/1.0.0

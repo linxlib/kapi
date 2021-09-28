@@ -3,63 +3,57 @@ package ast
 import (
 	"errors"
 	"fmt"
-	"gitee.com/kirile/kapi/tools"
+	"gitee.com/kirile/kapi/internal"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"golang.org/x/mod/modfile"
+	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
 )
 
-var importFile map[string]string // 自定义包文件
-
-func init() {
-	importFile = make(map[string]string)
-}
+var importFile = make(map[string]string) // 自定义包文件
 
 // AddImportFile 添加自定义import文件列表
 func AddImportFile(k, v string) {
 	importFile[k] = v
 }
 
-// GetModuleInfo find and get module info , return module [ name ,path ]
-// 通过model信息获取[model name] [和 根目录绝对地址]
+// GetModuleInfo 获取项目[module name] [根目录绝对地址]
 func GetModuleInfo(n int) (string, string, bool) {
 	index := n
-	// This is used to support third-party package encapsulation
-	// 这样做用于支持第三方包封装,(主要找到main调用者)
-	for { // find main file
+	// 本包被引用时需要向上推2级查找main.go
+	for {
 		_, filename, _, ok := runtime.Caller(index)
 		if ok {
 			if strings.HasSuffix(filename, "runtime/asm_amd64.s") {
-				index = index - 2
+				index -= 2
 				break
 			}
 			if strings.HasSuffix(filename, "runtime/asm_arm64.s") {
-				index = index - 2
+				index -= 2
 				break
 			}
 			index++
 		} else {
-			panic(errors.New("package parsing failed:can not find main files"))
+			panic(errors.New("package parsing failed:can not find main file"))
 		}
 	}
 
 	_, filename, _, _ := runtime.Caller(index)
-	filename = strings.Replace(filename, "\\", "/", -1) // offset
+	filename = strings.Replace(filename, "\\", "/", -1) // change windows path delimiter '\' to unix path delimiter '/'
 	for {
 		n := strings.LastIndex(filename, "/")
 		if n > 0 {
 			filename = filename[0:n]
-			if tools.CheckFileIsExist(filename + "/go.mod") {
-				list := tools.ReadFile(filename + "/go.mod")
-				if len(list) > 0 {
-					line := strings.TrimSpace(list[0])
-					if len(line) > 0 && strings.HasPrefix(line, "module") { // find it
-						return strings.TrimSpace(strings.TrimPrefix(line, "module")), filename, true
-					}
-				}
+			if internal.CheckFileIsExist(filename + "/go.mod") {
+				bs, _ := ioutil.ReadFile(filename + "/go.mod")
+				f, _ := modfile.Parse("go.mod", bs, func(_, version string) (string, error) {
+					return version, nil
+				})
+				return f.Module.Mod.String(), filename, true
 			}
 		} else {
 			break
@@ -111,7 +105,7 @@ func GetAstPkgs(objPkg, objFile string) (*ast.Package, bool) {
 
 	// not find . maybe is main package and find main package
 	if objPkg == "main" {
-		dirs := tools.GetPathDirs(objFile) // get all of dir
+		dirs := internal.GetPathDirs(objFile) // get all of dir
 		for _, dir := range dirs {
 			if !strings.HasPrefix(dir, ".") {
 				pkg, b := GetAstPkgs(objPkg, objFile+"/"+dir)
@@ -176,10 +170,13 @@ func AnalysisImport(astPkgs *ast.Package) map[string]string {
 	return imports
 }
 
-func AnalysisControllerComments(astPkg *ast.Package, controllerName string) string {
+func AnalysisControllerComments(astPkg *ast.Package, controllerName string) (tagName string, route string) {
+	tagName = ""
+	route = ""
 	if astPkg == nil {
-		return ""
+		return
 	}
+
 	for _, fl := range astPkg.Files {
 		for _, d := range fl.Decls {
 			switch specDecl := d.(type) {
@@ -193,12 +190,15 @@ func AnalysisControllerComments(astPkg *ast.Package, controllerName string) stri
 							if spec.Name.Name == controllerName { // find it
 								if specDecl.Doc != nil { // 如果有注释
 									for _, v := range specDecl.Doc.List { // 结构体注释
-										t := strings.TrimSpace(strings.TrimPrefix(v.Text, "//"))
+										t := internal.GetCommentAfterPrefix(v.Text, "//")
 										if strings.HasPrefix(t, "@TAG") {
-											t = strings.TrimSpace(strings.TrimPrefix(t, "@TAG"))
-											return t
+											tagName = internal.GetCommentAfterPrefix(t, "@TAG")
+
+										} else if strings.HasPrefix(t, "@ROUTE") {
+											route = internal.GetCommentAfterPrefix(t, "@ROUTE")
 										}
 									}
+									return
 								}
 
 							}
@@ -208,7 +208,7 @@ func AnalysisControllerComments(astPkg *ast.Package, controllerName string) stri
 			}
 		}
 	}
-	return ""
+	return
 
 }
 

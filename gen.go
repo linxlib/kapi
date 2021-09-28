@@ -2,7 +2,7 @@ package kapi
 
 import (
 	"bytes"
-	"gitee.com/kirile/kapi/tools"
+	"gitee.com/kirile/kapi/internal"
 	"os"
 	"os/exec"
 	"strings"
@@ -11,17 +11,9 @@ import (
 	"time"
 )
 
-//const getRouter = "/router.data"
 var _mu sync.Mutex // protects the serviceMap
 var _once sync.Once
 var _genInfo genInfo
-
-//func init() {
-//	data, err := ioutil.ReadFile(path.Join(tools.GetCurrentDirectory(), getRouter))
-//	if err == nil {
-//		tools.Decode(data, &_genInfo) // gob de serialize 反序列化
-//	}
-//}
 
 // AddGenOne add one to base case
 func AddGenOne(handFunName, routerPath string, methods []string) {
@@ -122,7 +114,7 @@ func getPkgName(dir string) string {
 	}
 
 	if len(pkgName) == 0 || pkgName == "." {
-		list = strings.Split(tools.GetCurrentDirectory(), "/")
+		list = strings.Split(internal.GetCurrentDirectory(), "/")
 		if len(list) > 0 {
 			pkgName = list[len(list)-1]
 		}
