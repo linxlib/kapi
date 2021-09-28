@@ -1,16 +1,15 @@
 package kapi
 
 import (
-	"gitee.com/kirile/kapi/ast"
-	"gitee.com/kirile/kapi/binding"
-	"gitee.com/kirile/kapi/doc"
-	"gitee.com/kirile/kapi/doc/swagger"
-	"gitee.com/kirile/kapi/tools"
-
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gitee.com/kirile/kapi/ast"
+	"gitee.com/kirile/kapi/binding"
+	"gitee.com/kirile/kapi/doc"
+	"gitee.com/kirile/kapi/doc/swagger"
+	"gitee.com/kirile/kapi/internal"
 	goast "go/ast"
 	"io"
 	"net/http"
@@ -25,6 +24,7 @@ import (
 )
 
 // checkHandlerFunc 检查路由方法是否符合 返回参数个数
+// isObj表示方法是否是struct下的方法 如果是则 typ.In(0) 是struct本身
 func (b *KApi) checkHandlerFunc(typ reflect.Type, isObj bool) (int, bool) {
 	offset := 0
 	if isObj {
@@ -40,12 +40,12 @@ func (b *KApi) checkHandlerFunc(typ reflect.Type, isObj bool) (int, bool) {
 		}
 
 		// Customized context . 自定义的context
-		if ctxType == b.apiType {
+		if ctxType == b.customContextType {
 			return num, true
 		}
 
 		// maybe interface
-		if b.apiType.ConvertibleTo(ctxType) {
+		if b.customContextType.ConvertibleTo(ctxType) {
 			return num, true
 		}
 
@@ -56,23 +56,24 @@ func (b *KApi) checkHandlerFunc(typ reflect.Type, isObj bool) (int, bool) {
 // HandlerFunc Get and filter the parameters to be bound (object call type)
 func (b *KApi) handlerFuncObj(tvl, obj reflect.Value, methodName string) gin.HandlerFunc { // 获取并过滤要绑定的参数(obj 对象类型)
 	typ := tvl.Type()
-	if typ.NumIn() == 2 { // Parameter checking 参数检查
+	if typ.NumIn() == 2 { //1个参数的方法
 		ctxType := typ.In(1)
 
-		// go-gin default method
 		apiFun := func(c *gin.Context) interface{} { return c }
-		if ctxType == b.apiType { // Customized context . 自定义的context
+		if ctxType == b.customContextType { // Customized context . 自定义的context
 			apiFun = b.apiFun
 		} else if !(ctxType == reflect.TypeOf(&gin.Context{})) {
-			panic("方法不受支持 " + runtime.FuncForPC(tvl.Pointer()).Name() + " !")
+			_log.Errorln("方法不受支持 " + runtime.FuncForPC(tvl.Pointer()).Name() + " !")
 		}
 
 		return func(c *gin.Context) {
+			//加入recover处理
 			defer func() {
 				if err := recover(); err != nil {
-					b.recoverErrorFunc(err)
+					b.option.recoverErrorFunc(err)
 				}
 			}()
+
 			tvl.Call([]reflect.Value{obj, reflect.ValueOf(apiFun(c))})
 		}
 	}
@@ -87,8 +88,8 @@ func (b *KApi) handlerFuncObj(tvl, obj reflect.Value, methodName string) gin.Han
 }
 
 //beforeCall 调用前处理
-func (b *KApi) beforeCall(c *gin.Context, obj reflect.Value, req interface{}, methodName string) (*MiddlewareContext, bool) {
-	info := &MiddlewareContext{
+func (b *KApi) beforeCall(c *gin.Context, obj reflect.Value, req interface{}, methodName string) (*InterceptorContext, bool) {
+	info := &InterceptorContext{
 		C:        c,
 		FuncName: fmt.Sprintf("%v.%v", reflect.Indirect(obj).Type().Name(), methodName), // 函数名
 		Req:      req,                                                                   // 调用前的请求参数
@@ -107,7 +108,7 @@ func (b *KApi) beforeCall(c *gin.Context, obj reflect.Value, req interface{}, me
 }
 
 //afterCall 调用后处理
-func (b *KApi) afterCall(info *MiddlewareContext, obj reflect.Value) bool {
+func (b *KApi) afterCall(info *InterceptorContext, obj reflect.Value) bool {
 	is := true
 	if bfobj, ok := obj.Interface().(Interceptor); ok { // 本类型
 		is = bfobj.GinAfter(info)
@@ -119,103 +120,8 @@ func (b *KApi) afterCall(info *MiddlewareContext, obj reflect.Value) bool {
 }
 
 // Custom context type with request parameters
-//func (b *KApi) changeToGinHandler(valueOfHandlerFunc reflect.Value) (func(*gin.Context), error) {
-//	typ := valueOfHandlerFunc.Type()
-//	if typ.NumIn() != 2 { // Parameter checking 参数检查
-//		//TODO：参数检查未通过时，可以选择跳过这个方法，只打印下方法名供排查
-//		return nil, errors.New("方法 " + runtime.FuncForPC(valueOfHandlerFunc.Pointer()).Name() + " 不支持!")
-//	}
-//    // 方法有返回值时
-//	if typ.NumOut() != 0 {
-//		// 有两个返回值的情况
-//		if typ.NumOut() == 2 {
-//			//第二个返回值需要为error
-//			if returnType := typ.Out(1); returnType != typeOfError {
-//				//TODO：参数检查未通过时，可以选择跳过这个方法，只打印下方法名供排查
-//				return nil, errors.Errorf("method : %v , returns[1] %v not error",
-//					runtime.FuncForPC(valueOfHandlerFunc.Pointer()).Name(), returnType.String())
-//			}
-//		} else {
-//			//TODO：也可以支持一个返回值的情况 (obj) (error)
-//			return nil, errors.Errorf("方法 : %v , 只有两个返回值 (obj, error) 被支持", runtime.FuncForPC(valueOfHandlerFunc.Pointer()).Name())
-//		}
-//	}
-//
-//	ctxType, reqType := typ.In(0), typ.In(1)
-//
-//	reqIsGinCtx := false
-//	if ctxType == reflect.TypeOf(&gin.Context{}) {
-//		reqIsGinCtx = true
-//	}
-//
-//	if !reqIsGinCtx && ctxType != b.apiType && !b.apiType.ConvertibleTo(ctxType) {
-//		//TODO：参数检查未通过时，可以选择跳过这个方法，只打印下方法名供排查
-//		return nil, errors.New("方法 " + runtime.FuncForPC(valueOfHandlerFunc.Pointer()).Name() + " 的首个参数类型不受支持! 应为*gin.Context 或者 *kapi.Context")
-//	}
-//
-//	//判断第二个参数是不是值类型
-//	reqIsValue := true
-//	if reqType.Kind() == reflect.Ptr {
-//		reqIsValue = false
-//	}
-//	apiFun := func(c *gin.Context) interface{} { return c }
-//	if !reqIsGinCtx {
-//		apiFun = b.apiFun
-//	}
-//
-//	return func(c *gin.Context) {
-//		defer func() {
-//			if err := recover(); err != nil {
-//				b.recoverErrorFunc(err)
-//			}
-//		}()
-//
-//		// 非值类型时 反射创建新的空实例
-//		req := reflect.New(reqType)
-//		if !reqIsValue {
-//			req = reflect.New(reqType.Elem())
-//		}
-//		//反序列化 进行参数binding和校验
-//		if err := b.unmarshal(c, req.Interface()); err != nil { // Return error message.返回错误信息
-//			b.handleErrorString(c, req, err)
-//			return
-//		}
-//
-//		if reqIsValue {
-//			req = req.Elem()
-//		}
-//		//调用路由方法
-//		returnValues := valueOfHandlerFunc.Call([]reflect.Value{reflect.ValueOf(apiFun(c)), req})
-//		if returnValues != nil {
-//			obj := returnValues[0].Interface()
-//			rerr := returnValues[1].Interface()
-//			if rerr != nil {
-//				err := rerr.(error)
-//				msg := MessageBody{
-//					Code:  "FAIL",
-//					Msg:   err.Error(),
-//					Count: 0,
-//					Data:  nil,
-//				}
-//				c.JSON(http.StatusBadRequest, msg)
-//			} else {
-//				c.JSON(http.StatusOK, MessageBody{
-//					Code:  "SUCCESS",
-//					Msg:   "",
-//					Count: 0,
-//					Data:  obj,
-//				})
-//			}
-//		}
-//	}, nil
-//}
-
-// Custom context type with request parameters
 func (b *KApi) changeToGinHandlerFunc(tvl, obj reflect.Value, methodName string) (func(*gin.Context), error) {
 	typ := tvl.Type()
-	if typ.NumIn() != 3 { // Parameter checking 参数检查
-		return nil, errors.New("方法 " + runtime.FuncForPC(tvl.Pointer()).Name() + " 不受支持!")
-	}
 
 	if typ.NumOut() != 0 {
 		if typ.NumOut() == 2 {
@@ -235,9 +141,7 @@ func (b *KApi) changeToGinHandlerFunc(tvl, obj reflect.Value, methodName string)
 		reqIsGinCtx = true
 	}
 
-	// ctxType != reflect.TypeOf(gin.Context{}) &&
-	// ctxType != reflect.Indirect(reflect.ValueOf(b.iAPIType)).Type()
-	if !reqIsGinCtx && ctxType != b.apiType && !b.apiType.ConvertibleTo(ctxType) {
+	if !reqIsGinCtx && ctxType != b.customContextType && !b.customContextType.ConvertibleTo(ctxType) {
 		return nil, errors.New("方法 " + runtime.FuncForPC(tvl.Pointer()).Name() + " 第一个参数不受支持!")
 	}
 
@@ -253,7 +157,7 @@ func (b *KApi) changeToGinHandlerFunc(tvl, obj reflect.Value, methodName string)
 	return func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
-				b.recoverErrorFunc(err)
+				b.option.recoverErrorFunc(err)
 			}
 		}()
 
@@ -289,39 +193,15 @@ func (b *KApi) changeToGinHandlerFunc(tvl, obj reflect.Value, methodName string)
 			is = b.afterCall(bainfo, obj)
 			if is {
 				if bainfo.Error != nil {
-					msg := MessageBody{
-						Code:  "FAIL",
-						Msg:   bainfo.Error.Error(),
-						Count: 0,
-						Data:  bainfo.Resp,
-					}
-					c.JSON(http.StatusOK, msg)
+					c.JSON(defaultGetResult(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
 				} else {
-					msg := MessageBody{
-						Code:  "SUCCESS",
-						Msg:   "",
-						Count: 0,
-						Data:  bainfo.Resp,
-					}
-					c.JSON(http.StatusOK, msg)
+					c.JSON(defaultGetResult(RESULT_CODE_SUCCESS, "", 0, bainfo.Resp))
 				}
 			} else {
 				if bainfo.Error != nil {
-					msg := MessageBody{
-						Code:  "FAIL",
-						Msg:   bainfo.Error.Error(),
-						Count: 0,
-						Data:  bainfo.Resp,
-					}
-					c.JSON(http.StatusBadRequest, msg)
+					c.JSON(defaultGetResult(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
 				} else {
-					msg := MessageBody{
-						Code:  "FAIL",
-						Msg:   "",
-						Count: 0,
-						Data:  bainfo.Resp,
-					}
-					c.JSON(http.StatusBadRequest, msg)
+					c.JSON(defaultGetResult(RESULT_CODE_ERROR, "", 0, bainfo.Resp))
 				}
 			}
 		}
@@ -332,22 +212,11 @@ func (b *KApi) handleErrorString(c *gin.Context, req reflect.Value, err error) {
 	var fields []string
 	if _, ok := err.(validator.ValidationErrors); ok {
 		for _, err := range err.(validator.ValidationErrors) {
-			tmp := fmt.Sprintf("%v:%v", tools.FindTag(req.Interface(), err.Field(), "json"), err.Tag())
+			tmp := fmt.Sprintf("%v:%v", internal.FindTag(req.Interface(), err.Field(), "json"), err.Tag())
 			if len(err.Param()) > 0 {
 				tmp += fmt.Sprintf("[%v](but[%v])", err.Param(), err.Value())
 			}
 			fields = append(fields, tmp)
-			// fmt.Println(err.Namespace())
-			// fmt.Println(err.Field())
-			// fmt.Println(err.StructNamespace()) // can differ when a custom TagNameFunc is registered or
-			// fmt.Println(err.StructField())     // by passing alt name to ReportError like below
-			// fmt.Println(err.Tag())
-			// fmt.Println(err.ActualTag())
-			// fmt.Println(err.Kind())
-			// fmt.Println(err.Type())
-			// fmt.Println(err.Value())
-			// fmt.Println(err.Param())
-			// fmt.Println()
 		}
 	} else if _, ok := err.(*json.UnmarshalTypeError); ok {
 		err := err.(*json.UnmarshalTypeError)
@@ -358,14 +227,7 @@ func (b *KApi) handleErrorString(c *gin.Context, req reflect.Value, err error) {
 		fields = append(fields, err.Error())
 	}
 
-	msg := MessageBody{
-		Code:  "FAIL",
-		Msg:   "",
-		Count: 0,
-		Data:  nil,
-	}
-	msg.Msg = fmt.Sprintf("req param : %v", strings.Join(fields, ";"))
-	c.JSON(http.StatusBadRequest, msg)
+	c.JSON(defaultGetResult(RESULT_CODE_FAIL, fmt.Sprintf("req param : %v", strings.Join(fields, ";")), 0, nil))
 	return
 }
 
@@ -502,7 +364,7 @@ func analysisParam(f *goast.FieldList, imports map[string]string, objPkg string,
 
 var routeRegex = regexp.MustCompile(`(@\w+)\s+(\S+)`)
 
-func (b *KApi) parseComments(f *goast.FuncDecl, objName, objFunc string, imports map[string]string, objPkg string, num int) ([]genComment, *paramInfo, *paramInfo) {
+func (b *KApi) parseComments(f *goast.FuncDecl, controllerRoute, objFunc string, imports map[string]string, objPkg string, num int) ([]genComment, *paramInfo, *paramInfo) {
 	var note string
 	var gcs []genComment
 	req := analysisParam(f.Type.Params, imports, objPkg, 1)   // 第二个参数作为请求参数
@@ -516,6 +378,9 @@ func (b *KApi) parseComments(f *goast.FuncDecl, objName, objFunc string, imports
 				matches := routeRegex.FindStringSubmatch(t)
 				if len(matches) == 3 { // 第一个是自身全部
 					gc.RouterPath = matches[2]
+					if controllerRoute != "" {
+						gc.RouterPath = controllerRoute + gc.RouterPath
+					}
 					methods := matches[1]
 					if methods == "" {
 						gc.Methods = []string{"get"}
@@ -562,9 +427,7 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 
 	groupPath := b.BasePath(router)
 	doc := doc.NewDoc(groupPath)
-
 	for _, c := range controllers {
-
 		refVal := reflect.ValueOf(c)
 		_log.Debugf("解析 --> %s", refVal.Type().String())
 		t := reflect.Indirect(refVal).Type()
@@ -572,6 +435,7 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 		objPkg := t.PkgPath()
 		objName := t.Name()
 		tagName := objName
+		route := ""
 
 		// find path
 		objFile := ast.EvalSymlinks(modPkg, modFile, objPkg)
@@ -580,8 +444,12 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 		if _b {
 			imports := ast.AnalysisImport(astPkgs)
 			funMp := ast.GetObjFunMp(astPkgs, objName)
-			if t := ast.AnalysisControllerComments(astPkgs, objName); t != "" {
+			t, r := ast.AnalysisControllerComments(astPkgs, objName)
+			if t != "" {
 				tagName = t
+			}
+			if r != "" {
+				route = r
 			}
 
 			refTyp := reflect.TypeOf(c)
@@ -591,8 +459,8 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 				num, _b := b.checkHandlerFunc(method.Type, true)
 				if _b {
 					if sdl, ok := funMp[method.Name]; ok {
-						gcs, req, resp := b.parseComments(sdl, objName, method.Name, imports, objPkg, num)
-						if b.isOutDoc { // output doc
+						gcs, req, resp := b.parseComments(sdl, route, method.Name, imports, objPkg, num)
+						if b.option.needDoc { // output doc
 							docReq, docResp := b.parseStruct(req, resp, astPkgs, modPkg, modFile)
 							for _, gc := range gcs {
 								doc.AddOne(tagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp)
@@ -610,11 +478,9 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 		}
 	}
 
-	if b.isOutDoc {
+	if b.option.needDoc {
 		b.addDocModel(doc)
 	}
-	// 生成路由注册文件
-	//genOutPut(b.outPath, modFile)
 	return true
 }
 
@@ -642,7 +508,8 @@ func (b *KApi) addDocModel(model *doc.Model) {
 			p.Parameters = make([]swagger.Element, 0)
 			if v1.Req != nil {
 				for _, item := range v1.Req.Items {
-					if item.IsHeader {
+					switch item.ParamType {
+					case doc.ParamTypeHeader:
 						p.Parameters = append(p.Parameters, swagger.Element{
 							In:          "header",
 							Name:        item.Name,
@@ -652,7 +519,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Schema:      nil,
 							Default:     item.Default,
 						})
-					} else if item.IsQuery {
+					case doc.ParamTypeQuery:
 						p.Parameters = append(p.Parameters, swagger.Element{
 							In:          "query",
 							Name:        item.Name,
@@ -662,7 +529,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Schema:      nil,
 							Default:     item.Default,
 						})
-					} else if item.IsFormData {
+					case doc.ParamTypeForm:
 						p.Parameters = append(p.Parameters, swagger.Element{
 							In:          "formData",
 							Name:        item.Name,
@@ -672,7 +539,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Schema:      nil,
 							Default:     item.Default,
 						})
-					} else if item.IsPath {
+					case doc.ParamTypePath:
 						p.Parameters = append(p.Parameters, swagger.Element{
 							In:          "path",
 							Name:        item.Name,
@@ -682,11 +549,11 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Schema:      nil,
 							Default:     item.Default,
 						})
-					} else {
+					default:
 						myreqRef = "#/definitions/" + v1.Req.Name
 						p.Parameters = append(p.Parameters, swagger.Element{
-							In:          "body",      //  body, header, formData, query, path
-							Name:        v1.Req.Name, //  body, header, formData, query, path
+							In:          "body",
+							Name:        v1.Req.Name,
 							Description: item.Note,
 							Required:    true,
 							Schema: &swagger.Schema{
@@ -694,6 +561,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							},
 						})
 					}
+
 				}
 
 			} else {
@@ -770,19 +638,19 @@ func (b *KApi) registerHandlerObj(router gin.IRoutes, httpMethod []string, relat
 
 	for _, v := range httpMethod {
 		switch strings.ToUpper(v) {
-		case "POST":
+		case http.MethodPost:
 			router.POST(relativePath, call)
-		case "GET":
+		case http.MethodGet:
 			router.GET(relativePath, call)
-		case "DELETE":
+		case http.MethodDelete:
 			router.DELETE(relativePath, call)
-		case "PATCH":
+		case http.MethodPatch:
 			router.PATCH(relativePath, call)
-		case "PUT":
+		case http.MethodPut:
 			router.PUT(relativePath, call)
-		case "OPTIONS":
+		case http.MethodOptions:
 			router.OPTIONS(relativePath, call)
-		case "HEAD":
+		case http.MethodHead:
 			router.HEAD(relativePath, call)
 		case "ANY":
 			router.Any(relativePath, call)

@@ -1,11 +1,11 @@
-package tools
+package internal
 
 import (
 	"encoding/json"
 )
 
-// GetJSONStr obj to json string
-func GetJSONStr(obj interface{}, isFormat bool) string {
+// MarshalToJson obj to json string
+func MarshalToJson(obj interface{}, isFormat bool) string {
 	var b []byte
 	if isFormat {
 		b, _ = json.MarshalIndent(obj, "", "     ")

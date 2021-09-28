@@ -2,18 +2,19 @@ package main
 
 import (
 	"gitee.com/kirile/kapi"
-	"test_kapi/routers"
+	"test_kapi/api/controller"
+	_ "test_kapi/routers"
 )
 
 func main() {
-	k := kapi.New(
-		kapi.WithDebug(true),
-		kapi.OutputDoc("测试"),
-
-		kapi.OpenDoc(),
-		kapi.Port(8081),
-	)
-	k.RegisterRouter(routers.Register)
+	k := kapi.New(func(option *kapi.Option) {
+		option.SetIsDebug().
+			SetDocName("测试").
+			SetOpenDocInBrowser().
+			SetApiBasePath("/api2").
+			SetPort(8081)
+	})
+	k.RegisterRouter(new(controller.Hello))
 	k.Run()
 
 }

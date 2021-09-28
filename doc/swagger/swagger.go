@@ -1,7 +1,7 @@
 package swagger
 
 import (
-	"gitee.com/kirile/kapi/tools"
+	"gitee.com/kirile/kapi/internal"
 	"strings"
 )
 
@@ -77,7 +77,7 @@ func (doc *DocSwagger) AddPatch(url string, p Param, metheds ...string) {
 
 // GetAPIString 获取返回数据
 func (doc *DocSwagger) GetAPIString() string {
-	return tools.GetJSONStr(doc.Client, true)
+	return internal.MarshalToJson(doc.Client, true)
 }
 
 var kvType = map[string]string{ // array, boolean, integer, number, object, string
