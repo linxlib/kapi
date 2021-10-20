@@ -92,11 +92,10 @@ func New(f func(*Option)) *KApi {
 	f(b.option)
 	b.Model(NewAPIFunc)
 
+	gin.SetMode(gin.ReleaseMode) //we don't need gin's debug output
 	b.engine = gin.New()
 	b.engine.Use(gin.LoggerWithFormatter(b.option.ginLoggerFormatter))
 	b.engine.Use(cors.New(b.option.corsConfig))
-	gin.SetMode(gin.ReleaseMode) //we don't need gin's debug output
-	b.doc = swagger.NewDoc()
 
 	_log.Infof("localIP:%s docName:%s port:%d", b.option.intranetIP, b.option.docName, b.option.listenPort)
 
@@ -122,6 +121,7 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 		})
 
 	}
+	b.doc = swagger.NewDoc()
 	b.baseGroup = b.engine.Group(b.option.apiBasePath)
 	b.Register(b.baseGroup, cList...)
 }
