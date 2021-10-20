@@ -49,10 +49,7 @@ func (h *HelloController) World1(c *kapi.Context) {
 
 ## TODO
 
-- [ ] 增加一种注册controller的方式，在包的init中注册
 - [x] 修改为func方式配置kapi
-- [ ] 换个地方生成gen_code.go  
-- [ ] 注册成gRPC服务
 - [x] controller 增加 //@ROUTE 用于标记整个controller的path
 
 
