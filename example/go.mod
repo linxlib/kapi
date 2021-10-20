@@ -8,5 +8,5 @@ require (
 )
 
 replace (
-	gitee.com/kirile/kapi => /Users/linx/kapi
+	gitee.com/kirile/kapi => ../
 )
