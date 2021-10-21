@@ -10,7 +10,10 @@ func (m *Model) analysisStructInfo(info *StructInfo) {
 	if info != nil {
 		for i := 0; i < len(info.Items); i++ {
 			tag := reflect.StructTag(strings.Trim(info.Items[i].Tag, "`"))
-
+            info.Items[i].IsQuery = false
+            info.Items[i].IsHeader = false
+            info.Items[i].IsFormData = false
+            info.Items[i].IsPath = false
 			// json
 			tagStr := tag.Get("json")
 			if tagStr == "-" || tagStr == "" {
