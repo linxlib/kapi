@@ -10,10 +10,10 @@ func (m *Model) analysisStructInfo(info *StructInfo) {
 	if info != nil {
 		for i := 0; i < len(info.Items); i++ {
 			tag := reflect.StructTag(strings.Trim(info.Items[i].Tag, "`"))
-            info.Items[i].IsQuery = false
-            info.Items[i].IsHeader = false
-            info.Items[i].IsFormData = false
-            info.Items[i].IsPath = false
+			info.Items[i].IsQuery = false
+			info.Items[i].IsHeader = false
+			info.Items[i].IsFormData = false
+			info.Items[i].IsPath = false
 			// json
 			tagStr := tag.Get("json")
 			if tagStr == "-" || tagStr == "" {
@@ -21,6 +21,7 @@ func (m *Model) analysisStructInfo(info *StructInfo) {
 			}
 			tagStrs := strings.Split(tagStr, ",")
 			if len(tagStrs[0]) > 0 {
+				info.Items[i].ParamType = -1
 				info.Items[i].Name = tagStrs[0]
 			}
 			// -------- end
@@ -51,6 +52,7 @@ func (m *Model) analysisStructInfo(info *StructInfo) {
 			v, b = tag.Lookup("header")
 			info.Items[i].IsHeader = b
 			if b {
+				info.Items[i].ParamType = ParamTypeHeader
 				info.Items[i].Name = v
 				info.Items[i].Required = true
 			}
@@ -59,6 +61,7 @@ func (m *Model) analysisStructInfo(info *StructInfo) {
 
 			info.Items[i].IsFormData = b
 			if b {
+				info.Items[i].ParamType = ParamTypeForm
 				info.Items[i].IsHeader = false
 
 				info.Items[i].Name = v
@@ -67,6 +70,7 @@ func (m *Model) analysisStructInfo(info *StructInfo) {
 			v, b = tag.Lookup("path")
 			info.Items[i].IsPath = b
 			if b {
+				info.Items[i].ParamType = ParamTypePath
 				info.Items[i].IsHeader = false
 				info.Items[i].IsFormData = false
 				//info.Items[i].Required = true
