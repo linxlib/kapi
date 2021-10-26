@@ -62,6 +62,9 @@ func (o *Option) SetIsDebug(isDebug ...bool) *Option {
 	if len(isDebug) > 0 {
 		o.isDebug = isDebug[0]
 	}
+	if !internal.CheckFileIsExist("main.go") {
+		o.isDebug = false
+	}
 	return o
 }
 

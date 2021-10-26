@@ -52,22 +52,12 @@ func getStringList(list []string) string {
 }
 
 func genOutPut(outDir, modFile string) {
-
 	_mu.Lock()
 	defer _mu.Unlock()
-
 	genCode(outDir, modFile) // gen .go file
-	//_genInfo.Tm = time.Now().Unix()
-	//_data, _ := tools.Encode(&_genInfo) // gob serialize 序列化
-	//_path := modFile+getRouter
-	//tools.BuildDir(_path)
-	//f, err := os.Create(_path)
-	//if err != nil {
-	//	return
-	//}
-	//defer f.Close()
-	//f.Write(_data)
 }
+
+
 
 func genCode(outDir, modFile string) bool {
 	_genInfo.Tm = time.Now().Unix()

@@ -52,6 +52,7 @@ var (
 	func init() {
 		kapi.SetVersion({{.Tm}})
 		{{range .List}}kapi.AddGenOne("{{.HandFunName}}", "{{.GenComment.RouterPath}}", []string{ {{getStringList .GenComment.Methods}} })
-		{{end}} }
+		{{end}} 
+	}
 	`
 )
