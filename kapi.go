@@ -108,14 +108,16 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 	_log.Debug("注册路由..")
 	if b.option.needDoc {
 		if b.option.docDomain == "" {
+			swagger.SetSchemes(true, false)
 			swagger.SetHost(fmt.Sprintf("http://%s:%d", b.option.intranetIP, b.option.listenPort))
 		} else {
 			_log.Debug("域名:" + b.option.docDomain)
+			swagger.SetSchemes(false, true)
 			swagger.SetHost(b.option.docDomain)
 		}
 
 		swagger.SetBasePath("")
-		swagger.SetSchemes(true, true)
+
 		swagger.SetInfo(swagger.Info{
 			Description: b.option.docName,
 			Version:     b.option.docVer,
