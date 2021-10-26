@@ -2,12 +2,14 @@ package kapi
 
 import (
 	"embed"
+	"encoding/json"
 	"fmt"
 	"gitee.com/kirile/kapi/ast"
 	"gitee.com/kirile/kapi/doc/swagger"
 	"gitee.com/kirile/kapi/internal"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -128,6 +130,8 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 
 func (b *KApi) Run() {
 	b.genRouterCode()
+	b.genDoc()
+
 	b.engine.GET("/version", func(c *gin.Context) {
 		c.String(200, "ServerTime:%36s\nAPI_Version_Time:%30s", time.Now().Format(time.RFC3339), time.Unix(_genInfo.Tm, 0).Format(time.RFC3339))
 	})
@@ -145,7 +149,13 @@ func (b *KApi) Run() {
 
 		// 将解析的文档内容直接通过接口返回, 省去了写到文件的步骤
 		b.engine.GET("/swagger.json", func(c *gin.Context) {
-			c.JSON(200, b.doc.Client)
+			if !internal.CheckFileIsExist("swagger.json") {
+				_log.Warningln("swagger.json未找到, 请放置到程序目录下")
+				c.JSON(404, "swagger.json not found")
+				return
+			}
+			bs, _ := ioutil.ReadFile("swagger.json")
+			c.String(200, string(bs))
 		})
 		b.engine.GET("/swagger/*any", func(c *gin.Context) {
 			c.FileFromFS(c.Request.URL.Path, http.FS(swaggerFS))
@@ -213,6 +223,29 @@ func (b *KApi) genRouterCode() {
 	}
 	_, modFile, _ := ast.GetModuleInfo(2)
 	genOutPut(b.option.outPath, modFile)
+}
+
+// genDoc 生成swagger.json
+func (b *KApi) genDoc() {
+	if !b.option.isDebug || !b.option.needDoc {
+		return
+	}
+	bs, _ := json.Marshal(b.doc.Client)
+
+	_, modFile, _ := ast.GetModuleInfo(2)
+	outDir := b.option.outPath
+	if len(outDir) == 0 {
+		outDir = modFile + "/"
+	}
+	if outDir[len(outDir)-1] != '/' {
+		outDir += "/"
+	}
+	err := ioutil.WriteFile(outDir+"swagger.json", bs, os.ModePerm)
+	if err != nil {
+		_log.Errorln("create swagger.json fail:", err.Error())
+		return
+	}
+
 }
 
 var _ctlsList = make([]interface{}, 0)
