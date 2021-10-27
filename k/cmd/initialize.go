@@ -85,7 +85,8 @@ func Initialize() {
 			gfile.Mkdir("api")
 		}
 		if !gfile.Exists("main.go") {
-			ioutil.WriteFile("main.go",[]byte(mainContent),os.ModePerm)
+			r := fmt.Sprintf(mainContent,modName,modName)
+			ioutil.WriteFile("main.go",[]byte(r),os.ModePerm)
 			_log.Println("写出main.go")
 			exec.Command("gofmt", "-l", "-w", "./").Output()
 			exec.Command("go mod tidy").Output()
