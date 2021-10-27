@@ -1,9 +1,6 @@
 package internal
 
 import (
-	"bufio"
-
-	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -47,7 +44,7 @@ func GetCurrentDirectory() string {
 }
 
 // WriteFile 写入文件
-func WriteFile(fname string, src []string, isClear bool) bool {
+func WriteFile(fname string, src []byte, isClear bool) bool {
 	BuildDir(fname)
 	flag := os.O_CREATE | os.O_WRONLY | os.O_TRUNC
 	if !isClear {
@@ -58,31 +55,13 @@ func WriteFile(fname string, src []string, isClear bool) bool {
 		return false
 	}
 	defer f.Close()
-
-	for _, v := range src {
-		f.WriteString(v)
-		f.WriteString("\r\n")
-	}
+	f.Write(src)
 
 	return true
 }
 
 // ReadFile 读取文件
-func ReadFile(fname string) (src []string) {
-	f, err := os.OpenFile(fname, os.O_RDONLY, 0666)
-	if err != nil {
-		return []string{}
-	}
-	defer f.Close()
-
-	rd := bufio.NewReader(f)
-	for {
-		line, _, err := rd.ReadLine()
-		if err != nil || io.EOF == err {
-			break
-		}
-		src = append(src, string(line))
-	}
-
+func ReadFile(fname string) []byte {
+	src,_:=ioutil.ReadFile(fname)
 	return src
 }

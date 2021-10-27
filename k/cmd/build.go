@@ -51,6 +51,7 @@ const platforms = `
 `
 
 func Build() {
+	g.Config().SetFileName("build.toml")
 	parser, err := gcmd.Parse(g.MapStrBool{
 		"n,name":    true,
 		"v,version": true,
