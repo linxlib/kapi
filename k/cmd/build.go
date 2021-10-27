@@ -175,6 +175,26 @@ func Build() {
 			}
 			// single binary building.
 			if len(customSystems) == 0 && len(customArches) == 0 {
+				if gfile.Exists("gen.gob") {
+					gfile.CopyFile("gen.gob", fmt.Sprintf(
+						`%s/%s/gen.gob`,
+						path, system+"_"+arch))
+					_log.Debug("拷贝gen.gob文件")
+				}
+				if gfile.Exists("swagger.json") {
+					gfile.CopyFile("swagger.json", fmt.Sprintf(
+						`%s/%s/swagger.json`,
+						path, system+"_"+arch))
+					_log.Debug("拷贝swagger.json文件")
+				}
+				if gfile.Exists("config.toml") &&!gfile.Exists(fmt.Sprintf(
+					`%s/%s/config.toml`,
+					path, system+"_"+arch)) {
+					gfile.CopyFile("config.toml", fmt.Sprintf(
+						`%s/%s/config.toml`,
+						path, system+"_"+arch))
+					_log.Debug("拷贝config.toml文件")
+				}
 				goto buildDone
 			}
 		}
