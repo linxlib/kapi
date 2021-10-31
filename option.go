@@ -25,11 +25,14 @@ type Option struct {
 
 	recoverErrorFunc RecoverErrorFunc
 	intranetIP       string
+
+	staticDir string
 }
 
 func defaultOption() *Option {
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true
+	corsConfig.AddAllowHeaders("Access-Control-Allow-Private-Network: true")
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
 	return &Option{
 		isDebug:                     true,
@@ -46,6 +49,7 @@ func defaultOption() *Option {
 		ginLoggerFormatter:          defaultLogFormatter,
 		corsConfig:                  corsConfig,
 		intranetIP:                  internal.GetIntranetIp(),
+		staticDir: "",
 		recoverErrorFunc: func(err interface{}) {
 			switch err {
 			case KAPIEXIT:
@@ -149,6 +153,15 @@ func (o *Option) SetRedirectToDocWhenAccessRoot(redirect ...bool) *Option {
 	o.redirectToDocWhenAccessRoot = true
 	if len(redirect) > 0 {
 		o.redirectToDocWhenAccessRoot = redirect[0]
+	}
+	return o
+
+}
+
+func (o *Option) SetStaticDir(dir ...string) *Option {
+	o.staticDir = "static"
+	if len(dir) > 0 {
+		o.staticDir = dir[0]
 	}
 	return o
 

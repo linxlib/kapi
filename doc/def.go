@@ -41,4 +41,5 @@ type DocModel struct {
 	Methods    []string
 	Note       string
 	Req, Resp  *StructInfo
+	TokenHeader string
 }

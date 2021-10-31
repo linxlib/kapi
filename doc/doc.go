@@ -40,7 +40,7 @@ func replacePathTo(origin string) string {
 }
 
 // AddOne 添加一个方法
-func (m *Model) AddOne(group string, routerPath string, methods []string, note string, req, resp *StructInfo) {
+func (m *Model) AddOne(group string, routerPath string, methods []string, note string, req, resp *StructInfo,tokenHeader string) {
 	if m.MP[group] == nil {
 		m.MP[group] = make(map[string]DocModel)
 	}
@@ -54,5 +54,6 @@ func (m *Model) AddOne(group string, routerPath string, methods []string, note s
 		Note:       note,
 		Req:        req,
 		Resp:       resp,
+		TokenHeader: tokenHeader,
 	}
 }

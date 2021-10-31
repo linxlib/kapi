@@ -170,9 +170,10 @@ func AnalysisImport(astPkgs *ast.Package) map[string]string {
 	return imports
 }
 
-func AnalysisControllerComments(astPkg *ast.Package, controllerName string) (tagName string, route string) {
+func AnalysisControllerComments(astPkg *ast.Package, controllerName string) (tagName string, route string,tokenHeader string) {
 	tagName = ""
 	route = ""
+	tokenHeader = ""
 	if astPkg == nil {
 		return
 	}
@@ -196,6 +197,11 @@ func AnalysisControllerComments(astPkg *ast.Package, controllerName string) (tag
 
 										} else if strings.HasPrefix(t, "@ROUTE") {
 											route = internal.GetCommentAfterPrefix(t, "@ROUTE")
+										} else if strings.HasPrefix(t,"@AUTH") {
+											tokenHeader =  internal.GetCommentAfterPrefix(t, "@AUTH")
+											if tokenHeader=="" {
+												tokenHeader = "Authorization"
+											}
 										}
 									}
 									return
