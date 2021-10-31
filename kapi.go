@@ -112,7 +112,7 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 			swagger.SetHost(fmt.Sprintf("http://%s:%d", b.option.intranetIP, b.option.listenPort))
 		} else {
 			_log.Debug("域名:" + b.option.docDomain)
-			swagger.SetSchemes(false, true)
+			swagger.SetSchemes(true, true)
 			swagger.SetHost(b.option.docDomain)
 		}
 
@@ -128,6 +128,10 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 	b.doc = swagger.NewDoc()
 	b.baseGroup = b.engine.Group(b.option.apiBasePath)
 	b.Register(b.baseGroup, cList...)
+	if b.option.staticDir!="" {
+		b.engine.Static(b.option.staticDir,b.option.staticDir)
+	}
+
 }
 
 func (b *KApi) Run() {

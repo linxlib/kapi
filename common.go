@@ -90,7 +90,7 @@ func (b *KApi) handlerFuncObj(tvl, obj reflect.Value, methodName string) gin.Han
 //beforeCall 调用前处理
 func (b *KApi) beforeCall(c *gin.Context, obj reflect.Value, req interface{}, methodName string) (*InterceptorContext, bool) {
 	info := &InterceptorContext{
-		C:        c,
+		C:        &Context{c},
 		FuncName: fmt.Sprintf("%v.%v", reflect.Indirect(obj).Type().Name(), methodName), // 函数名
 		Req:      req,                                                                   // 调用前的请求参数
 		Context:  context.Background(),                                                  // 占位参数，可用于存储其他参数，前后连接可用
@@ -193,15 +193,15 @@ func (b *KApi) changeToGinHandlerFunc(tvl, obj reflect.Value, methodName string)
 			is = b.afterCall(bainfo, obj)
 			if is {
 				if bainfo.Error != nil {
-					c.JSON(defaultGetResult(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
+					c.JSON(DefaultGetResult(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
 				} else {
-					c.JSON(defaultGetResult(RESULT_CODE_SUCCESS, "", 0, bainfo.Resp))
+					c.JSON(DefaultGetResult(RESULT_CODE_SUCCESS, "", 0, bainfo.Resp))
 				}
 			} else {
 				if bainfo.Error != nil {
-					c.JSON(defaultGetResult(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
+					c.JSON(DefaultGetResult(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
 				} else {
-					c.JSON(defaultGetResult(RESULT_CODE_ERROR, "", 0, bainfo.Resp))
+					c.JSON(DefaultGetResult(RESULT_CODE_ERROR, "", 0, bainfo.Resp))
 				}
 			}
 		}
@@ -227,7 +227,7 @@ func (b *KApi) handleErrorString(c *gin.Context, req reflect.Value, err error) {
 		fields = append(fields, err.Error())
 	}
 
-	c.JSON(defaultGetResult(RESULT_CODE_FAIL, fmt.Sprintf("req param : %v", strings.Join(fields, ";")), 0, nil))
+	c.JSON(DefaultGetResult(RESULT_CODE_FAIL, fmt.Sprintf("req param : %v", strings.Join(fields, ";")), 0, nil))
 	return
 }
 
@@ -381,6 +381,9 @@ func (b *KApi) parseComments(f *goast.FuncDecl, controllerRoute, objFunc string,
 					if controllerRoute != "" {
 						gc.RouterPath = controllerRoute + gc.RouterPath
 					}
+					if strings.Contains(gc.RouterPath,"/") {
+						gc.RouterPath = strings.TrimSuffix(gc.RouterPath,"/")
+					}
 					methods := matches[1]
 					if methods == "" {
 						gc.Methods = []string{"get"}
@@ -436,6 +439,7 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 		objName := t.Name()
 		tagName := objName
 		route := ""
+		tokenHeader := ""
 
 		// find path
 		objFile := ast.EvalSymlinks(modPkg, modFile, objPkg)
@@ -444,12 +448,15 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 		if _b {
 			imports := ast.AnalysisImport(astPkgs)
 			funMp := ast.GetObjFunMp(astPkgs, objName)
-			t, r := ast.AnalysisControllerComments(astPkgs, objName)
+			t, r,th := ast.AnalysisControllerComments(astPkgs, objName)
 			if t != "" {
 				tagName = t
 			}
 			if r != "" {
 				route = r
+			}
+			if th!="" {
+				tokenHeader = th
 			}
 
 			refTyp := reflect.TypeOf(c)
@@ -463,7 +470,7 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 						if b.option.needDoc { // output doc
 							docReq, docResp := b.parseStruct(req, resp, astPkgs, modPkg, modFile)
 							for _, gc := range gcs {
-								doc.AddOne(tagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp)
+								doc.AddOne(tagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp,tokenHeader)
 								checkOnceAdd(objName+"/"+method.Name, gc.RouterPath, gc.Methods)
 							}
 						} else {
@@ -515,7 +522,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        item.Type,
+							Type:        swagger.GetKvType(item.Type,false,true) ,
 							Schema:      nil,
 							Default:     item.Default,
 						})
@@ -525,7 +532,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        item.Type,
+							Type:        swagger.GetKvType(item.Type,false,true) ,
 							Schema:      nil,
 							Default:     item.Default,
 						})
@@ -535,7 +542,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        item.Type,
+							Type:        swagger.GetKvType(item.Type,false,true) ,
 							Schema:      nil,
 							Default:     item.Default,
 						})
@@ -545,27 +552,47 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        item.Type,
+							Type:        swagger.GetKvType(item.Type,false,true) ,
 							Schema:      nil,
 							Default:     item.Default,
 						})
 					default:
 						myreqRef = "#/definitions/" + v1.Req.Name
-						p.Parameters = append(p.Parameters, swagger.Element{
-							In:          "body",
-							Name:        v1.Req.Name,
-							Description: item.Note,
-							Required:    true,
-							Schema: &swagger.Schema{
-								Ref: myreqRef,
-							},
-						})
+						exist := false
+						for _, parameter := range p.Parameters {
+							if parameter.Name==v1.Req.Name {
+								exist = true
+							}
+						}
+						if !exist {
+							p.Parameters = append(p.Parameters, swagger.Element{
+								In:          "body",
+								Name:        v1.Req.Name,
+								Description: item.Note,
+								Required:    true,
+								Schema: &swagger.Schema{
+									Ref: myreqRef,
+								},
+							})
+						}
+
 					}
 
 				}
 
 			} else {
 
+			}
+			if v1.TokenHeader!="" {
+				p.Parameters = append(p.Parameters, swagger.Element{
+					In:          "header",
+					Name:        v1.TokenHeader,
+					Description: v1.TokenHeader,
+					Required:    true,
+					Type:        "string" ,
+					Schema:      nil,
+					Default:     "",
+				})
 			}
 			if v1.Resp != nil {
 				p.Responses = make(map[string]swagger.Resp)
@@ -590,6 +617,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 					}
 				}
 			}
+
 			b.doc.AddPatch(buildRelativePath(model.Group, v1.RouterPath), p, v1.Methods...)
 		}
 	}

@@ -24,6 +24,7 @@ type genComment struct {
 	RouterPath string
 	Note       string // 注释
 	Methods    []string
+	TokenHeader string
 }
 
 // router style list.路由规则列表

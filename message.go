@@ -14,16 +14,17 @@ const (
 	RESULT_CODE_SUCCESS RESULT_CODE = iota //SuccessExit DataExit ListExit 时
 	RESULT_CODE_FAIL                       // FailExit
 	RESULT_CODE_ERROR                      //FailExit时传参error
+	RESULT_CODE_UNAUTHED
 )
 
 // RegisterFuncGetResult 注册返回json结构的func
 func RegisterFuncGetResult(i FuncGetResult) {
-	defaultGetResult = i
+	DefaultGetResult = i
 }
 
 type FuncGetResult = func(code RESULT_CODE, msg string, count int64, data interface{}) (int, interface{})
 
-var defaultGetResult = _defaultGetResult
+var DefaultGetResult = _defaultGetResult
 
 func _defaultGetResult(code RESULT_CODE, msg string, count int64, data interface{}) (int, interface{}) {
 	if code == RESULT_CODE_SUCCESS {
@@ -35,6 +36,13 @@ func _defaultGetResult(code RESULT_CODE, msg string, count int64, data interface
 		}
 	} else if code == RESULT_CODE_ERROR {
 		return 500, messageBody{
+			Code:  "FAIL",
+			Msg:   msg,
+			Count: count,
+			Data:  data,
+		}
+	} else if code==RESULT_CODE_UNAUTHED{
+		return 401, messageBody{
 			Code:  "FAIL",
 			Msg:   msg,
 			Count: count,
@@ -56,19 +64,19 @@ func (c *Context) WriteJSON(obj interface{}) {
 }
 
 func (c *Context) writeMessage(msg string) {
-	c.JSON(defaultGetResult(RESULT_CODE_SUCCESS, msg, 0, nil))
+	c.JSON(DefaultGetResult(RESULT_CODE_SUCCESS, msg, 0, nil))
 }
 func (c *Context) writeError(err error) {
-	c.JSON(defaultGetResult(RESULT_CODE_ERROR, err.Error(), 0, nil))
+	c.JSON(DefaultGetResult(RESULT_CODE_ERROR, err.Error(), 0, nil))
 }
 func (c *Context) writeErrorDetail(err interface{}) {
-	c.JSON(defaultGetResult(RESULT_CODE_ERROR, "", 0, err))
+	c.JSON(DefaultGetResult(RESULT_CODE_ERROR, "", 0, err))
 }
 func (c *Context) writeFailMsg(msg string) {
-	c.JSON(defaultGetResult(RESULT_CODE_FAIL, msg, 0, nil))
+	c.JSON(DefaultGetResult(RESULT_CODE_FAIL, msg, 0, nil))
 }
 func (c *Context) writeList(count int64, list interface{}) {
-	c.JSON(defaultGetResult(RESULT_CODE_SUCCESS, "", count, list))
+	c.JSON(DefaultGetResult(RESULT_CODE_SUCCESS, "", count, list))
 }
 
 func (c *Context) ListExit(count int64, list interface{}) {
@@ -122,3 +130,5 @@ func (c *Context) FailAndExit(data ...interface{}) {
 		c.Exit()
 	}
 }
+
+

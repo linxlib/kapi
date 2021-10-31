@@ -2,13 +2,12 @@ package kapi
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
 	"time"
 )
 
 // InterceptorContext 对象调用前后执行中间件参数
 type InterceptorContext struct {
-	C        *gin.Context
+	C        *Context
 	FuncName string          // 函数名
 	Req      interface{}     // 调用前的请求参数
 	Resp     interface{}     // 调用后的响应参数
@@ -40,9 +39,9 @@ func (d *DefaultGinBeforeAfter) GinAfter(req *InterceptorContext) bool {
 	now := time.Now()
 	_log.Infof("[middleware] call[%v] [%v]", req.FuncName, now.Sub(begin))
 	if req.Error != nil {
-		_, req.Resp = defaultGetResult(RESULT_CODE_ERROR, req.Error.Error(), 0, nil)
+		_, req.Resp = DefaultGetResult(RESULT_CODE_ERROR, req.Error.Error(), 0, nil)
 	} else {
-		_, req.Resp = defaultGetResult(RESULT_CODE_SUCCESS, "", 0, req.Resp)
+		_, req.Resp = DefaultGetResult(RESULT_CODE_SUCCESS, "", 0, req.Resp)
 	}
 	return true
 }
