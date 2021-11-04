@@ -11,7 +11,7 @@ type DocSwagger struct {
 }
 
 // NewDoc 新建一个swagger doc
-func NewDoc() *DocSwagger {
+func NewDoc(host string,info Info,basePath string,schemes []string) *DocSwagger {
 	doc := &DocSwagger{}
 	doc.Client = &APIBody{
 		Head:     Head{Swagger: version},

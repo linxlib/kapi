@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -56,27 +57,6 @@ type KApi struct {
 	option      *Option
 }
 
-// WithCtx use custom context.设置自定义context
-//func WithCtx(middleware ApiFunc) Option {
-//	return optionFunc(func(o *KApi) {
-//		o.Model(middleware)
-//	})
-//}
-
-// WithImportFile 添加自定义import文件列表
-//func WithImportFile(k, v string) Option {
-//	return optionFunc(func(o *KApi) {
-//		ast.AddImportFile(k, v)
-//	})
-//}
-
-// WithBeforeAfter 设置对象调用前后执行中间件
-//func WithBeforeAfter(beforeAfter Interceptor) Option {
-//	return optionFunc(func(o *KApi) {
-//		o.beforeAfter = beforeAfter
-//	})
-//}
-
 func New(f func(*Option)) *KApi {
 	if VERSION != "" {
 		_log.Infof(_banner, fmt.Sprintf(_info, VERSION, GOVERSION, OS, ARCH, BUILDTIME))
@@ -106,32 +86,40 @@ func New(f func(*Option)) *KApi {
 
 func (b *KApi) RegisterRouter(cList ...interface{}) {
 	_log.Debug("注册路由..")
+	schemes := []string{"http"}
+	host := "localhost"
+	basePath := ""
+	info := swagger.Info{
+		Description: "kapi api server",
+		Version:     "1.0.0",
+		Title:       "KAPI",
+	}
 	if b.option.needDoc {
 		if b.option.docDomain == "" {
-			swagger.SetSchemes(true, false)
-			swagger.SetHost(fmt.Sprintf("http://%s:%d", b.option.intranetIP, b.option.listenPort))
+			schemes = []string{"http"}
+			host = fmt.Sprintf("%s:%d", b.option.intranetIP, b.option.listenPort)
 		} else {
 			_log.Debug("域名:" + b.option.docDomain)
-			swagger.SetSchemes(true, true)
-			swagger.SetHost(b.option.docDomain)
+			if strings.HasPrefix(b.option.docDomain, "https") {
+				schemes = []string{"https", "http"}
+			} else {
+				schemes = []string{"http", "https"}
+			}
+			host = strings.TrimPrefix(b.option.docDomain, "http://")
+			host = strings.TrimPrefix(host, "https://")
 		}
-
-		swagger.SetBasePath("")
-
-		swagger.SetInfo(swagger.Info{
+		info = swagger.Info{
 			Description: b.option.docName,
 			Version:     b.option.docVer,
 			Title:       b.option.docDesc,
-		})
-
+		}
 	}
-	b.doc = swagger.NewDoc()
+	b.doc = swagger.NewDoc(host, info, basePath, schemes)
 	b.baseGroup = b.engine.Group(b.option.apiBasePath)
 	b.Register(b.baseGroup, cList...)
-	if b.option.staticDir!="" {
-		b.engine.Static(b.option.staticDir,b.option.staticDir)
+	if b.option.staticDir != "" {
+		b.engine.Static(b.option.staticDir, b.option.staticDir)
 	}
-
 }
 
 func (b *KApi) Run() {

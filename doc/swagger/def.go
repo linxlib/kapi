@@ -1,5 +1,9 @@
 package swagger
 
+var version = "2.0"
+var reqCtxType = []string{"application/json"}
+var respCtxType = []string{"application/json"}
+
 // Head Swagger 版本
 type Head struct {
 	Swagger string `json:"swagger"`
