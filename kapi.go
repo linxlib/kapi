@@ -126,9 +126,6 @@ func (b *KApi) Run() {
 	b.genRouterCode()
 	b.genDoc()
 
-	b.engine.GET("/version", func(c *gin.Context) {
-		c.String(200, "ServerTime:%36s\nAPI_Version_Time:%30s", time.Now().Format(time.RFC3339), time.Unix(_genInfo.Tm, 0).Format(time.RFC3339))
-	})
 	if b.option.needDoc {
 		swaggerUrl := fmt.Sprintf("http://%s:%d/swagger/index.html", b.option.intranetIP, b.option.listenPort)
 		if b.option.docDomain != "" {
