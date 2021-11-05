@@ -25,8 +25,8 @@ func (d Document) ToString() string {
 	return d.root.String()
 }
 
-func (this Document) Array(name string, defaultValue ...[]Value) []Value {
-	v, ok := this.Value(name)
+func (d Document) Array(name string, defaultValue ...[]Value) []Value {
+	v, ok := d.Value(name)
 	if !ok {
 		if len(defaultValue) >= 1 {
 			return defaultValue[0]
@@ -37,8 +37,8 @@ func (this Document) Array(name string, defaultValue ...[]Value) []Value {
 	return v.AsArray()
 }
 
-func (this Document) String(name string, defaultValue ...string) string {
-	v, ok := this.Value(name)
+func (d Document) String(name string, defaultValue ...string) string {
+	v, ok := d.Value(name)
 	if !ok {
 		if len(defaultValue) >= 1 {
 			return defaultValue[0]
@@ -49,8 +49,8 @@ func (this Document) String(name string, defaultValue ...string) string {
 	return v.AsString()
 }
 
-func (this Document) Int(name string, defaultValue ...int) int {
-	v, ok := this.Value(name)
+func (d Document) Int(name string, defaultValue ...int) int {
+	v, ok := d.Value(name)
 	if !ok {
 		if len(defaultValue) >= 1 {
 			return defaultValue[0]
@@ -61,8 +61,8 @@ func (this Document) Int(name string, defaultValue ...int) int {
 	return v.AsInt()
 }
 
-func (this Document) Int8(name string, defaultValue ...int8) int8 {
-	v, ok := this.Value(name)
+func (d Document) Int8(name string, defaultValue ...int8) int8 {
+	v, ok := d.Value(name)
 	if !ok {
 		if len(defaultValue) >= 1 {
 			return defaultValue[0]
@@ -73,8 +73,8 @@ func (this Document) Int8(name string, defaultValue ...int8) int8 {
 	return v.AsInt8()
 }
 
-func (this Document) Int16(name string, defaultValue ...int16) int16 {
-	v, ok := this.Value(name)
+func (d Document) Int16(name string, defaultValue ...int16) int16 {
+	v, ok := d.Value(name)
 	if !ok {
 		if len(defaultValue) >= 1 {
 			return defaultValue[0]
@@ -85,8 +85,8 @@ func (this Document) Int16(name string, defaultValue ...int16) int16 {
 	return v.AsInt16()
 }
 
-func (this Document) Int32(name string, defaultValue ...int32) int32 {
-	v, ok := this.Value(name)
+func (d Document) Int32(name string, defaultValue ...int32) int32 {
+	v, ok := d.Value(name)
 	if !ok {
 		if len(defaultValue) >= 1 {
 			return defaultValue[0]
@@ -97,8 +97,8 @@ func (this Document) Int32(name string, defaultValue ...int32) int32 {
 	return v.AsInt32()
 }
 
-func (this Document) Int64(name string, defaultValue ...int64) int64 {
-	v, ok := this.Value(name)
+func (d Document) Int64(name string, defaultValue ...int64) int64 {
+	v, ok := d.Value(name)
 	if !ok {
 		if len(defaultValue) >= 1 {
 			return defaultValue[0]
@@ -109,8 +109,8 @@ func (this Document) Int64(name string, defaultValue ...int64) int64 {
 	return v.AsInt64()
 }
 
-func (this Document) Float(name string, defaultValue ...float64) float64 {
-	v, ok := this.Value(name)
+func (d Document) Float(name string, defaultValue ...float64) float64 {
+	v, ok := d.Value(name)
 	if !ok {
 		if len(defaultValue) >= 1 {
 			return defaultValue[0]
