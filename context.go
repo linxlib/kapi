@@ -94,8 +94,8 @@ func (c *Context) GetPageSize() (int, int) {
 	return conv.Int(page) - 1, conv.Int(size)
 }
 
-func (c *Context) SaveFile(form string,dst string) error {
-	f,err:=c.FormFile(form)
+func (c *Context) SaveFile(form string, dst string) error {
+	f, err := c.FormFile(form)
 	if err != nil {
 		return err
 	}
@@ -105,5 +105,3 @@ func (c *Context) SaveFile(form string,dst string) error {
 	}
 	return nil
 }
-
-

@@ -3,7 +3,6 @@ package main
 import (
 	"gitee.com/kirile/kapi"
 	"test_kapi/api/controller"
-	_ "test_kapi/routers"
 )
 
 func main() {

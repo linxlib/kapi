@@ -87,7 +87,7 @@ func (p Parser) Parse(tomlString string) Document {
 		} else {
 			node := newNodePointer()
 			node.name = key
-			node.value.raw = cleanRawValue(line[index+1 : len(line)])
+			node.value.raw = cleanRawValue(line[index+1 :])
 			node.kind = kindValue
 			currentSection.setChild(key, node)
 			currentValue = node
@@ -267,7 +267,7 @@ func parseArray(s string) ([]Value, int, bool) {
 		}
 
 		if state == 1 {
-			v, index, ok := parseValue(s[i:len(s)])
+			v, index, ok := parseValue(s[i:])
 			if !ok {
 				continue
 			} else {
