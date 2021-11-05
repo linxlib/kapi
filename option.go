@@ -2,7 +2,7 @@ package kapi
 
 import (
 	"gitee.com/kirile/kapi/internal"
-	"github.com/gin-contrib/cors"
+	"gitee.com/kirile/kapi/internal/cors"
 	"github.com/gin-gonic/gin"
 	"strings"
 )
@@ -32,7 +32,7 @@ type Option struct {
 func defaultOption() *Option {
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true
-	corsConfig.AddAllowHeaders("Access-Control-Allow-Private-Network: true")
+	corsConfig.AllowPrivateNetwork = true
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
 	return &Option{
 		isDebug:                     true,

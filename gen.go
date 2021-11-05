@@ -4,11 +4,8 @@ import (
 	"bytes"
 	"encoding/gob"
 	"gitee.com/kirile/kapi/internal"
-	"os"
-	"os/exec"
 	"strings"
 	"sync"
-	"text/template"
 	"time"
 )
 
@@ -38,12 +35,6 @@ func AddGenOne(handFunName, routerPath string, methods []string) {
 	})
 }
 
-// SetVersion use timestamp to replace version
-func SetVersion(tm int64) {
-	_mu.Lock()
-	defer _mu.Unlock()
-	_genInfo.Tm = tm
-}
 
 func checkOnceAdd(handFunName, routerPath string, methods []string) {
 	_once.Do(func() {
@@ -56,10 +47,6 @@ func checkOnceAdd(handFunName, routerPath string, methods []string) {
 	AddGenOne(handFunName, routerPath, methods)
 }
 
-// getStringList format string
-func getStringList(list []string) string {
-	return `"` + strings.Join(list, `","`) + `"`
-}
 
 func genOutPut(outDir, modFile string) {
 	_mu.Lock()
@@ -75,62 +62,6 @@ func genOutPut(outDir, modFile string) {
 		return
 	}
 	internal.WriteFile("gen.gob",buf.Bytes(),true)
-}
-
-
-
-func genCode(outDir, modFile string) bool {
-	_genInfo.Tm = time.Now().Unix()
-	if len(outDir) == 0 {
-		outDir = modFile + "/routers/"
-	}
-	pkgName := getPkgName(outDir)
-	data := struct {
-		genInfo
-		PkgName string
-		T       string
-	}{
-		genInfo: _genInfo,
-		PkgName: pkgName,
-		T:       time.Now().Format("2006-01-02 15:04:05"),
-	}
-
-	tmpl, err := template.New("gen_out").Funcs(template.FuncMap{"getStringList": getStringList}).Parse(genTemp)
-	if err != nil {
-		panic(err)
-	}
-	var buf bytes.Buffer
-	tmpl.Execute(&buf, data)
-	f, err := os.Create(outDir + "gen_router.go")
-	if err != nil {
-		return false
-	}
-	defer f.Close()
-	f.Write(buf.Bytes())
-	_log.Debug("生成 ", outDir, "gen_router.go")
-	// format
-	exec.Command("gofmt", "-l", "-w", outDir).Output()
-	return true
-}
-
-func getPkgName(dir string) string {
-	dir = strings.Replace(dir, "\\", "/", -1)
-	dir = strings.TrimRight(dir, "/")
-
-	var pkgName string
-	list := strings.Split(dir, "/")
-	if len(list) > 0 {
-		pkgName = list[len(list)-1]
-	}
-
-	if len(pkgName) == 0 || pkgName == "." {
-		list = strings.Split(internal.GetCurrentDirectory(), "/")
-		if len(list) > 0 {
-			pkgName = list[len(list)-1]
-		}
-	}
-
-	return pkgName
 }
 
 // 获取路由注册信息

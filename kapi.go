@@ -7,7 +7,7 @@ import (
 	"gitee.com/kirile/kapi/ast"
 	"gitee.com/kirile/kapi/doc/swagger"
 	"gitee.com/kirile/kapi/internal"
-	"github.com/gin-contrib/cors"
+	"gitee.com/kirile/kapi/internal/cors"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net"
@@ -15,7 +15,6 @@ import (
 	"os"
 	"reflect"
 	"strings"
-	"time"
 )
 
 var (
