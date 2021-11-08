@@ -34,6 +34,7 @@ func defaultOption() *Option {
 	corsConfig.AllowAllOrigins = true
 	corsConfig.AllowPrivateNetwork = true
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
+	gin.ForceConsoleColor()
 	return &Option{
 		isDebug:                     true,
 		needDoc:                     true,
