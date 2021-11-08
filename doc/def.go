@@ -7,9 +7,11 @@ type ElementInfo struct {
 	Type      string      // 类型
 	TypeRef   *StructInfo // 类型定义
 	IsArray   bool        // 是否是数组
-	Required  bool        // 是否必须
-	Note      string      // 注释
-	Default   string      // 默认值
+	IsTDArray bool        // 是否二维数组
+
+	Required  bool   // 是否必须
+	Note      string // 注释
+	Default   string // 默认值
 	ParamType ParamType
 
 	IsQuery    bool // 是否是query
@@ -37,9 +39,9 @@ type StructInfo struct {
 
 // DocModel Model
 type DocModel struct {
-	RouterPath string
-	Methods    []string
-	Note       string
-	Req, Resp  *StructInfo
+	RouterPath  string
+	Methods     []string
+	Note        string
+	Req, Resp   *StructInfo
 	TokenHeader string
 }

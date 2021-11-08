@@ -381,8 +381,8 @@ func (b *KApi) parseComments(f *goast.FuncDecl, controllerRoute, objFunc string,
 					if controllerRoute != "" {
 						gc.RouterPath = controllerRoute + gc.RouterPath
 					}
-					if strings.Contains(gc.RouterPath,"/") {
-						gc.RouterPath = strings.TrimSuffix(gc.RouterPath,"/")
+					if strings.Contains(gc.RouterPath, "/") {
+						gc.RouterPath = strings.TrimSuffix(gc.RouterPath, "/")
 					}
 					methods := matches[1]
 					if methods == "" {
@@ -448,14 +448,14 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 		if _b {
 			imports := ast.AnalysisImport(astPkgs)
 			funMp := ast.GetObjFunMp(astPkgs, objName)
-			t, r,th := ast.AnalysisControllerComments(astPkgs, objName)
+			t, r, th := ast.AnalysisControllerComments(astPkgs, objName)
 			if t != "" {
 				tagName = t
 			}
 			if r != "" {
 				route = r
 			}
-			if th!="" {
+			if th != "" {
 				tokenHeader = th
 			}
 
@@ -470,7 +470,7 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 						if b.option.needDoc { // output doc
 							docReq, docResp := b.parseStruct(req, resp, astPkgs, modPkg, modFile)
 							for _, gc := range gcs {
-								doc.AddOne(tagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp,tokenHeader)
+								doc.AddOne(tagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp, tokenHeader)
 								checkOnceAdd(objName+"/"+method.Name, gc.RouterPath, gc.Methods)
 							}
 						} else {
@@ -522,7 +522,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        swagger.GetKvType(item.Type,false,true) ,
+							Type:        swagger.GetKvType(item.Type, false, true),
 							Schema:      nil,
 							Default:     item.Default,
 						})
@@ -532,7 +532,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        swagger.GetKvType(item.Type,false,true) ,
+							Type:        swagger.GetKvType(item.Type, false, true),
 							Schema:      nil,
 							Default:     item.Default,
 						})
@@ -542,7 +542,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        swagger.GetKvType(item.Type,false,true) ,
+							Type:        swagger.GetKvType(item.Type, false, true),
 							Schema:      nil,
 							Default:     item.Default,
 						})
@@ -552,7 +552,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        swagger.GetKvType(item.Type,false,true) ,
+							Type:        swagger.GetKvType(item.Type, false, true),
 							Schema:      nil,
 							Default:     item.Default,
 						})
@@ -560,7 +560,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 						myreqRef = "#/definitions/" + v1.Req.Name
 						exist := false
 						for _, parameter := range p.Parameters {
-							if parameter.Name==v1.Req.Name {
+							if parameter.Name == v1.Req.Name {
 								exist = true
 							}
 						}
@@ -583,13 +583,13 @@ func (b *KApi) addDocModel(model *doc.Model) {
 			} else {
 
 			}
-			if v1.TokenHeader!="" {
+			if v1.TokenHeader != "" {
 				p.Parameters = append(p.Parameters, swagger.Element{
 					In:          "header",
 					Name:        v1.TokenHeader,
 					Description: v1.TokenHeader,
 					Required:    true,
-					Type:        "string" ,
+					Type:        "string",
 					Schema:      nil,
 					Default:     "",
 				})
