@@ -122,6 +122,22 @@ func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, sinfo *ast.StructT
 				case *ast.Ident:
 					a.dealIdent(astPkg, x1, &info)
 				}
+			case *ast.ArrayType:
+				info.IsTDArray = true
+				switch y := x.Elt.(type) {
+				case *ast.SelectorExpr: // 非本文件包
+					a.dealSelectorExpr(y, &info, importMP)
+				case *ast.Ident:
+					a.dealIdent(astPkg, y, &info)
+				case *ast.StarExpr:
+					switch x1 := y.X.(type) {
+					case *ast.SelectorExpr: // 非本文件包
+						a.dealSelectorExpr(x1, &info, importMP)
+					case *ast.Ident:
+						a.dealIdent(astPkg, x1, &info)
+					}
+				}
+
 			}
 		case *ast.StarExpr:
 			switch x := exp.X.(type) {

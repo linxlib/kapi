@@ -63,9 +63,10 @@ func InitRedis(address string, password string, db ...int) (err error) {
 		mydb = db[0]
 	}
 	Redis = redis.NewClient(&redis.Options{
-		DB:       mydb,
-		Addr:     address,
-		Password: password,
+		DB:          mydb,
+		Addr:        address,
+		Password:    password,
+		DialTimeout: time.Second * 2,
 	})
 	if err := Redis.Ping().Err(); err != nil {
 		panic(err)
@@ -94,6 +95,7 @@ func Lock(appId string) bool {
 	}
 	return Redis.SetNX(appId, 1, time.Second*0).Val()
 }
+
 func UnLock(appId string) int64 {
 	return Redis.Del(appId).Val()
 }

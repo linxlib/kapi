@@ -70,11 +70,12 @@ type SecurityDefinitions struct {
 }
 
 type PropertyItems struct {
-	Type        string      `json:"type,omitempty"`
-	Format      string      `json:"format,omitempty"`
-	Description string      `json:"description,omitempty"` // 描述
-	Enum        interface{} `json:"enum,omitempty"`        // enum
-	Ref         string      `json:"$ref"`                  // 主体模式和响应主体模式中引用
+	Type        string            `json:"type,omitempty"`
+	Format      string            `json:"format,omitempty"`
+	Description string            `json:"description,omitempty"` // 描述
+	Enum        interface{}       `json:"enum,omitempty"`        // enum
+	Items       map[string]string `json:"items,omitempty"`
+	Ref         string            `json:"$ref,omitempty"` // 主体模式和响应主体模式中引用
 }
 
 // Property 属性
