@@ -56,6 +56,7 @@ type Param struct {
 	Parameters  []Element       `json:"parameters"`            // 请求参数
 	Responses   map[string]Resp `json:"responses"`             // 返回参数
 	Security    interface{}     `json:"security,omitempty"`    // 认证信息
+	Deprecated  bool            `json:"deprecated,omitempty"`  // API是否过时
 }
 
 type Resp struct {
