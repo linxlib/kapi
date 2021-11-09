@@ -41,7 +41,7 @@ func _defaultGetResult(code RESULT_CODE, msg string, count int64, data interface
 			Count: count,
 			Data:  data,
 		}
-	} else if code==RESULT_CODE_UNAUTHED{
+	} else if code == RESULT_CODE_UNAUTHED {
 		return 401, messageBody{
 			Code:  "FAIL",
 			Msg:   msg,
@@ -130,5 +130,3 @@ func (c *Context) FailAndExit(data ...interface{}) {
 		c.Exit()
 	}
 }
-
-

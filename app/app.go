@@ -68,9 +68,9 @@ func InitRedis(address string, password string, db ...int) (err error) {
 		Password:    password,
 		DialTimeout: time.Second * 2,
 	})
-	if err := Redis.Ping().Err(); err != nil {
-		panic(err)
-	}
+	//if err := Redis.Ping().Err(); err != nil {
+	//	panic(err)
+	//}
 	return nil
 }
 func InitRedis2(sec ...string) error {

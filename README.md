@@ -64,6 +64,10 @@ func (h *HelloController) World1(c *kapi.Context) {
 
 - [ ] 在issue中进行任务处理
 
+- [ ] 加入枚举支持
+
+- [ ] 加入二维数组支持 
+
   
 
 

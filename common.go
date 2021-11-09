@@ -74,7 +74,38 @@ func (b *KApi) handlerFuncObj(tvl, obj reflect.Value, methodName string) gin.Han
 				}
 			}()
 
-			tvl.Call([]reflect.Value{obj, reflect.ValueOf(apiFun(c))})
+			bainfo, is := b.beforeCall(c, obj, nil, methodName)
+			if !is {
+				c.JSON(http.StatusBadRequest, bainfo.Resp)
+				return
+			}
+
+			var returnValues []reflect.Value
+			returnValues = tvl.Call([]reflect.Value{obj, reflect.ValueOf(apiFun(c))})
+
+			if returnValues != nil {
+				bainfo.Resp = returnValues[0].Interface()
+				rerr := returnValues[1].Interface()
+				if rerr != nil {
+					bainfo.Error = rerr.(error)
+				}
+
+				is = b.afterCall(bainfo, obj)
+				if is {
+					if bainfo.Error != nil {
+						c.JSON(DefaultGetResult(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
+					} else {
+						c.JSON(DefaultGetResult(RESULT_CODE_SUCCESS, "", 0, bainfo.Resp))
+					}
+				} else {
+					if bainfo.Error != nil {
+						c.JSON(DefaultGetResult(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
+					} else {
+						c.JSON(DefaultGetResult(RESULT_CODE_ERROR, "", 0, bainfo.Resp))
+					}
+				}
+			}
+
 		}
 	}
 
@@ -511,6 +542,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 			p.Tags = []string{k}
 			p.Summary = v1.Note
 			p.Description = v1.Note
+			p.OperationID = v1.Methods[0] + "_" + strings.ReplaceAll(v1.RouterPath, "/", "_")
 			myreqRef := ""
 			p.Parameters = make([]swagger.Element, 0)
 			if v1.Req != nil {
