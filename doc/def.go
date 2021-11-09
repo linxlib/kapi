@@ -39,9 +39,10 @@ type StructInfo struct {
 
 // DocModel Model
 type DocModel struct {
-	RouterPath  string
-	Methods     []string
-	Note        string
-	Req, Resp   *StructInfo
-	TokenHeader string
+	RouterPath   string
+	Methods      []string
+	Note         string
+	Req, Resp    *StructInfo
+	TokenHeader  string
+	IsDeprecated bool
 }

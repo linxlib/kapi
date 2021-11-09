@@ -11,7 +11,7 @@ type DocSwagger struct {
 }
 
 // NewDoc 新建一个swagger doc
-func NewDoc(host string,info Info,basePath string,schemes []string) *DocSwagger {
+func NewDoc(host string, info Info, basePath string, schemes []string) *DocSwagger {
 	doc := &DocSwagger{}
 	doc.Client = &APIBody{
 		Head:     Head{Swagger: version},
@@ -44,7 +44,7 @@ func (doc *DocSwagger) AddDefinitions(key string, def Definition) {
 }
 
 // AddPatch ... API 路径 paths 和操作在 API 规范的全局部分定义
-func (doc *DocSwagger) AddPatch(url string, p Param, metheds ...string) {
+func (doc *DocSwagger) AddPatch(url string, p Param, methods ...string) {
 	if !strings.HasPrefix(url, "/") {
 		url = "/" + url
 	}
@@ -69,8 +69,7 @@ func (doc *DocSwagger) AddPatch(url string, p Param, metheds ...string) {
 		p.Responses["400"] = Resp{Description: "参数错误 失败"}
 		p.Responses["401"] = Resp{Description: "鉴权失败"}
 	}
-
-	for _, v := range metheds {
+	for _, v := range methods {
 		doc.Client.Paths[url][strings.ToLower(v)] = p
 	}
 }

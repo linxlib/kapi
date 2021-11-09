@@ -394,9 +394,11 @@ func analysisParam(f *goast.FieldList, imports map[string]string, objPkg string,
 }
 
 var routeRegex = regexp.MustCompile(`(@\w+)\s+(\S+)`)
+var deprecatedRegex = regexp.MustCompile(`(@\w+)`)
 
-func (b *KApi) parseComments(f *goast.FuncDecl, controllerRoute, objFunc string, imports map[string]string, objPkg string, num int) ([]genComment, *paramInfo, *paramInfo) {
+func (b *KApi) parseComments(f *goast.FuncDecl, controllerRoute, objFunc string, imports map[string]string, objPkg string, num int) (bool, []genComment, *paramInfo, *paramInfo) {
 	var note string
+	var isDeprecated = false
 	var gcs []genComment
 	req := analysisParam(f.Type.Params, imports, objPkg, 1)   // 第二个参数作为请求参数
 	resp := analysisParam(f.Type.Results, imports, objPkg, 0) // 第一个返回值作为resp
@@ -424,8 +426,11 @@ func (b *KApi) parseComments(f *goast.FuncDecl, controllerRoute, objFunc string,
 					gcs = append(gcs, gc)
 				} else {
 					//处理其他注释
+					matches1 := deprecatedRegex.FindStringSubmatch(t)
 
-					// return nil, errors.New("Router information is missing")
+					if len(matches1) == 2 && matches1[1] == "@DEPRECATED" {
+						isDeprecated = true
+					}
 				}
 
 			} else if strings.HasPrefix(t, objFunc) { // 以方法名开头的注释 设置为api的描述
@@ -438,10 +443,7 @@ func (b *KApi) parseComments(f *goast.FuncDecl, controllerRoute, objFunc string,
 
 	//default
 	if len(gcs) == 0 {
-		return make([]genComment, 0), nil, nil
-		//gc := genComment{}
-		//gc.RouterPath, gc.Methods = b.getDefaultComments(objName, objFunc, num)
-		//gcs = append(gcs, gc)
+		return isDeprecated, make([]genComment, 0), nil, nil
 	}
 
 	// add note 添加注释
@@ -449,7 +451,7 @@ func (b *KApi) parseComments(f *goast.FuncDecl, controllerRoute, objFunc string,
 		gcs[i].Note = note
 	}
 
-	return gcs, req, resp
+	return isDeprecated, gcs, req, resp
 }
 
 // tryGenRegister gen out the Registered config info  by struct object,[prepath + objname.]
@@ -497,11 +499,11 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 				num, _b := b.checkHandlerFunc(method.Type, true)
 				if _b {
 					if sdl, ok := funMp[method.Name]; ok {
-						gcs, req, resp := b.parseComments(sdl, route, method.Name, imports, objPkg, num)
+						isDeprecated, gcs, req, resp := b.parseComments(sdl, route, method.Name, imports, objPkg, num)
 						if b.option.needDoc { // output doc
 							docReq, docResp := b.parseStruct(req, resp, astPkgs, modPkg, modFile)
 							for _, gc := range gcs {
-								doc.AddOne(tagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp, tokenHeader)
+								doc.AddOne(tagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp, tokenHeader, isDeprecated)
 								checkOnceAdd(objName+"/"+method.Name, gc.RouterPath, gc.Methods)
 							}
 						} else {
@@ -545,6 +547,8 @@ func (b *KApi) addDocModel(model *doc.Model) {
 			p.OperationID = v1.Methods[0] + "_" + strings.ReplaceAll(v1.RouterPath, "/", "_")
 			myreqRef := ""
 			p.Parameters = make([]swagger.Element, 0)
+			p.Deprecated = v1.IsDeprecated
+
 			if v1.Req != nil {
 				for _, item := range v1.Req.Items {
 					switch item.ParamType {
