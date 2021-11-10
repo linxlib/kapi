@@ -26,7 +26,7 @@ func (m *Model) analysisStructInfo(info *StructInfo) {
 			}
 			// -------- end
 
-			// required
+			// 必填
 			tagStr = tag.Get("binding")
 			tagStrs = strings.Split(tagStr, ",")
 			for _, v := range tagStrs {
@@ -35,20 +35,15 @@ func (m *Model) analysisStructInfo(info *StructInfo) {
 					break
 				}
 			}
-			// ---------------end
-
-			// default
+			// 默认值
 			info.Items[i].Default = tag.Get("default")
-			// ---------------end
 			//query
 			v, b := tag.Lookup("query")
-			//info.Items[i].IsQuery = b
 			if b {
 				info.Items[i].ParamType = ParamTypeQuery
 				info.Items[i].Name = v
 			}
-
-			//header
+			//请求头header
 			v, b = tag.Lookup("header")
 			info.Items[i].IsHeader = b
 			if b {
@@ -56,24 +51,22 @@ func (m *Model) analysisStructInfo(info *StructInfo) {
 				info.Items[i].Name = v
 				info.Items[i].Required = true
 			}
-			//formData
+			//表单 formData
 			v, b = tag.Lookup("form")
 
 			info.Items[i].IsFormData = b
 			if b {
 				info.Items[i].ParamType = ParamTypeForm
 				info.Items[i].IsHeader = false
-
 				info.Items[i].Name = v
 			}
-			//path
+			//url path
 			v, b = tag.Lookup("path")
 			info.Items[i].IsPath = b
 			if b {
 				info.Items[i].ParamType = ParamTypePath
 				info.Items[i].IsHeader = false
 				info.Items[i].IsFormData = false
-				//info.Items[i].Required = true
 				info.Items[i].Name = v
 			} else {
 				v, b = tag.Lookup("uri")
@@ -81,16 +74,9 @@ func (m *Model) analysisStructInfo(info *StructInfo) {
 				if b {
 					info.Items[i].IsHeader = false
 					info.Items[i].IsFormData = false
-					//info.Items[i].Required = true
 					info.Items[i].Name = v
 				}
 			}
-
-			////required
-			//v,b = tag.Lookup("required")
-			//if b {
-			//	info.Items[i].Required = conv.Bool(v)
-			//}
 
 			if info.Items[i].TypeRef != nil {
 				m.analysisStructInfo(info.Items[i].TypeRef)
@@ -115,11 +101,9 @@ func (m *Model) SetDefinition(doc *swagger.DocSwagger, tmp *StructInfo) string {
 							Description: v2.Note,
 							Items: &swagger.PropertyItems{
 								Type: "array",
-								//Format: swagger.GetKvType(v2.Type, v2.IsArray, false),
 								Items: map[string]string{
 									"type": swagger.GetKvType(v2.Type, false, true),
 								},
-								//Ref:    m.SetDefinition(doc, v2.TypeRef),
 							},
 						}
 					} else {
@@ -153,12 +137,10 @@ func (m *Model) SetDefinition(doc *swagger.DocSwagger, tmp *StructInfo) string {
 							Description: v2.Note,
 							Items: &swagger.PropertyItems{
 								Type: "array",
-								//Format: swagger.GetKvType(v2.Type, v2.IsArray, false),
 								Items: map[string]string{
 									"type":   swagger.GetKvType(v2.Type, false, true),
 									"format": v2.Type,
 								},
-								//Ref:    m.SetDefinition(doc, v2.TypeRef),
 							},
 						}
 					} else {

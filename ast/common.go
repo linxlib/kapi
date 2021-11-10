@@ -170,7 +170,7 @@ func AnalysisImport(astPkgs *ast.Package) map[string]string {
 	return imports
 }
 
-func AnalysisControllerComments(astPkg *ast.Package, controllerName string) (tagName string, route string,tokenHeader string) {
+func AnalysisControllerComments(astPkg *ast.Package, controllerName string) (tagName string, route string, tokenHeader string) {
 	tagName = ""
 	route = ""
 	tokenHeader = ""
@@ -179,6 +179,36 @@ func AnalysisControllerComments(astPkg *ast.Package, controllerName string) (tag
 	}
 
 	for _, fl := range astPkg.Files {
+		//ast.Inspect(fl, func(node ast.Node) bool {
+		//	structType, ok := node.(*ast.GenDecl)
+		//	if !ok {
+		//		return true
+		//	}
+		//	if structType.Name.Name==controllerName {
+		//		if node.(*ast.GenDecl).Doc != nil { // 如果有注释
+		//			for _, v := range node.(*ast.GenDecl).Doc.List { // 结构体注释
+		//				t := internal.GetCommentAfterPrefix(v.Text, "//")
+		//				if strings.HasPrefix(t, "@TAG") {
+		//					tagName = internal.GetCommentAfterPrefix(t, "@TAG")
+		//
+		//				} else if strings.HasPrefix(t, "@ROUTE") {
+		//					route = internal.GetCommentAfterPrefix(t, "@ROUTE")
+		//				} else if strings.HasPrefix(t,"@AUTH") {
+		//					tokenHeader =  internal.GetCommentAfterPrefix(t, "@AUTH")
+		//					if tokenHeader=="" {
+		//						tokenHeader = "Authorization"
+		//					}
+		//				}
+		//			}
+		//			return false
+		//		}
+		//		return false
+		//	}
+		//	return true
+		//})
+		//
+		//return
+
 		for _, d := range fl.Decls {
 			switch specDecl := d.(type) {
 			case *ast.GenDecl:
@@ -197,9 +227,9 @@ func AnalysisControllerComments(astPkg *ast.Package, controllerName string) (tag
 
 										} else if strings.HasPrefix(t, "@ROUTE") {
 											route = internal.GetCommentAfterPrefix(t, "@ROUTE")
-										} else if strings.HasPrefix(t,"@AUTH") {
-											tokenHeader =  internal.GetCommentAfterPrefix(t, "@AUTH")
-											if tokenHeader=="" {
+										} else if strings.HasPrefix(t, "@AUTH") {
+											tokenHeader = internal.GetCommentAfterPrefix(t, "@AUTH")
+											if tokenHeader == "" {
 												tokenHeader = "Authorization"
 											}
 										}
