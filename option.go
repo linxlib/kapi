@@ -20,13 +20,10 @@ type Option struct {
 	ginLoggerFormatter          gin.LogFormatter
 	corsConfig                  cors.Config
 	apiBasePath                 string
-
-	listenPort int
-
-	recoverErrorFunc RecoverErrorFunc
-	intranetIP       string
-
-	staticDir string
+	listenPort                  int
+	recoverErrorFunc            RecoverErrorFunc
+	intranetIP                  string
+	staticDir                   string
 }
 
 func defaultOption() *Option {
@@ -50,7 +47,7 @@ func defaultOption() *Option {
 		ginLoggerFormatter:          defaultLogFormatter,
 		corsConfig:                  corsConfig,
 		intranetIP:                  internal.GetIntranetIp(),
-		staticDir: "",
+		staticDir:                   "",
 		recoverErrorFunc: func(err interface{}) {
 			switch err {
 			case KAPIEXIT:
@@ -62,6 +59,7 @@ func defaultOption() *Option {
 	}
 }
 
+// SetIsDebug 设置是否调试模式 当不是开发情况时自动变为false
 func (o *Option) SetIsDebug(isDebug ...bool) *Option {
 	o.isDebug = true
 	if len(isDebug) > 0 {
@@ -81,14 +79,19 @@ func (o *Option) SetNeedDoc(needDoc ...bool) *Option {
 	return o
 }
 
+// SetDocName 设置文档名称
 func (o *Option) SetDocName(docName string) *Option {
 	o.docName = docName
 	return o
 }
+
+//SetDocVersion 设置文档版本
 func (o *Option) SetDocVersion(ver string) *Option {
 	o.docVer = ver
 	return o
 }
+
+//SetDocDescription 设置文档描述
 func (o *Option) SetDocDescription(desc string) *Option {
 	o.docDesc = desc
 	return o

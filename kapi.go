@@ -85,6 +85,14 @@ func New(f func(*Option)) *KApi {
 
 func (b *KApi) RegisterRouter(cList ...interface{}) {
 	_log.Debug("注册路由..")
+
+	b.handleSwaggerBase()
+	b.baseGroup = b.engine.Group(b.option.apiBasePath)
+	b.doRegister(b.baseGroup, cList...)
+	b.handleStatic()
+}
+
+func (b *KApi) handleSwaggerBase() {
 	schemes := []string{"http"}
 	host := "localhost"
 	basePath := ""
@@ -114,17 +122,15 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 		}
 	}
 	b.doc = swagger.NewDoc(host, info, basePath, schemes)
-	b.baseGroup = b.engine.Group(b.option.apiBasePath)
-	b.Register(b.baseGroup, cList...)
+}
+
+func (b *KApi) handleStatic() {
 	if b.option.staticDir != "" {
 		b.engine.Static(b.option.staticDir, b.option.staticDir)
 	}
 }
 
-func (b *KApi) Run() {
-	b.genRouterCode()
-	b.genDoc()
-
+func (b *KApi) handleSwaggerDoc() {
 	if b.option.needDoc {
 		swaggerUrl := fmt.Sprintf("http://%s:%d/swagger/index.html", b.option.intranetIP, b.option.listenPort)
 		if b.option.docDomain != "" {
@@ -158,6 +164,13 @@ func (b *KApi) Run() {
 			}
 		}
 	}
+}
+
+func (b *KApi) Run() {
+	b.genRouterCode()
+	b.genDoc()
+	b.handleSwaggerDoc()
+
 	_log.Infoln(fmt.Sprintf("服务启动 http://%s:%d", b.option.intranetIP, b.option.listenPort))
 	err := b.engine.Run(fmt.Sprintf(":%d", b.option.listenPort))
 	if err != nil {
@@ -191,22 +204,16 @@ func (b *KApi) Model(middleware ApiFunc) *KApi {
 }
 
 // Register 注册多个Controller struct
-func (b *KApi) Register(router gin.IRoutes, cList ...interface{}) bool {
-	//开发时 生成路由注册文件
+func (b *KApi) doRegister(router gin.IRoutes, cList ...interface{}) bool {
+	//开发时 生成路由注册文件 gen.gob
 	if b.option.isDebug {
 		b.tryGenRegister(router, cList...)
-	} else {
-		// 为处理一种情况: 没有run过, 直接build的情况 不会生成gen_router.go 此时路由信息需要从代码中读取
-		// 这里即使使用 ldflags="-w -s" 也可以正常读取
-		if len(_genInfo.List) <= 0 {
-			b.tryGenRegister(router, cList...)
-		}
 	}
 
 	return b.register(router, cList...)
 }
 
-// genRouterCode 生成gen_router.go
+// genRouterCode 生成gen.gob
 func (b *KApi) genRouterCode() {
 	if !b.option.isDebug {
 		return
@@ -232,7 +239,7 @@ func (b *KApi) genDoc() {
 	}
 	err := ioutil.WriteFile(outDir+"swagger.json", bs, os.ModePerm)
 	if err != nil {
-		_log.Errorln("create swagger.json fail:", err.Error())
+		_log.Errorln("写出 swagger.json 失败:", err.Error())
 		return
 	}
 

@@ -39,9 +39,9 @@ func (d *DefaultGinBeforeAfter) GinAfter(req *InterceptorContext) bool {
 	now := time.Now()
 	_log.Infof("[middleware] call[%v] [%v]", req.FuncName, now.Sub(begin))
 	if req.Error != nil {
-		_, req.Resp = DefaultGetResult(RESULT_CODE_ERROR, req.Error.Error(), 0, nil)
+		_, req.Resp = GetResultFunc(RESULT_CODE_ERROR, req.Error.Error(), 0, nil)
 	} else {
-		_, req.Resp = DefaultGetResult(RESULT_CODE_SUCCESS, "", 0, req.Resp)
+		_, req.Resp = GetResultFunc(RESULT_CODE_SUCCESS, "", 0, req.Resp)
 	}
 	return true
 }

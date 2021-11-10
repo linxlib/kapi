@@ -93,15 +93,15 @@ func (b *KApi) handlerFuncObj(tvl, obj reflect.Value, methodName string) gin.Han
 				is = b.afterCall(bainfo, obj)
 				if is {
 					if bainfo.Error != nil {
-						c.JSON(DefaultGetResult(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
+						c.JSON(GetResultFunc(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
 					} else {
-						c.JSON(DefaultGetResult(RESULT_CODE_SUCCESS, "", 0, bainfo.Resp))
+						c.JSON(GetResultFunc(RESULT_CODE_SUCCESS, "", 0, bainfo.Resp))
 					}
 				} else {
 					if bainfo.Error != nil {
-						c.JSON(DefaultGetResult(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
+						c.JSON(GetResultFunc(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
 					} else {
-						c.JSON(DefaultGetResult(RESULT_CODE_ERROR, "", 0, bainfo.Resp))
+						c.JSON(GetResultFunc(RESULT_CODE_ERROR, "", 0, bainfo.Resp))
 					}
 				}
 			}
@@ -224,15 +224,15 @@ func (b *KApi) changeToGinHandlerFunc(tvl, obj reflect.Value, methodName string)
 			is = b.afterCall(bainfo, obj)
 			if is {
 				if bainfo.Error != nil {
-					c.JSON(DefaultGetResult(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
+					c.JSON(GetResultFunc(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
 				} else {
-					c.JSON(DefaultGetResult(RESULT_CODE_SUCCESS, "", 0, bainfo.Resp))
+					c.JSON(GetResultFunc(RESULT_CODE_SUCCESS, "", 0, bainfo.Resp))
 				}
 			} else {
 				if bainfo.Error != nil {
-					c.JSON(DefaultGetResult(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
+					c.JSON(GetResultFunc(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
 				} else {
-					c.JSON(DefaultGetResult(RESULT_CODE_ERROR, "", 0, bainfo.Resp))
+					c.JSON(GetResultFunc(RESULT_CODE_ERROR, "", 0, bainfo.Resp))
 				}
 			}
 		}
@@ -258,7 +258,7 @@ func (b *KApi) handleErrorString(c *gin.Context, req reflect.Value, err error) {
 		fields = append(fields, err.Error())
 	}
 
-	c.JSON(DefaultGetResult(RESULT_CODE_FAIL, fmt.Sprintf("req param : %v", strings.Join(fields, ";")), 0, nil))
+	c.JSON(GetResultFunc(RESULT_CODE_FAIL, fmt.Sprintf("req param : %v", strings.Join(fields, ";")), 0, nil))
 	return
 }
 
