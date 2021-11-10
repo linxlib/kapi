@@ -19,12 +19,12 @@ const (
 
 // RegisterFuncGetResult 注册返回json结构的func
 func RegisterFuncGetResult(i FuncGetResult) {
-	DefaultGetResult = i
+	GetResultFunc = i
 }
 
 type FuncGetResult = func(code RESULT_CODE, msg string, count int64, data interface{}) (int, interface{})
 
-var DefaultGetResult = _defaultGetResult
+var GetResultFunc = _defaultGetResult
 
 func _defaultGetResult(code RESULT_CODE, msg string, count int64, data interface{}) (int, interface{}) {
 	if code == RESULT_CODE_SUCCESS {
@@ -64,19 +64,19 @@ func (c *Context) WriteJSON(obj interface{}) {
 }
 
 func (c *Context) writeMessage(msg string) {
-	c.JSON(DefaultGetResult(RESULT_CODE_SUCCESS, msg, 0, nil))
+	c.JSON(GetResultFunc(RESULT_CODE_SUCCESS, msg, 0, nil))
 }
 func (c *Context) writeError(err error) {
-	c.JSON(DefaultGetResult(RESULT_CODE_ERROR, err.Error(), 0, nil))
+	c.JSON(GetResultFunc(RESULT_CODE_ERROR, err.Error(), 0, nil))
 }
 func (c *Context) writeErrorDetail(err interface{}) {
-	c.JSON(DefaultGetResult(RESULT_CODE_ERROR, "", 0, err))
+	c.JSON(GetResultFunc(RESULT_CODE_ERROR, "", 0, err))
 }
 func (c *Context) writeFailMsg(msg string) {
-	c.JSON(DefaultGetResult(RESULT_CODE_FAIL, msg, 0, nil))
+	c.JSON(GetResultFunc(RESULT_CODE_FAIL, msg, 0, nil))
 }
 func (c *Context) writeList(count int64, list interface{}) {
-	c.JSON(DefaultGetResult(RESULT_CODE_SUCCESS, "", count, list))
+	c.JSON(GetResultFunc(RESULT_CODE_SUCCESS, "", count, list))
 }
 
 func (c *Context) ListExit(count int64, list interface{}) {
