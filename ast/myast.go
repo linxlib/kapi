@@ -31,9 +31,36 @@ func (a *structAnalysis) ParseStruct(astPkg *ast.Package, structName string) (in
 			Name: structName,
 		}
 	}
-	//ast.Print(token.NewFileSet(), astPkg)
 
+	//ast.Print(token.NewFileSet(), astPkg)
 	for _, fl := range astPkg.Files {
+		//ast.Inspect(fl, func(node ast.Node) bool {
+		//	structType, ok := node.(*ast.TypeSpec)
+		//	if !ok {
+		//		return true
+		//	}
+		//
+		//	if structType.Name.Name==structName {
+		//		info = new(doc.StructInfo)
+		//		info.Pkg = astPkg.Name
+		//		if structType.Doc != nil { // 如果有注释
+		//			for _, v := range structType.Doc.List { // 结构体注释
+		//				t := strings.TrimSpace(strings.TrimPrefix(v.Text, "//"))
+		//				if strings.HasPrefix(t, structName) { // find note
+		//					t = strings.TrimSpace(strings.TrimPrefix(t, structName))
+		//					info.Note += t
+		//				}
+		//			}
+		//		}
+		//
+		//		info.Name = structName
+		//		info.Items = a.structFieldInfo(astPkg, structType.Type.(*ast.StructType))
+		//		return false
+		//	}
+		//	return true
+		//})
+		//return info
+
 		for _, d := range fl.Decls {
 			switch specDecl := d.(type) {
 			case *ast.GenDecl:
@@ -70,19 +97,38 @@ func (a *structAnalysis) ParseStruct(astPkg *ast.Package, structName string) (in
 	return nil
 }
 
-func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, sinfo *ast.StructType) (items []doc.ElementInfo) {
-	if sinfo == nil || sinfo.Fields == nil {
+func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, structType *ast.StructType) (items []doc.ElementInfo) {
+	if structType == nil || structType.Fields == nil {
 		return
 	}
 
 	importMP := AnalysisImport(astPkg)
 
-	var info doc.ElementInfo
-	for _, field := range sinfo.Fields.List {
-		info = doc.ElementInfo{}
+	//遍历结构体字段
+	for _, field := range structType.Fields.List {
+		info := doc.ElementInfo{}
+
 		for _, fnames := range field.Names {
 			info.Name += fnames.Name
 		}
+		if info.Name == "" { //处理没有字段名的 （类似继承）
+			if exp, ok := field.Type.(*ast.Ident); ok { //比如报名,函数名,变量名
+				a.dealIdent(astPkg, exp, &info)
+			} else if exp, ok := field.Type.(*ast.StarExpr); ok {
+				switch x := exp.X.(type) {
+				case *ast.SelectorExpr: // 选择结构,类似于a.b的结构
+					a.dealSelectorExpr(x, &info, importMP)
+				case *ast.Ident: //报名,函数名,变量名
+					a.dealIdent(astPkg, x, &info)
+				}
+			} else if exp, ok := field.Type.(*ast.SelectorExpr); ok {
+				a.dealSelectorExpr(exp, &info, importMP)
+			}
+			items = append(items, info.TypeRef.Items...)
+
+			continue
+		}
+
 		// 判断是否是导出属性(导出属性才允许)(首字母大写)
 		strArray := []rune(info.Name)
 		if len(strArray) > 0 && (strArray[0] >= 97 && strArray[0] <= 122) { // 首字母小写
@@ -92,11 +138,11 @@ func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, sinfo *ast.StructT
 		if field.Tag != nil {
 			info.Tag = strings.Trim(field.Tag.Value, "`")
 			tag := reflect.StructTag(info.Tag)
+			//TODO: 其他标签也处理忽略逻辑
 			tagStr := tag.Get("json")
 			if tagStr == "-" { // 忽略的json字段
 				continue
 			}
-
 		}
 		if field.Comment != nil {
 			info.Note = strings.TrimSpace(field.Comment.Text())
@@ -108,7 +154,7 @@ func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, sinfo *ast.StructT
 		switch exp := field.Type.(type) {
 		case *ast.SelectorExpr: // 非本文件包
 			a.dealSelectorExpr(exp, &info, importMP)
-		case *ast.ArrayType:
+		case *ast.ArrayType: //数组
 			info.IsArray = true
 			switch x := exp.Elt.(type) {
 			case *ast.SelectorExpr: // 非本文件包
@@ -122,7 +168,7 @@ func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, sinfo *ast.StructT
 				case *ast.Ident:
 					a.dealIdent(astPkg, x1, &info)
 				}
-			case *ast.ArrayType:
+			case *ast.ArrayType: //这里支持二维数组
 				info.IsTDArray = true
 				switch y := x.Elt.(type) {
 				case *ast.SelectorExpr: // 非本文件包
@@ -139,7 +185,7 @@ func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, sinfo *ast.StructT
 				}
 
 			}
-		case *ast.StarExpr:
+		case *ast.StarExpr: //类型
 			switch x := exp.X.(type) {
 			case *ast.SelectorExpr: // 非本文件包
 				a.dealSelectorExpr(x, &info, importMP)
@@ -181,7 +227,7 @@ func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, sinfo *ast.StructT
 		}
 
 		if len(info.Type) == 0 {
-			panic(fmt.Sprintf("can not deal the type : %v", field.Type))
+			panic(fmt.Sprintf("不支持的类型 : %v", field.Type))
 		}
 
 		items = append(items, info)
@@ -205,6 +251,7 @@ func (a *structAnalysis) dealSelectorExpr(exp *ast.SelectorExpr, info *doc.Eleme
 	}
 }
 
+// dealIdent 处理类型
 func (a *structAnalysis) dealIdent(astPkg *ast.Package, exp *ast.Ident, info *doc.ElementInfo) { // 本文件
 	info.Type = exp.Name
 	if !internal.IsInternalType(info.Type) { // 非基础类型

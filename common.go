@@ -456,6 +456,8 @@ func (b *KApi) parseComments(f *goast.FuncDecl, controllerRoute, objFunc string,
 
 // tryGenRegister gen out the Registered config info  by struct object,[prepath + objname.]
 func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bool {
+	//TODO: 需要解析controller的注释，然后解析controller下方法的注释， 然后解析每个方法的参数
+
 	modPkg, modFile, isFind := ast.GetModuleInfo(2)
 	if !isFind {
 		return false
@@ -469,6 +471,7 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 		t := reflect.Indirect(refVal).Type()
 
 		objPkg := t.PkgPath()
+
 		objName := t.Name()
 		tagName := objName
 		route := ""

@@ -14,11 +14,17 @@ type DocSwagger struct {
 func NewDoc(host string, info Info, basePath string, schemes []string) *DocSwagger {
 	doc := &DocSwagger{}
 	doc.Client = &APIBody{
-		Head:     Head{Swagger: version},
-		Info:     info,
-		Host:     host,
-		BasePath: basePath,
-		Schemes:  schemes,
+		Head: Head{Swagger: version},
+		Info: info,
+		Host: host,
+		SecurityDefinitions: &SecurityDefinitions{
+			Type: "apiKey",
+			Name: "Authorization",
+			In:   "header",
+		},
+		BasePath:     basePath,
+		Schemes:      schemes,
+		ExternalDocs: nil,
 	}
 	doc.Client.Paths = make(map[string]map[string]Param)
 	return doc

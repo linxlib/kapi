@@ -66,8 +66,9 @@ type Resp struct {
 
 // SecurityDefinitions 安全验证
 type SecurityDefinitions struct {
-	PetstoreAuth interface{} `json:"petstore_auth,omitempty"` // 安全验证定义
-	AIPKey       interface{} `json:"api_key,omitempty"`       // api key
+	Type string `json:"type"`
+	Name string `json:"name"`
+	In   string `json:"in"`
 }
 
 type PropertyItems struct {
@@ -85,7 +86,7 @@ type Property struct {
 	Items       *PropertyItems `json:"items,omitempty"`
 	Format      string         `json:"format,omitempty"`      // format 类型
 	Description string         `json:"description,omitempty"` // 描述
-	Enum        interface{}    `json:"enum,omitempty"`        // enum
+	Enum        []interface{}  `json:"enum,omitempty"`        // enum
 	Ref         string         `json:"$ref,omitempty"`        // 主体模式和响应主体模式中引用
 }
 
@@ -99,7 +100,7 @@ type XML struct {
 type Definition struct {
 	Type       string              `json:"type"`       // 类型 object
 	Properties map[string]Property `json:"properties"` // 属性列表
-	XML        XML                 `json:"xml"`
+	//XML        XML                 `json:"xml"`
 }
 
 // APIBody swagger api body info
@@ -111,7 +112,7 @@ type APIBody struct {
 	Tags                []Tag                       `json:"tags"`
 	Schemes             []string                    `json:"schemes"`                       // http/https
 	Paths               map[string]map[string]Param `json:"paths"`                         // API 路径
-	SecurityDefinitions SecurityDefinitions         `json:"securityDefinitions,omitempty"` // 安全验证
+	SecurityDefinitions *SecurityDefinitions        `json:"securityDefinitions,omitempty"` // 安全验证
 	Definitions         map[string]Definition       `json:"definitions"`                   // 通用结构体定义
-	ExternalDocs        ExternalDocs                `json:"externalDocs"`                  // 外部链接
+	ExternalDocs        *ExternalDocs               `json:"externalDocs,omitempty"`        // 外部链接
 }

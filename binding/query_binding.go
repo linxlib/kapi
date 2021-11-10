@@ -11,6 +11,7 @@ type queryBinding struct{}
 func (queryBinding) Name() string {
 	return "query"
 }
+
 func (queryBinding) Bind(req *http.Request, obj interface{}) error {
 	values := req.URL.Query()
 	if err := mapQuery(obj, values); err != nil {
