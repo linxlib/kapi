@@ -66,8 +66,9 @@ func (h *HelloController) World1(c *kapi.Context) {
 
 - [ ] 加入枚举支持
 
-- [ ] 加入二维数组支持 
+- [x] 加入二维数组支持 
 
+- [x] 请求参数可以使用类似继承的方式来重用结构
   
 
 
