@@ -13,7 +13,7 @@ var _globalParser = Parser{}
 func ParseFile(tomlFilePath string) Document {
 	content, err := ioutil.ReadFile(tomlFilePath)
 	if err != nil {
-		panic(err.Error())
+		content = []byte("")
 	}
 	return _globalParser.Parse(string(content))
 }
