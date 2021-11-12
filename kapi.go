@@ -139,7 +139,7 @@ func (b *KApi) handleSwaggerDoc() {
 		_log.Infoln("文档地址:", swaggerUrl)
 		if b.option.redirectToDocWhenAccessRoot {
 			b.engine.Any("/", func(c *gin.Context) {
-				c.Redirect(301, "/swagger/")
+				c.Redirect(301, fmt.Sprintf("%s/swagger/", b.option.docDomain))
 			})
 		}
 
@@ -153,6 +153,7 @@ func (b *KApi) handleSwaggerDoc() {
 			bs, _ := ioutil.ReadFile("swagger.json")
 			c.String(200, string(bs))
 		})
+
 		b.engine.GET("/swagger/*any", func(c *gin.Context) {
 			c.FileFromFS(c.Request.URL.Path, http.FS(swaggerFS))
 		})
