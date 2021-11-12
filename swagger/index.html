@@ -41,13 +41,13 @@
 
     <script>
     window.onload = function() {
-      let href = window.location.origin;
+      let href = window.location.origin + window.location.pathname;
       if (href[href.length -1] != "/") {
         href += "/"
       }
       // Begin Swagger UI call region
       const ui = SwaggerUIBundle({
-        url: href+"swagger.json",
+        url: href+"../swagger.json",
         dom_id: '#swagger-ui',
         defaultModelsExpandDepth: -1,
         deepLinking: true,
