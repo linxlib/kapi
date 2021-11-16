@@ -17,24 +17,24 @@ type InterceptorContext struct {
 
 // Interceptor 对象调用前后执行中间件(支持总的跟对象单独添加)
 type Interceptor interface {
-	GinBefore(req *InterceptorContext) bool
-	GinAfter(req *InterceptorContext) bool
+	Before(req *InterceptorContext) bool
+	After(req *InterceptorContext) bool
 }
 
-// DefaultGinBeforeAfter 默认 BeforeAfter Middleware
-type DefaultGinBeforeAfter struct {
+// DefaultBeforeAfter 默认 BeforeAfter Middleware
+type DefaultBeforeAfter struct {
 }
 
 type timeTrace struct{}
 
-// GinBefore call之前调用
-func (d *DefaultGinBeforeAfter) GinBefore(req *InterceptorContext) bool {
+// Before call之前调用
+func (d *DefaultBeforeAfter) Before(req *InterceptorContext) bool {
 	req.Context = context.WithValue(req.Context, timeTrace{}, time.Now())
 	return true
 }
 
-// GinAfter call之后调用
-func (d *DefaultGinBeforeAfter) GinAfter(req *InterceptorContext) bool {
+// After call之后调用
+func (d *DefaultBeforeAfter) After(req *InterceptorContext) bool {
 	begin := (req.Context.Value(timeTrace{})).(time.Time)
 	now := time.Now()
 	_log.Infof("[middleware] call[%v] [%v]", req.FuncName, now.Sub(begin))

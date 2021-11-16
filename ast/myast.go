@@ -31,36 +31,7 @@ func (a *structAnalysis) ParseStruct(astPkg *ast.Package, structName string) (in
 			Name: structName,
 		}
 	}
-
-	//ast.Print(token.NewFileSet(), astPkg)
 	for _, fl := range astPkg.Files {
-		//ast.Inspect(fl, func(node ast.Node) bool {
-		//	structType, ok := node.(*ast.TypeSpec)
-		//	if !ok {
-		//		return true
-		//	}
-		//
-		//	if structType.Name.Name==structName {
-		//		info = new(doc.StructInfo)
-		//		info.Pkg = astPkg.Name
-		//		if structType.Doc != nil { // 如果有注释
-		//			for _, v := range structType.Doc.List { // 结构体注释
-		//				t := strings.TrimSpace(strings.TrimPrefix(v.Text, "//"))
-		//				if strings.HasPrefix(t, structName) { // find note
-		//					t = strings.TrimSpace(strings.TrimPrefix(t, structName))
-		//					info.Note += t
-		//				}
-		//			}
-		//		}
-		//
-		//		info.Name = structName
-		//		info.Items = a.structFieldInfo(astPkg, structType.Type.(*ast.StructType))
-		//		return false
-		//	}
-		//	return true
-		//})
-		//return info
-
 		for _, d := range fl.Decls {
 			switch specDecl := d.(type) {
 			case *ast.GenDecl:
@@ -108,8 +79,8 @@ func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, structType *ast.St
 	for _, field := range structType.Fields.List {
 		info := doc.ElementInfo{}
 
-		for _, fnames := range field.Names {
-			info.Name += fnames.Name
+		for _, fieldName := range field.Names {
+			info.Name += fieldName.Name
 		}
 		if info.Name == "" { //处理没有字段名的 （类似继承）
 			if exp, ok := field.Type.(*ast.Ident); ok { //比如报名,函数名,变量名
@@ -242,7 +213,7 @@ func (a *structAnalysis) dealSelectorExpr(exp *ast.SelectorExpr, info *doc.Eleme
 			if v, ok := importMP[x.Name]; ok {
 				objFile := EvalSymlinks(a.ModPkg, a.ModFile, v)
 				objPkg := GetImportPkg(v)
-				astFile, _b := GetAstPkgs(objPkg, objFile)
+				astFile, _b := GetAstPackages(objPkg, objFile)
 				if _b {
 					info.TypeRef = a.ParseStruct(astFile, info.Type)
 				}

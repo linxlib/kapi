@@ -27,10 +27,12 @@ type Option struct {
 }
 
 func defaultOption() *Option {
+	//配置cors
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true
 	corsConfig.AllowPrivateNetwork = true
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
+
 	gin.ForceConsoleColor()
 	return &Option{
 		isDebug:                     true,

@@ -30,30 +30,30 @@ func (b *KApi) checkHandlerFunc(typ reflect.Type, isObj bool) (int, bool) {
 	if isObj {
 		offset = 1
 	}
-	num := typ.NumIn() - offset
-	if num == 1 || num == 2 { // 参数检查
+	paramCount := typ.NumIn() - offset
+	if paramCount == 1 || paramCount == 2 { // 参数检查
 		ctxType := typ.In(0 + offset)
 
 		// go-gin 框架的默认方法
 		if ctxType == reflect.TypeOf(&gin.Context{}) {
-			return num, true
+			return paramCount, true
 		}
 
 		// Customized context . 自定义的context
 		if ctxType == b.customContextType {
-			return num, true
+			return paramCount, true
 		}
 
 		// maybe interface
 		if b.customContextType.ConvertibleTo(ctxType) {
-			return num, true
+			return paramCount, true
 		}
 
 	}
-	return num, false
+	return paramCount, false
 }
 
-// HandlerFunc Get and filter the parameters to be bound (object call type)
+// handlerFuncObj Get and filter the parameters to be bound (object call type)
 func (b *KApi) handlerFuncObj(tvl, obj reflect.Value, methodName string) gin.HandlerFunc { // 获取并过滤要绑定的参数(obj 对象类型)
 	typ := tvl.Type()
 	if typ.NumIn() == 2 { //1个参数的方法
@@ -74,7 +74,7 @@ func (b *KApi) handlerFuncObj(tvl, obj reflect.Value, methodName string) gin.Han
 				}
 			}()
 
-			bainfo, is := b.beforeCall(c, obj, nil, methodName)
+			bainfo, is := b.preCall(c, obj, nil, methodName)
 			if !is {
 				c.JSON(http.StatusBadRequest, bainfo.Resp)
 				return
@@ -118,8 +118,8 @@ func (b *KApi) handlerFuncObj(tvl, obj reflect.Value, methodName string) gin.Han
 	return call
 }
 
-//beforeCall 调用前处理
-func (b *KApi) beforeCall(c *gin.Context, obj reflect.Value, req interface{}, methodName string) (*InterceptorContext, bool) {
+//preCall 调用前处理
+func (b *KApi) preCall(c *gin.Context, obj reflect.Value, req interface{}, methodName string) (*InterceptorContext, bool) {
 	info := &InterceptorContext{
 		C:        &Context{c},
 		FuncName: fmt.Sprintf("%v.%v", reflect.Indirect(obj).Type().Name(), methodName), // 函数名
@@ -128,12 +128,12 @@ func (b *KApi) beforeCall(c *gin.Context, obj reflect.Value, req interface{}, me
 	}
 	//处理控制器的拦截器
 	is := true
-	if bfobj, ok := obj.Interface().(Interceptor); ok { // 本类型
-		is = bfobj.GinBefore(info)
+	if preObj, ok := obj.Interface().(Interceptor); ok { // 本类型
+		is = preObj.Before(info)
 	}
 	//处理全局的拦截器
 	if is && b.beforeAfter != nil {
-		is = b.beforeAfter.GinBefore(info)
+		is = b.beforeAfter.Before(info)
 	}
 	return info, is
 }
@@ -142,10 +142,10 @@ func (b *KApi) beforeCall(c *gin.Context, obj reflect.Value, req interface{}, me
 func (b *KApi) afterCall(info *InterceptorContext, obj reflect.Value) bool {
 	is := true
 	if bfobj, ok := obj.Interface().(Interceptor); ok { // 本类型
-		is = bfobj.GinAfter(info)
+		is = bfobj.After(info)
 	}
 	if is && b.beforeAfter != nil {
-		is = b.beforeAfter.GinAfter(info)
+		is = b.beforeAfter.After(info)
 	}
 	return is
 }
@@ -205,7 +205,7 @@ func (b *KApi) changeToGinHandlerFunc(tvl, obj reflect.Value, methodName string)
 			req = req.Elem()
 		}
 
-		bainfo, is := b.beforeCall(c, obj, req.Interface(), methodName)
+		bainfo, is := b.preCall(c, obj, req.Interface(), methodName)
 		if !is {
 			c.JSON(http.StatusBadRequest, bainfo.Resp)
 			return
@@ -326,7 +326,7 @@ func (b *KApi) parseStruct(req, resp *paramInfo, astPkg *goast.Package, modPkg, 
 		tmp := astPkg
 		if len(req.Pkg) > 0 {
 			objFile := ast.EvalSymlinks(modPkg, modFile, req.Import)
-			tmp, _ = ast.GetAstPkgs(req.Pkg, objFile) // get ast trees.
+			tmp, _ = ast.GetAstPackages(req.Pkg, objFile) // get ast trees.
 		}
 		r = ant.ParseStruct(tmp, req.Type)
 	}
@@ -335,7 +335,7 @@ func (b *KApi) parseStruct(req, resp *paramInfo, astPkg *goast.Package, modPkg, 
 		tmp := astPkg
 		if len(resp.Pkg) > 0 {
 			objFile := ast.EvalSymlinks(modPkg, modFile, resp.Import)
-			tmp, _ = ast.GetAstPkgs(resp.Pkg, objFile) // get ast trees.
+			tmp, _ = ast.GetAstPackages(resp.Pkg, objFile) // get ast trees.
 		}
 		p = ant.ParseStruct(tmp, resp.Type)
 	}
@@ -456,7 +456,7 @@ func (b *KApi) parseComments(f *goast.FuncDecl, controllerRoute, objFunc string,
 
 // tryGenRegister gen out the Registered config info  by struct object,[prepath + objname.]
 func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bool {
-	//TODO: 需要解析controller的注释，然后解析controller下方法的注释， 然后解析每个方法的参数
+	//TODO: 需要解析controller的注释，然后解析controller下方法的注释， 然后解析每个方法的参数, 优化解析性能
 
 	modPkg, modFile, isFind := ast.GetModuleInfo(2)
 	if !isFind {
@@ -464,7 +464,7 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 	}
 
 	groupPath := b.BasePath(router)
-	doc := doc.NewDoc(groupPath)
+	newDoc := doc.NewDoc(groupPath)
 	for _, c := range controllers {
 		refVal := reflect.ValueOf(c)
 		_log.Debugf("解析 --> %s", refVal.Type().String())
@@ -480,7 +480,7 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 		// find path
 		objFile := ast.EvalSymlinks(modPkg, modFile, objPkg)
 
-		astPkgs, _b := ast.GetAstPkgs(objPkg, objFile) // get ast trees.
+		astPkgs, _b := ast.GetAstPackages(objPkg, objFile) // get ast trees.
 		if _b {
 			imports := ast.AnalysisImport(astPkgs)
 			funMp := ast.GetObjFunMp(astPkgs, objName)
@@ -503,10 +503,10 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 				if _b {
 					if sdl, ok := funMp[method.Name]; ok {
 						isDeprecated, gcs, req, resp := b.parseComments(sdl, route, method.Name, imports, objPkg, num)
-						if b.option.needDoc { // output doc
+						if b.option.needDoc { // output newDoc
 							docReq, docResp := b.parseStruct(req, resp, astPkgs, modPkg, modFile)
 							for _, gc := range gcs {
-								doc.AddOne(tagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp, tokenHeader, isDeprecated)
+								newDoc.AddOne(tagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp, tokenHeader, isDeprecated)
 								checkOnceAdd(objName+"/"+method.Name, gc.RouterPath, gc.Methods)
 							}
 						} else {
@@ -522,7 +522,7 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 	}
 
 	if b.option.needDoc {
-		b.addDocModel(doc)
+		b.addDocModel(newDoc)
 	}
 	return true
 }
@@ -690,7 +690,7 @@ func (b *KApi) register(router gin.IRoutes, cList ...interface{}) bool {
 					for _, v1 := range v {
 						methods := strings.Join(v1.GenComment.Methods, ",")
 						_log.Debugf("%6s  %-20s --> %s", methods, v1.GenComment.RouterPath, t.PkgPath()+".(*"+objName+")."+method.Name)
-						b.registerHandlerObj(router, v1.GenComment.Methods, v1.GenComment.RouterPath, method.Name, method.Func, refVal)
+						_ = b.registerHandlerObj(router, v1.GenComment.Methods, v1.GenComment.RouterPath, method.Name, method.Func, refVal)
 					}
 				}
 			}
