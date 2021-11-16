@@ -85,8 +85,8 @@ func EvalSymlinks(modPkg, modFile, objPkg string) string {
 	panic(fmt.Errorf("can not eval pkg:[%v] must include [%v]", objPkg, modPkg))
 }
 
-// GetAstPkgs Parsing source file ast structure (with main restriction).解析源文件ast结构(带 main 限制)
-func GetAstPkgs(objPkg, objFile string) (*ast.Package, bool) {
+// GetAstPackages Parsing source file ast structure (with main restriction).解析源文件ast结构(带 main 限制)
+func GetAstPackages(objPkg, objFile string) (*ast.Package, bool) {
 	fileSet := token.NewFileSet()
 	astPkgs, err := parser.ParseDir(fileSet, objFile, func(info os.FileInfo) bool {
 		name := info.Name()
@@ -108,7 +108,7 @@ func GetAstPkgs(objPkg, objFile string) (*ast.Package, bool) {
 		dirs := internal.GetPathDirs(objFile) // get all of dir
 		for _, dir := range dirs {
 			if !strings.HasPrefix(dir, ".") {
-				pkg, b := GetAstPkgs(objPkg, objFile+"/"+dir)
+				pkg, b := GetAstPackages(objPkg, objFile+"/"+dir)
 				if b {
 					return pkg, true
 				}
@@ -179,43 +179,13 @@ func AnalysisControllerComments(astPkg *ast.Package, controllerName string) (tag
 	}
 
 	for _, fl := range astPkg.Files {
-		//ast.Inspect(fl, func(node ast.Node) bool {
-		//	structType, ok := node.(*ast.GenDecl)
-		//	if !ok {
-		//		return true
-		//	}
-		//	if structType.Name.Name==controllerName {
-		//		if node.(*ast.GenDecl).Doc != nil { // 如果有注释
-		//			for _, v := range node.(*ast.GenDecl).Doc.List { // 结构体注释
-		//				t := internal.GetCommentAfterPrefix(v.Text, "//")
-		//				if strings.HasPrefix(t, "@TAG") {
-		//					tagName = internal.GetCommentAfterPrefix(t, "@TAG")
-		//
-		//				} else if strings.HasPrefix(t, "@ROUTE") {
-		//					route = internal.GetCommentAfterPrefix(t, "@ROUTE")
-		//				} else if strings.HasPrefix(t,"@AUTH") {
-		//					tokenHeader =  internal.GetCommentAfterPrefix(t, "@AUTH")
-		//					if tokenHeader=="" {
-		//						tokenHeader = "Authorization"
-		//					}
-		//				}
-		//			}
-		//			return false
-		//		}
-		//		return false
-		//	}
-		//	return true
-		//})
-		//
-		//return
-
 		for _, d := range fl.Decls {
 			switch specDecl := d.(type) {
 			case *ast.GenDecl:
-				for _, subitem := range specDecl.Specs {
+				for _, spec := range specDecl.Specs {
 					switch specDecl.Tok {
 					case token.TYPE:
-						spec := subitem.(*ast.TypeSpec)
+						spec := spec.(*ast.TypeSpec)
 						switch spec.Type.(type) {
 						case *ast.StructType:
 							if spec.Name.Name == controllerName { // find it
@@ -224,7 +194,6 @@ func AnalysisControllerComments(astPkg *ast.Package, controllerName string) (tag
 										t := internal.GetCommentAfterPrefix(v.Text, "//")
 										if strings.HasPrefix(t, "@TAG") {
 											tagName = internal.GetCommentAfterPrefix(t, "@TAG")
-
 										} else if strings.HasPrefix(t, "@ROUTE") {
 											route = internal.GetCommentAfterPrefix(t, "@ROUTE")
 										} else if strings.HasPrefix(t, "@AUTH") {
