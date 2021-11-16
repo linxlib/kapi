@@ -17,7 +17,7 @@ func init() {
 	if internal.CheckFileIsExist("gen.gob") {
 		data := internal.ReadFile("gen.gob")
 		var buf = bytes.NewBuffer(data)
-		dec  := gob.NewDecoder(buf)
+		dec := gob.NewDecoder(buf)
 		dec.Decode(&_genInfo)
 	}
 }
@@ -35,7 +35,6 @@ func AddGenOne(handFunName, routerPath string, methods []string) {
 	})
 }
 
-
 func checkOnceAdd(handFunName, routerPath string, methods []string) {
 	_once.Do(func() {
 		_mu.Lock()
@@ -47,12 +46,9 @@ func checkOnceAdd(handFunName, routerPath string, methods []string) {
 	AddGenOne(handFunName, routerPath, methods)
 }
 
-
-func genOutPut(outDir, modFile string) {
+func genOutPut() {
 	_mu.Lock()
 	defer _mu.Unlock()
-	//genCode(outDir, modFile) // gen .go file
-
 	var buf bytes.Buffer
 	encoder := gob.NewEncoder(&buf)
 	_genInfo.Tm = time.Now().Unix()
@@ -61,7 +57,7 @@ func genOutPut(outDir, modFile string) {
 		_log.Error(err)
 		return
 	}
-	internal.WriteFile("gen.gob",buf.Bytes(),true)
+	internal.WriteFile("gen.gob", buf.Bytes(), true)
 }
 
 // 获取路由注册信息

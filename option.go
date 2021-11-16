@@ -4,7 +4,6 @@ import (
 	"gitee.com/kirile/kapi/internal"
 	"gitee.com/kirile/kapi/internal/cors"
 	"github.com/gin-gonic/gin"
-	"strings"
 )
 
 type Option struct {
@@ -16,7 +15,6 @@ type Option struct {
 	docDomain                   string
 	docDesc                     string
 	docVer                      string
-	outPath                     string
 	ginLoggerFormatter          gin.LogFormatter
 	corsConfig                  cors.Config
 	apiBasePath                 string
@@ -45,7 +43,6 @@ func defaultOption() *Option {
 		docDesc:                     "K-Api",
 		apiBasePath:                 "/",
 		listenPort:                  2021,
-		outPath:                     "",
 		ginLoggerFormatter:          defaultLogFormatter,
 		corsConfig:                  corsConfig,
 		intranetIP:                  internal.GetIntranetIp(),
@@ -76,7 +73,7 @@ func (o *Option) SetIsDebug(isDebug ...bool) *Option {
 func (o *Option) SetNeedDoc(needDoc ...bool) *Option {
 	o.needDoc = true
 	if len(needDoc) > 0 {
-		o.isDebug = needDoc[0]
+		o.needDoc = needDoc[0]
 	}
 	return o
 }
@@ -98,13 +95,7 @@ func (o *Option) SetDocDescription(desc string) *Option {
 	o.docDesc = desc
 	return o
 }
-func (o *Option) SetOutputPath(outPath string) *Option {
-	if !strings.HasSuffix(outPath, "/") {
-		outPath += "/"
-	}
-	o.outPath = outPath
-	return o
-}
+
 func (o *Option) SetOpenDocInBrowser(open ...bool) *Option {
 	o.openDocInBrowser = true
 	if len(open) > 0 {
@@ -132,7 +123,7 @@ func (o *Option) SetCors(cors cors.Config) *Option {
 	return o
 }
 
-func (o *Option) SetGinLoggerFormater(formatter gin.LogFormatter) *Option {
+func (o *Option) SetGinLoggerFormatter(formatter gin.LogFormatter) *Option {
 	o.ginLoggerFormatter = formatter
 	return o
 }
@@ -161,7 +152,6 @@ func (o *Option) SetRedirectToDocWhenAccessRoot(redirect ...bool) *Option {
 		o.redirectToDocWhenAccessRoot = redirect[0]
 	}
 	return o
-
 }
 
 func (o *Option) SetStaticDir(dir ...string) *Option {

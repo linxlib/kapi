@@ -4,7 +4,6 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
-	"gitee.com/kirile/kapi/ast"
 	"gitee.com/kirile/kapi/doc/swagger"
 	"gitee.com/kirile/kapi/internal"
 	"gitee.com/kirile/kapi/internal/cors"
@@ -102,10 +101,7 @@ func (b *KApi) handleSwaggerBase() {
 		Title:       "KAPI",
 	}
 	if b.option.needDoc {
-		if b.option.docDomain == "" {
-			schemes = []string{"http"}
-			host = fmt.Sprintf("%s:%d", b.option.intranetIP, b.option.listenPort)
-		} else {
+		if b.option.docDomain != "" {
 			_log.Debug("域名:" + b.option.docDomain)
 			if strings.HasPrefix(b.option.docDomain, "https") {
 				schemes = []string{"https", "http"}
@@ -114,6 +110,9 @@ func (b *KApi) handleSwaggerBase() {
 			}
 			host = strings.TrimPrefix(b.option.docDomain, "http://")
 			host = strings.TrimPrefix(host, "https://")
+		} else {
+			schemes = []string{"http"}
+			host = fmt.Sprintf("%s:%d", b.option.intranetIP, b.option.listenPort)
 		}
 		info = swagger.Info{
 			Description: b.option.docName,
@@ -138,12 +137,14 @@ func (b *KApi) handleSwaggerDoc() {
 		}
 		_log.Infoln("文档地址:", swaggerUrl)
 		if b.option.redirectToDocWhenAccessRoot {
-			b.engine.Any("/", func(c *gin.Context) {
+			//b.engine.Any("/", func(c *gin.Context) {
+			//	c.Redirect(301, fmt.Sprintf("%s/swagger/", b.option.docDomain))
+			//})
+			b.engine.Any("", func(c *gin.Context) {
 				c.Redirect(301, fmt.Sprintf("%s/swagger/", b.option.docDomain))
 			})
 		}
 
-		// 将解析的文档内容直接通过接口返回, 省去了写到文件的步骤
 		b.engine.GET("/swagger.json", func(c *gin.Context) {
 			if !internal.CheckFileIsExist("swagger.json") {
 				_log.Warningln("swagger.json未找到, 请放置到程序目录下")
@@ -219,8 +220,7 @@ func (b *KApi) genRouterCode() {
 	if !b.option.isDebug {
 		return
 	}
-	_, modFile, _ := ast.GetModuleInfo(2)
-	genOutPut(b.option.outPath, modFile)
+	genOutPut()
 }
 
 // genDoc 生成swagger.json
@@ -229,21 +229,11 @@ func (b *KApi) genDoc() {
 		return
 	}
 	bs, _ := json.Marshal(b.doc.Client)
-
-	_, modFile, _ := ast.GetModuleInfo(2)
-	outDir := b.option.outPath
-	if len(outDir) == 0 {
-		outDir = modFile + "/"
-	}
-	if outDir[len(outDir)-1] != '/' {
-		outDir += "/"
-	}
-	err := ioutil.WriteFile(outDir+"swagger.json", bs, os.ModePerm)
+	err := ioutil.WriteFile("swagger.json", bs, os.ModePerm)
 	if err != nil {
 		_log.Errorln("写出 swagger.json 失败:", err.Error())
 		return
 	}
-
 }
 
 var _ctlsList = make([]interface{}, 0)
