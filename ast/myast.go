@@ -72,7 +72,7 @@ func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, structType *ast.St
 	if structType == nil || structType.Fields == nil {
 		return
 	}
-
+	items = make([]doc.ElementInfo, 0)
 	importMP := AnalysisImport(astPkg)
 
 	//遍历结构体字段
