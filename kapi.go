@@ -156,6 +156,7 @@ func (b *KApi) handleSwaggerDoc() {
 		})
 
 		b.engine.GET("/swagger/*any", func(c *gin.Context) {
+
 			c.FileFromFS(c.Request.URL.Path, http.FS(swaggerFS))
 		})
 
