@@ -1,10 +1,12 @@
 package internal
 
 import (
+	"bufio"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 // CheckFileIsExist 检查目录是否存在
@@ -64,4 +66,22 @@ func WriteFile(fname string, src []byte, isClear bool) bool {
 func ReadFile(fname string) []byte {
 	src,_:=ioutil.ReadFile(fname)
 	return src
+}
+
+func GetMod(fileName string) string {
+	file, err := os.Open(fileName)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		m :=strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(m,"module") {
+			m = strings.TrimPrefix(m,"module")
+			m =strings.TrimSpace(m)
+			return m
+		}
+	}
+	return ""
 }

@@ -7,8 +7,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"golang.org/x/mod/modfile"
-	"io/ioutil"
 	"os"
 	"runtime"
 	"strings"
@@ -49,11 +47,7 @@ func GetModuleInfo(n int) (string, string, bool) {
 		if n > 0 {
 			filename = filename[0:n]
 			if internal.CheckFileIsExist(filename + "/go.mod") {
-				bs, _ := ioutil.ReadFile(filename + "/go.mod")
-				f, _ := modfile.Parse("go.mod", bs, func(_, version string) (string, error) {
-					return version, nil
-				})
-				return f.Module.Mod.String(), filename, true
+				return internal.GetMod(filename + "/go.mod"), filename, true
 			}
 		} else {
 			break
