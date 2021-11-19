@@ -674,6 +674,9 @@ func (b *KApi) BasePath(router gin.IRoutes) string {
 
 // register 注册路由到gin
 func (b *KApi) register(router gin.IRoutes, cList ...interface{}) bool {
+	if b.genFlag {
+		return true
+	}
 	mp := getInfo()
 	for _, c := range cList {
 		refTyp := reflect.TypeOf(c)
