@@ -53,6 +53,7 @@ type KApi struct {
 	baseGroup   *gin.RouterGroup
 	doc         *swagger.DocSwagger
 	option      *Option
+	genFlag     bool
 }
 
 func New(f func(*Option)) *KApi {
@@ -68,22 +69,31 @@ func New(f func(*Option)) *KApi {
 	}
 
 	b := new(KApi)
+	if len(os.Args) > 1 && os.Args[1] == "-g" {
+		b.genFlag = true
+	}
 	b.option = defaultOption()
 	f(b.option)
 	b.Model(NewAPIFunc)
-
 	gin.SetMode(gin.ReleaseMode) //we don't need gin's debug output
 	b.engine = gin.New()
 	b.engine.Use(gin.LoggerWithFormatter(b.option.ginLoggerFormatter))
 	b.engine.Use(cors.New(b.option.corsConfig))
-
-	_log.Infof("localIP:%s docName:%s port:%d", b.option.intranetIP, b.option.docName, b.option.listenPort)
+	if !b.genFlag {
+		_log.Infof("localIP:%s docName:%s port:%d", b.option.intranetIP, b.option.docName, b.option.listenPort)
+	} else {
+		_log.Infoln("生成模式")
+	}
 
 	return b
 }
 
 func (b *KApi) RegisterRouter(cList ...interface{}) {
-	_log.Debug("注册路由..")
+	if b.genFlag {
+		_log.Debug("解析路由..")
+	} else {
+		_log.Debug("注册路由..")
+	}
 
 	b.handleSwaggerBase()
 	b.baseGroup = b.engine.Group(b.option.apiBasePath)
@@ -124,13 +134,13 @@ func (b *KApi) handleSwaggerBase() {
 }
 
 func (b *KApi) handleStatic() {
-	if b.option.staticDir != "" {
+	if b.option.staticDir != "" && !b.genFlag {
 		b.engine.Static(b.option.staticDir, b.option.staticDir)
 	}
 }
 
 func (b *KApi) handleSwaggerDoc() {
-	if b.option.needDoc {
+	if b.option.needDoc && !b.genFlag {
 		swaggerUrl := fmt.Sprintf("http://%s:%d/swagger/index.html", b.option.intranetIP, b.option.listenPort)
 		if b.option.docDomain != "" {
 			swaggerUrl = fmt.Sprintf("%s/swagger/index.html", b.option.docDomain)
@@ -156,7 +166,6 @@ func (b *KApi) handleSwaggerDoc() {
 		})
 
 		b.engine.GET("/swagger/*any", func(c *gin.Context) {
-
 			c.FileFromFS(c.Request.URL.Path, http.FS(swaggerFS))
 		})
 
@@ -173,8 +182,12 @@ func (b *KApi) Run() {
 	b.genRouterCode()
 	b.genDoc()
 	b.handleSwaggerDoc()
+	if b.genFlag {
+		_log.Infoln("生成模式 完成")
+		return
+	}
 
-	_log.Infoln(fmt.Sprintf("服务启动 http://%s:%d", b.option.intranetIP, b.option.listenPort))
+	_log.Infof("服务启动 http://%s:%d\n", b.option.intranetIP, b.option.listenPort)
 	err := b.engine.Run(fmt.Sprintf(":%d", b.option.listenPort))
 	if err != nil {
 		if e, ok := err.(*net.OpError); ok {
