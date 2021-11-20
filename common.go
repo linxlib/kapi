@@ -76,7 +76,7 @@ func (b *KApi) handlerFuncObj(tvl, obj reflect.Value, methodName string) gin.Han
 
 			bainfo, is := b.preCall(c, obj, nil, methodName)
 			if !is {
-				c.JSON(http.StatusBadRequest, bainfo.Resp)
+				c.JSON(bainfo.RespCode, bainfo.Resp)
 				return
 			}
 
@@ -207,7 +207,7 @@ func (b *KApi) changeToGinHandlerFunc(tvl, obj reflect.Value, methodName string)
 
 		bainfo, is := b.preCall(c, obj, req.Interface(), methodName)
 		if !is {
-			c.JSON(http.StatusBadRequest, bainfo.Resp)
+			c.JSON(bainfo.RespCode, bainfo.Resp)
 			return
 		}
 

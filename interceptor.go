@@ -11,6 +11,7 @@ type InterceptorContext struct {
 	FuncName string          // 函数名
 	Req      interface{}     // 调用前的请求参数
 	Resp     interface{}     // 调用后的响应参数
+	RespCode int             //状态码
 	Error    error           // 错误信息
 	Context  context.Context // 占位上下文参数，可用于存储其他参数，前后连接可用
 }
