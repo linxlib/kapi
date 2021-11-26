@@ -14,6 +14,7 @@ func main() {
 			SetPort(8081)
 	})
 	k.RegisterRouter(new(controller.Hello))
+
 	k.Run()
 
 }
