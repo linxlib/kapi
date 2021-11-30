@@ -16,9 +16,12 @@
 
 ## 快速开始
 
-1. main.go 中初始化
+1. 到 `https://gitee.com/kirile/k-cli` 安装cli
+2. 安装后执行`go mod init {module_name}` 然后 `k init`, 自动创建 config.toml build.toml main.go 等
+3. 
 ```go
    k := kapi.New(func(option *kapi.Option) {
+	   // 也可以在config.toml中进行修改, 这里写的话将覆盖配置文件中的设置
         option.SetNeedDoc(true)
         option.SetDocName("系统")
         option.SetDocDescription("系统api")
@@ -30,7 +33,7 @@
         option.SetRedirectToDocWhenAccessRoot(true)
         option.SetStaticDir("asset")
     })
-
+    // 注册路由
     k.RegisterRouter(new(controller.BannerController),
         new(controller.AssetController),
         new(controller.CategoryController),
@@ -47,7 +50,9 @@ func (h *HelloController) World1(c *kapi.Context) {
 	c.SuccessExit()
 }
 ```
-4. 运行
+其他路由和swagger文档相关请到example中查看
+
+4. 运行 `go run main.go` 或者 `k run`
 
 具体可查看example文件夹
 
@@ -55,6 +60,7 @@ func (h *HelloController) World1(c *kapi.Context) {
 ## 支持一些奇怪的特性 🐶
 
 - `//@TAG 分类` 在struct上增加, 可以指定在swagger文档中的标签, 默认为struct的名字
+- 一个方法`List`上如果有这样的注释 `//List 获取列表` 那么`获取列表` 将作为一个路由的Summary显示在swagger文档里
 - `//@AUTH Authorization` 在struct上增加, 可以为该struct的每个方法的请求参数加上一个Header请求头, 其中 `Authorization` 可以不要, 默认是 `Authorization`. 
 这个需要配合 `BaseAuthController`来对各个方法进行鉴权
 - `//@ROUTE /banner` 为该struct下的方法增加一个路由地址的前缀, 会拼接起来. 例如 struct上有`//@ROUTE /banner`, 其下方的方法`//@GET /list` 则实际的路由为 `GET /banner/list`
@@ -86,13 +92,13 @@ type GetBannerListReq struct {
 - [x] 增加@AUTH标记支持, 用于设置传输token的header名, 可以放在controller上
 - [x] 增加静态目录配置, Context增加 SaveFile
 - [x] 在issue中进行任务处理
-- [ ] 加入枚举支持
 - [x] 加入二维数组支持
 - [x] 请求参数可以使用类似继承的方式来重用结构
-- [ ] 配置文件配置服务
+- [x] 配置文件配置服务 (需要配合 k init)
 - [x] 增加命令行参数用于仅生成路由和文档, 实现编译前无需运行即可更新文档
+- [x] 优化ast包解析, 减少循环 (目前通过增加map来缓存需要的数据, 重复的对象不会多次遍历ast树)
+- [ ] 加入枚举支持
 - [ ] k cli 加入项目判断, 使其可用于其他纯go项目的编译
-- [ ] 优化ast包解析, 减少循环
   
 ## 感谢
 
