@@ -68,7 +68,7 @@ func defaultOption() *Option {
 			case KAPIEXIT:
 				return
 			default:
-				_log.Error(err)
+				internal.Log.Error(err)
 			}
 		},
 	}
@@ -151,7 +151,7 @@ func (o *Option) SetRecoverFunc(f func(interface{})) *Option {
 		case KAPIEXIT:
 			return
 		default:
-			_log.Error(err)
+			internal.Log.Error(err)
 			f(err)
 		}
 	}

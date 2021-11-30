@@ -96,19 +96,17 @@ func (n *Node) GetSection(path string) (*Node, bool) {
 	current := n
 	nameIndex := 0
 
-	for {
-		for _, node := range current.Children {
-			if node.kind != kindSection {
-				continue
+	for _, node := range current.Children {
+		if node.kind != kindSection {
+			continue
+		}
+		if node.name == names[nameIndex] {
+			current = node
+			nameIndex++
+			if nameIndex >= len(names) {
+				return current, true
 			}
-			if node.name == names[nameIndex] {
-				current = node
-				nameIndex++
-				if nameIndex >= len(names) {
-					return current, true
-				}
-				break
-			}
+			break
 		}
 	}
 

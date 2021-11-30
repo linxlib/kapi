@@ -2,6 +2,7 @@ package kapi
 
 import (
 	"context"
+	"gitee.com/kirile/kapi/internal"
 	"time"
 )
 
@@ -38,7 +39,7 @@ func (d *DefaultBeforeAfter) Before(req *InterceptorContext) bool {
 func (d *DefaultBeforeAfter) After(req *InterceptorContext) bool {
 	begin := (req.Context.Value(timeTrace{})).(time.Time)
 	now := time.Now()
-	_log.Infof("[middleware] call[%v] [%v]", req.FuncName, now.Sub(begin))
+	internal.Log.Infof("[middleware] call[%v] [%v]", req.FuncName, now.Sub(begin))
 	if req.Error != nil {
 		_, req.Resp = GetResultFunc(RESULT_CODE_ERROR, req.Error.Error(), 0, nil)
 	} else {

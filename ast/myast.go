@@ -21,43 +21,50 @@ func NewStructAnalysis(modPkg, modFile string) *structAnalysis {
 }
 
 // ParseStruct 解析结构体定义及相关信息
-func (a *structAnalysis) ParseStruct(astPkg *ast.Package, structName string) (info *doc.StructInfo) {
+func (a *structAnalysis) ParseStruct(astPkg *ast.Package, structName string) *doc.StructInfo {
 	if astPkg == nil {
 		return nil
 	}
-
+	//internal.Log.Debugf("ParseStruct:%s from:%s",structName,astPkg.Name)
 	if internal.IsInternalType(structName) { // 内部类型
 		return &doc.StructInfo{
 			Name: structName,
 		}
 	}
-	for _, fl := range astPkg.Files {
-		for _, d := range fl.Decls {
-			switch specDecl := d.(type) {
-			case *ast.GenDecl:
-				for _, subitem := range specDecl.Specs {
-					switch specDecl.Tok {
-					case token.TYPE:
-						spec := subitem.(*ast.TypeSpec)
-						switch st := spec.Type.(type) {
-						case *ast.StructType:
-							if spec.Name.Name == structName { // find it
 
-								info = new(doc.StructInfo)
-								info.Pkg = astPkg.Name
-								if specDecl.Doc != nil { // 如果有注释
-									for _, v := range specDecl.Doc.List { // 结构体注释
-										t := strings.TrimSpace(strings.TrimPrefix(v.Text, "//"))
-										if strings.HasPrefix(t, structName) { // find note
-											t = strings.TrimSpace(strings.TrimPrefix(t, structName))
-											info.Note += t
+	key := astPkg.Name + "_" + structName
+	if v, ok := parseStructCache[key]; ok {
+		return v
+	} else {
+		for _, fl := range astPkg.Files {
+			for _, d := range fl.Decls {
+				switch specDecl := d.(type) {
+				case *ast.GenDecl:
+					for _, subitem := range specDecl.Specs {
+						switch specDecl.Tok {
+						case token.TYPE:
+							spec := subitem.(*ast.TypeSpec)
+							switch st := spec.Type.(type) {
+							case *ast.StructType:
+								if spec.Name.Name == structName { // find it
+									info := &doc.StructInfo{
+										Items: a.structFieldInfo(astPkg, st),
+										Note:  "",
+										Name:  structName,
+										Pkg:   astPkg.Name,
+									}
+									if specDecl.Doc != nil { // 如果有注释
+										for _, v := range specDecl.Doc.List { // 结构体注释
+											t := strings.TrimSpace(strings.TrimPrefix(v.Text, "//"))
+											if strings.HasPrefix(t, structName) { // find note
+												t = strings.TrimSpace(strings.TrimPrefix(t, structName))
+												info.Note += t
+											}
 										}
 									}
+									parseStructCache[key] = info
+									return info
 								}
-
-								info.Name = structName
-								info.Items = a.structFieldInfo(astPkg, st)
-								return
 							}
 						}
 					}
@@ -65,6 +72,7 @@ func (a *structAnalysis) ParseStruct(astPkg *ast.Package, structName string) (in
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -72,7 +80,9 @@ func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, structType *ast.St
 	if structType == nil || structType.Fields == nil {
 		return
 	}
+
 	items = make([]doc.ElementInfo, 0)
+
 	importMP := AnalysisImport(astPkg)
 
 	//遍历结构体字段

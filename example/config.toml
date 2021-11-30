@@ -1,14 +1,14 @@
 [server]
     debug = true
     needDoc=true
-    docName="天气"
-    docDesc="Weather"
-    port=5858
+    docName="KAPI Example"
+    docDesc="Example Api"
+    port=3939
     openDocInBrowser=false
     docDomain=""
-    docVer="v1"
+    docVer="v2"
     redirectToDocWhenAccessRoot=true
     apiBasePath="/"
     staticDir=""
-    [server.cors]
-        allowHeaders = ["Origin","Content-Length","Content-Type","Authorization","x-requested-with"]
+    #[server.cors]
+    #    allowHeaders = ["Origin","Content-Length","Content-Type","Authorization","x-requested-with"]
