@@ -326,7 +326,7 @@ func (b *KApi) parseStruct(req, resp *paramInfo, astPkg *goast.Package, modPkg, 
 		tmp := astPkg
 		if len(req.Pkg) > 0 {
 			objFile := ast.EvalSymlinks(modPkg, modFile, req.Import)
-			tmp, _ = ast.GetAstPackages(req.Pkg, objFile) // get ast trees.
+			tmp, _ = ast.GetAstPackage(req.Pkg, objFile) // get ast trees.
 		}
 		r = ant.ParseStruct(tmp, req.Type)
 	}
@@ -335,7 +335,7 @@ func (b *KApi) parseStruct(req, resp *paramInfo, astPkg *goast.Package, modPkg, 
 		tmp := astPkg
 		if len(resp.Pkg) > 0 {
 			objFile := ast.EvalSymlinks(modPkg, modFile, resp.Import)
-			tmp, _ = ast.GetAstPackages(resp.Pkg, objFile) // get ast trees.
+			tmp, _ = ast.GetAstPackage(resp.Pkg, objFile) // get ast trees.
 		}
 		p = ant.ParseStruct(tmp, resp.Type)
 	}
@@ -477,11 +477,11 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 		// find path
 		objFile := ast.EvalSymlinks(modPkg, modFile, objPkg)
 
-		astPkgs, _b := ast.GetAstPackages(objPkg, objFile) // get ast trees.
+		astPkg, _b := ast.GetAstPackage(objPkg, objFile) // get ast trees.
 		if _b {
-			imports := ast.AnalysisImport(astPkgs)
-			funMp := ast.GetObjFunMp(astPkgs, objName)
-			cc := ast.AnalysisControllerComments(astPkgs, objName)
+			imports := ast.AnalysisImport(astPkg)
+			funMp := ast.GetObjFunMp(astPkg, objName)
+			cc := ast.AnalysisControllerComments(astPkg, objName)
 
 			refTyp := reflect.TypeOf(c)
 			// Install the methods
@@ -492,7 +492,7 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 					if sdl, ok := funMp[method.Name]; ok {
 						isDeprecated, gcs, req, resp := b.parseComments(sdl, cc.Route, method.Name, imports, objPkg, num)
 						if b.option.needDoc { // output newDoc
-							docReq, docResp := b.parseStruct(req, resp, astPkgs, modPkg, modFile)
+							docReq, docResp := b.parseStruct(req, resp, astPkg, modPkg, modFile)
 							for _, gc := range gcs {
 								newDoc.AddOne(cc.TagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp, cc.TokenHeader, isDeprecated)
 								checkOnceAdd(objName+"/"+method.Name, gc.RouterPath, gc.Methods)

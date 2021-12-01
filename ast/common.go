@@ -92,8 +92,8 @@ func EvalSymlinks(modPkg, modFile, objPkg string) string {
 	panic(fmt.Errorf("can not eval pkg:[%v] must include [%v]", objPkg, modPkg))
 }
 
-// GetAstPackages Parsing source file ast structure (with main restriction).解析源文件ast结构(带 main 限制)
-func GetAstPackages(objPkg, objFile string) (*ast.Package, bool) {
+// GetAstPackage Parsing source file ast structure (with main restriction).解析源文件ast结构(带 main 限制)
+func GetAstPackage(objPkg, objFile string) (*ast.Package, bool) {
 	key := objPkg + "_" + objFile
 	if v, ok := getAstPackagesCache[key]; ok {
 		return v, true
@@ -120,7 +120,7 @@ func GetAstPackages(objPkg, objFile string) (*ast.Package, bool) {
 			dirs := internal.GetPathDirs(objFile) // get all of dir
 			for _, dir := range dirs {
 				if !strings.HasPrefix(dir, ".") {
-					pkg, b := GetAstPackages(objPkg, objFile+"/"+dir)
+					pkg, b := GetAstPackage(objPkg, objFile+"/"+dir)
 					if b {
 						getAstPackagesCache[key] = pkg
 						return pkg, true
@@ -157,10 +157,10 @@ func GetObjFunMp(astPkg *ast.Package, objName string) map[string]*ast.FuncDecl {
 }
 
 // AnalysisImport 分析整合import相关信息
-func AnalysisImport(astPkgs *ast.Package) map[string]string {
+func AnalysisImport(astPkg *ast.Package) map[string]string {
 
 	imports := make(map[string]string)
-	for _, f := range astPkgs.Files {
+	for _, f := range astPkg.Files {
 		for _, p := range f.Imports {
 			k := ""
 			if p.Name != nil {

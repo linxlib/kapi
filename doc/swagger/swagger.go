@@ -25,6 +25,8 @@ func NewDoc(host string, info Info, basePath string, schemes []string) *DocSwagg
 		BasePath:     basePath,
 		Schemes:      schemes,
 		ExternalDocs: nil,
+		Definitions:  map[string]Definition{},
+		Tags:         []Tag{},
 	}
 	doc.Client.Paths = make(map[string]map[string]Param)
 	return doc
@@ -43,9 +45,6 @@ func (doc *DocSwagger) AddTag(tag Tag) {
 
 // AddDefinitions 添加 结构体定义
 func (doc *DocSwagger) AddDefinitions(key string, def Definition) {
-	if doc.Client.Definitions == nil {
-		doc.Client.Definitions = make(map[string]Definition)
-	}
 	doc.Client.Definitions[key] = def
 }
 

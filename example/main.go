@@ -15,7 +15,8 @@ func main() {
 		new(controller.CompanyController),
 		new(controller.UserController),
 		new(controller.LoginController),
-		new(controller.CategoryController))
+		new(controller.CategoryController),
+	)
 
 	k.Run()
 
