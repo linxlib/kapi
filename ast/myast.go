@@ -223,7 +223,7 @@ func (a *structAnalysis) dealSelectorExpr(exp *ast.SelectorExpr, info *doc.Eleme
 			if v, ok := importMP[x.Name]; ok {
 				objFile := EvalSymlinks(a.ModPkg, a.ModFile, v)
 				objPkg := GetImportPkg(v)
-				astFile, _b := GetAstPackages(objPkg, objFile)
+				astFile, _b := GetAstPackage(objPkg, objFile)
 				if _b {
 					info.TypeRef = a.ParseStruct(astFile, info.Type)
 				}
