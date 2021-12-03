@@ -1,11 +1,13 @@
 package controller
 
 import (
+	"fmt"
 	"gitee.com/kirile/kapi"
 	"test_kapi/api/model"
 )
 
 type LoginController struct {
+	BaseController
 }
 
 type GetLoginListReq struct {
@@ -15,7 +17,7 @@ type GetLoginListReq struct {
 //GetLoginList
 //@GET /login/list
 func (p *LoginController) GetLoginList(c *kapi.Context, req *GetLoginListReq) {
-
+	fmt.Println(p.MyCustomData)
 }
 
 type GetLoginOneReq struct {
