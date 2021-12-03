@@ -5,6 +5,7 @@ import (
 	"test_kapi/api/controller"
 )
 
+
 func main() {
 	k := kapi.New(func(option *kapi.Option) {
 		// 默认读取config.toml 在这可以覆盖配置文件中的设置
@@ -17,6 +18,7 @@ func main() {
 		new(controller.LoginController),
 		new(controller.CategoryController),
 	)
+
 
 	k.Run()
 
