@@ -109,7 +109,7 @@ type GetBannerListReq struct {
 #### 介绍
 这是本框架提供的命令行工具, 代码基本来自 `github.com/gogf/gf-cli`, 目前包含 安装、运行、编译三个部分， 后续会加入其它功能
 
-**目前移动到https://gitee.com/kirile/k-cli仓库**
+**目前移动到 https://gitee.com/kirile/k-cli ** 仓库
 
 
 # app
