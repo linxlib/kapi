@@ -25,6 +25,13 @@ func (v Value) AsArray() []Value {
 func (v Value) AsString() string {
 	return v.asString
 }
+func (v Value) AsStrings() []string {
+	result := make([]string, len(v.asArray))
+	for i, value := range v.asArray {
+		result[i] = value.AsString()
+	}
+	return result
+}
 
 func (v Value) AsInt() int {
 	return int(v.asInt)

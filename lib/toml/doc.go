@@ -48,6 +48,17 @@ func (d Document) String(name string, defaultValue ...string) string {
 	}
 	return v.AsString()
 }
+func (d Document) Strings(name string, defaultValues ...string) []string {
+	v, ok := d.Value(name)
+	if !ok {
+		if len(defaultValues) >= 1 {
+			return defaultValues
+		} else {
+			return []string{}
+		}
+	}
+	return v.AsStrings()
+}
 
 func (d Document) Int(name string, defaultValue ...int) int {
 	v, ok := d.Value(name)

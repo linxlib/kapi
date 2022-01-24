@@ -156,8 +156,11 @@ func (b *KApi) handleSwaggerBase() {
 }
 
 func (b *KApi) handleStatic() {
-	if b.option.staticDir != "" && !b.genFlag {
-		b.engine.Static(b.option.staticDir, b.option.staticDir)
+	if len(b.option.staticDir) > 0 && !b.genFlag {
+		for _, s := range b.option.staticDir {
+			b.engine.Static(s, s)
+		}
+
 	}
 }
 

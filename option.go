@@ -22,7 +22,7 @@ type Option struct {
 	listenPort                  int
 	recoverErrorFunc            RecoverErrorFunc
 	intranetIP                  string
-	staticDir                   string
+	staticDir                   []string
 }
 
 const SECTION_SERVER_NAME = "server"
@@ -52,7 +52,7 @@ func readConfig(o *Option) *Option {
 	o.SetDocDescription(_config.String(SECTION_SERVER_NAME+".docDesc", "K-Api"))
 	o.SetApiBasePath(_config.String(SECTION_SERVER_NAME+".apiBasePath", "/"))
 	o.SetPort(_config.Int(SECTION_SERVER_NAME+".port", 2021))
-	o.SetStaticDir(_config.String(SECTION_SERVER_NAME+".staticDir", ""))
+	o.SetStaticDirs(_config.Strings(SECTION_SERVER_NAME + ".staticDirs")...)
 
 	return o
 }
@@ -171,10 +171,10 @@ func (o *Option) SetRedirectToDocWhenAccessRoot(redirect ...bool) *Option {
 	return o
 }
 
-func (o *Option) SetStaticDir(dir ...string) *Option {
-	o.staticDir = "static"
+func (o *Option) SetStaticDirs(dir ...string) *Option {
+	o.staticDir = []string{"static"}
 	if len(dir) > 0 {
-		o.staticDir = dir[0]
+		o.staticDir = dir
 	}
 	return o
 }
