@@ -22,16 +22,16 @@
 ```go
    k := kapi.New(func(option *kapi.Option) {
 	   // 也可以在config.toml中进行修改, 这里写的话将覆盖配置文件中的设置
-        option.SetNeedDoc(true)
+        option.SetNeedDoc(true) //是否需要生成swagger文档
         option.SetDocName("系统")
         option.SetDocDescription("系统api")
         option.SetIsDebug(true)
         option.SetPort(3080)
         option.SetDocVersion("")
         //option.SetApiBasePath("/")
-       //option.SetDocDomain("http://example.com")
-        option.SetRedirectToDocWhenAccessRoot(true)
-        option.SetStaticDir("asset")
+       //option.SetDocDomain("http://example.com") // 使可以支持在线上用域名访问文档, 本地开发时默认为http://局域网ip+端口/swagger/
+        option.SetRedirectToDocWhenAccessRoot(true) //访问 / 时跳转到文档
+        option.SetStaticDirs("html", "h5")  //可以设置多个static目录
     })
     // 注册路由
     k.RegisterRouter(new(controller.BannerController),
@@ -59,7 +59,7 @@ func (h *HelloController) World1(c *kapi.Context) {
 
 ## 支持一些奇怪的特性 🐶
 
-- `//@TAG 分类` 在struct上增加, 可以指定在swagger文档中的标签, 默认为struct的名字
+- `//@TAG 分类` 在struct上增加, 可以指定在swagger文档中的标签, 默认为struct的名字, **目前不加@TAG注释, 则默认使用struct自己的注释**
 - 一个方法`List`上如果有这样的注释 `//List 获取列表` 那么`获取列表` 将作为一个路由的Summary显示在swagger文档里
 - `//@AUTH Authorization` 在struct上增加, 可以为该struct的每个方法的请求参数加上一个Header请求头, 其中 `Authorization` 可以不要, 默认是 `Authorization`. 
 这个需要配合 `BaseAuthController`来对各个方法进行鉴权
@@ -83,9 +83,12 @@ type GetBannerListReq struct {
 
 - `kapi.Context`包含一些Exit方法, 可以不用return直接跳出流程, 这是通过panic实现的, 当然如果方法使用了返回值, 就不能用这个方式了
 - 实现了 kapi.Interceptor 的中间件, 可以存储一些上下文数据, 比如 当前用户 CurrentUser *model.User, 无需使用Context的相关方法
+- `kapi.RegisterFuncGetResult` 可以修改默认的返回json的结构, 为自带的 `*Exit`系方法自定义返回
 
 ## 部署
-`k build`后 `./bin/版本/系统_架构/`目录下的文件即为全部, 如果是自行编译, 则需要同时拷贝swagger.json和gen.gob以及config.toml
+`k build`后 `./bin/版本/系统_架构/`目录下的文件即为全部, 如果是自行编译, 则需要同时拷贝swagger.json和gen.gob以及config.toml.
+
+当前主分支, 在 `k build -g` 后会覆盖 `swagger.json` 和 `gen.gob` ,`config.toml`则仅当输出目录下不存在`config.toml`时才会拷贝
 
 
 ## TODO
@@ -110,7 +113,9 @@ type GetBannerListReq struct {
 
 # k
 #### 介绍
-这是本框架提供的命令行工具, 代码基本来自 `github.com/gogf/gf-cli`, 目前包含 安装、运行、编译三个部分， 后续会加入其它功能
+这是本框架提供的命令行工具, 代码基本来自 `github.com/gogf/gf-cli`, 目前包含 安装、运行、编译三个部分， 后续会加入其它功能.
+
+使用kapi进行开发, 建议同时使用k-cli, 由于kapi的swagger文档以及路由注册需要在开发环境运行后才会生成, 使用go自带的编译可能无法正常使用文档和注册路由
 
 **目前移动到 https://gitee.com/kirile/k-cli** 仓库
 
@@ -118,6 +123,6 @@ type GetBannerListReq struct {
 # app
 
 #### 介绍
-app包, 包装了xorm mysql 和 redis的初始化连接以及一些简单的封装方法. 还包括了一个toml读取的辅助
+app包, 包装了xorm mysql 和 redis的初始化连接以及一些简单的封装方法. 还包括了一个toml读取的辅助. 不是必要的, 你可以用你喜欢的库进行数据库操作
 
 **目前移动到https://gitee.com/kirile/kapp**
