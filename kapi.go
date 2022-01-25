@@ -45,6 +45,9 @@ var _info = `
 //go:embed swagger/*
 var swaggerFS embed.FS
 
+//go:embed redoc/*
+var redocFS embed.FS
+
 // KApi base struct
 type KApi struct {
 	apiFun            ApiFunc
@@ -175,6 +178,12 @@ func (b *KApi) handleSwaggerDoc() {
 		b.engine.GET("/swagger/*any", func(c *gin.Context) {
 			c.FileFromFS(c.Request.URL.Path, http.FS(swaggerFS))
 		})
+
+		if b.option.needReDoc {
+			b.engine.GET("/redoc/*any", func(c *gin.Context) {
+				c.FileFromFS(c.Request.URL.Path, http.FS(redocFS))
+			})
+		}
 
 		if b.option.openDocInBrowser {
 			err := internal.OpenBrowser(swaggerUrl)

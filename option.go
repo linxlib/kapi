@@ -10,6 +10,7 @@ import (
 type Option struct {
 	isDebug                     bool
 	needDoc                     bool
+	needReDoc                   bool
 	docName                     string
 	openDocInBrowser            bool
 	redirectToDocWhenAccessRoot bool
@@ -44,6 +45,7 @@ func readConfig(o *Option) *Option {
 	o.corsConfig = corsConfig
 	o.SetIsDebug(_config.Bool(SECTION_SERVER_NAME+".debug", true))
 	o.SetNeedDoc(_config.Bool(SECTION_SERVER_NAME+".needDoc", true))
+	o.SetNeedDoc(_config.Bool(SECTION_SERVER_NAME+".needReDoc", true))
 	o.SetDocName(_config.String(SECTION_SERVER_NAME+".docName", "K-Api"))
 	o.SetOpenDocInBrowser(_config.Bool(SECTION_SERVER_NAME+".openDocInBrowser", false))
 	o.SetDocDomain(_config.String(SECTION_SERVER_NAME+".docDomain", ""))
@@ -91,6 +93,13 @@ func (o *Option) SetNeedDoc(needDoc ...bool) *Option {
 	o.needDoc = true
 	if len(needDoc) > 0 {
 		o.needDoc = needDoc[0]
+	}
+	return o
+}
+func (o *Option) SetNeedReDoc(needReDoc ...bool) *Option {
+	o.needReDoc = true
+	if len(needReDoc) > 0 {
+		o.needReDoc = needReDoc[0]
 	}
 	return o
 }
