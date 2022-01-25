@@ -3,12 +3,14 @@ package kapi
 import (
 	"gitee.com/kirile/kapi/internal"
 	"gitee.com/kirile/kapi/internal/cors"
+	"gitee.com/kirile/kapi/lib/toml"
 	"github.com/gin-gonic/gin"
 )
 
 type Option struct {
 	isDebug                     bool
 	needDoc                     bool
+	needReDoc                   bool
 	docName                     string
 	openDocInBrowser            bool
 	redirectToDocWhenAccessRoot bool
@@ -21,41 +23,58 @@ type Option struct {
 	listenPort                  int
 	recoverErrorFunc            RecoverErrorFunc
 	intranetIP                  string
-	staticDir                   string
+	staticDir                   []string
 }
 
-func defaultOption() *Option {
+const SECTION_SERVER_NAME = "server"
+
+var _config = toml.ParseFile("config.toml")
+
+func readConfig(o *Option) *Option {
 	//配置cors
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true
 	corsConfig.AllowPrivateNetwork = true
-	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization", "x-requested-with"}
+
+	arr := _config.Array(SECTION_SERVER_NAME+".cors.allowHeaders", toml.ParseDefaultArray(`["Origin","Content-Length","Content-Type","Authorization","x-requested-with"]`))
+	allowHeaders := make([]string, 0)
+	for _, value := range arr {
+		allowHeaders = append(allowHeaders, value.AsString())
+	}
+	corsConfig.AllowHeaders = allowHeaders
+	o.corsConfig = corsConfig
+	o.SetIsDebug(_config.Bool(SECTION_SERVER_NAME+".debug", true))
+	o.SetNeedDoc(_config.Bool(SECTION_SERVER_NAME+".needDoc", true))
+	o.SetNeedDoc(_config.Bool(SECTION_SERVER_NAME+".needReDoc", true))
+	o.SetDocName(_config.String(SECTION_SERVER_NAME+".docName", "K-Api"))
+	o.SetOpenDocInBrowser(_config.Bool(SECTION_SERVER_NAME+".openDocInBrowser", false))
+	o.SetDocDomain(_config.String(SECTION_SERVER_NAME+".docDomain", ""))
+	o.SetDocVersion(_config.String(SECTION_SERVER_NAME+".docVer", "v1"))
+	o.SetRedirectToDocWhenAccessRoot(_config.Bool(SECTION_SERVER_NAME+".redirectToDocWhenAccessRoot", true))
+	o.SetDocDescription(_config.String(SECTION_SERVER_NAME+".docDesc", "K-Api"))
+	o.SetApiBasePath(_config.String(SECTION_SERVER_NAME+".apiBasePath", "/"))
+	o.SetPort(_config.Int(SECTION_SERVER_NAME+".port", 2021))
+	o.SetStaticDirs(_config.Strings(SECTION_SERVER_NAME + ".staticDirs")...)
+
+	return o
+}
+
+func defaultOption() *Option {
 
 	gin.ForceConsoleColor()
-	return &Option{
-		isDebug:                     true,
-		needDoc:                     true,
-		docName:                     "K-Api",
-		openDocInBrowser:            false,
-		docDomain:                   "",
-		docVer:                      "v1",
-		redirectToDocWhenAccessRoot: true,
-		docDesc:                     "K-Api",
-		apiBasePath:                 "/",
-		listenPort:                  2021,
-		ginLoggerFormatter:          defaultLogFormatter,
-		corsConfig:                  corsConfig,
-		intranetIP:                  internal.GetIntranetIp(),
-		staticDir:                   "",
+	o := &Option{
+		ginLoggerFormatter: defaultLogFormatter,
+		intranetIP:         internal.GetIntranetIp(),
 		recoverErrorFunc: func(err interface{}) {
 			switch err {
 			case KAPIEXIT:
 				return
 			default:
-				_log.Error(err)
+				internal.Log.Error(err)
 			}
 		},
 	}
+	return readConfig(o)
 }
 
 // SetIsDebug 设置是否调试模式 当不是开发情况时自动变为false
@@ -74,6 +93,13 @@ func (o *Option) SetNeedDoc(needDoc ...bool) *Option {
 	o.needDoc = true
 	if len(needDoc) > 0 {
 		o.needDoc = needDoc[0]
+	}
+	return o
+}
+func (o *Option) SetNeedReDoc(needReDoc ...bool) *Option {
+	o.needReDoc = true
+	if len(needReDoc) > 0 {
+		o.needReDoc = needReDoc[0]
 	}
 	return o
 }
@@ -134,7 +160,7 @@ func (o *Option) SetRecoverFunc(f func(interface{})) *Option {
 		case KAPIEXIT:
 			return
 		default:
-			_log.Error(err)
+			internal.Log.Error(err)
 			f(err)
 		}
 	}
@@ -154,11 +180,10 @@ func (o *Option) SetRedirectToDocWhenAccessRoot(redirect ...bool) *Option {
 	return o
 }
 
-func (o *Option) SetStaticDir(dir ...string) *Option {
-	o.staticDir = "static"
+func (o *Option) SetStaticDirs(dir ...string) *Option {
+	o.staticDir = []string{"static"}
 	if len(dir) > 0 {
-		o.staticDir = dir[0]
+		o.staticDir = dir
 	}
 	return o
-
 }

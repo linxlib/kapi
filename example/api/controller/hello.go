@@ -4,6 +4,7 @@ import (
 	"gitee.com/kirile/kapi"
 )
 
+//Hello Hello1 World
 //@TAG 测试标签
 //@ROUTE /hello2
 type Hello struct {
@@ -33,6 +34,7 @@ func (h *Hello) List(c *kapi.Context, req *TestReq) {
 
 }
 
+//List2 List2222
 // @GET /hello/list2
 func (h *Hello) List2(c *kapi.Context, req *TestReq) ([]TestReq, error) {
 	list := make([]TestReq, 0)
@@ -41,6 +43,20 @@ func (h *Hello) List2(c *kapi.Context, req *TestReq) ([]TestReq, error) {
 	return list, nil
 }
 
-func init() {
-	kapi.RegisterController(new(Hello))
+//List3 List3333
+// @GET /hello/list3
+func (h *Hello) List3(c *kapi.Context, req *TestReq) ([]TestReq, error) {
+	list := make([]TestReq, 0)
+	list = append(list, *req)
+	//count := int64(30)
+	return list, nil
+}
+
+//List4 list443
+// @GET /hello/list4
+func (h *Hello) List4(c *kapi.Context, req *TestReq) ([]TestReq, error) {
+	list := make([]TestReq, 0)
+	list = append(list, *req)
+	//count := int64(30)
+	return list, nil
 }

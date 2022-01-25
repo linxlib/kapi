@@ -54,7 +54,7 @@ func genOutPut() {
 	_genInfo.Tm = time.Now().Unix()
 	err := encoder.Encode(_genInfo)
 	if err != nil {
-		_log.Error(err)
+		internal.Log.Error(err)
 		return
 	}
 	internal.WriteFile("gen.gob", buf.Bytes(), true)

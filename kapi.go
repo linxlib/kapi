@@ -14,8 +14,10 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"time"
 )
 
+//编译时植入变量
 var (
 	VERSION     string
 	BUILDTIME   string
@@ -43,6 +45,9 @@ var _info = `
 //go:embed swagger/*
 var swaggerFS embed.FS
 
+//go:embed redoc/*
+var redocFS embed.FS
+
 // KApi base struct
 type KApi struct {
 	apiFun            ApiFunc
@@ -59,14 +64,14 @@ type KApi struct {
 
 func New(f func(*Option)) *KApi {
 	if VERSION != "" {
-		_log.Infof(_banner, fmt.Sprintf(_info, VERSION, GOVERSION, OS, ARCH, BUILDTIME))
+		internal.Log.Infof(_banner, fmt.Sprintf(_info, VERSION, GOVERSION, OS, ARCH, BUILDTIME))
 	} else {
-		_log.Infof(_banner, "")
+		internal.Log.Infof(_banner, "")
 	}
 	if PACKAGENAME != "" {
-		_log.Infof("初始化[%s]", PACKAGENAME)
+		internal.Log.Infof("初始化[%s]", PACKAGENAME)
 	} else {
-		_log.Info("初始化..")
+		internal.Log.Info("初始化..")
 	}
 
 	b := new(KApi)
@@ -81,19 +86,20 @@ func New(f func(*Option)) *KApi {
 	b.engine.Use(gin.LoggerWithFormatter(b.option.ginLoggerFormatter))
 	b.engine.Use(cors.New(b.option.corsConfig))
 	if !b.genFlag {
-		_log.Infof("localIP:%s docName:%s port:%d", b.option.intranetIP, b.option.docName, b.option.listenPort)
+		internal.Log.Infof("localIP:%s docName:%s port:%d", b.option.intranetIP, b.option.docName, b.option.listenPort)
 	} else {
-		_log.Infoln("生成模式")
+		internal.Log.Infoln("生成模式")
 	}
 
 	return b
 }
 
 func (b *KApi) RegisterRouter(cList ...interface{}) {
+	start := time.Now()
 	if b.genFlag {
-		_log.Debug("解析路由..")
+		internal.Log.Debug("解析路由..")
 	} else {
-		_log.Debug("注册路由..")
+		internal.Log.Debug("注册路由..")
 	}
 
 	b.handleSwaggerBase()
@@ -117,6 +123,7 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 	})
 	b.doRegister(b.baseGroup, cList...)
 	b.handleStatic()
+	internal.Log.Infof("解析耗时:%s", time.Now().Sub(start).String())
 }
 
 func (b *KApi) handleSwaggerBase() {
@@ -130,7 +137,7 @@ func (b *KApi) handleSwaggerBase() {
 	}
 	if b.option.needDoc {
 		if b.option.docDomain != "" {
-			_log.Debug("域名:" + b.option.docDomain)
+			internal.Log.Debug("域名:" + b.option.docDomain)
 			if strings.HasPrefix(b.option.docDomain, "https") {
 				schemes = []string{"https", "http"}
 			} else {
@@ -152,8 +159,11 @@ func (b *KApi) handleSwaggerBase() {
 }
 
 func (b *KApi) handleStatic() {
-	if b.option.staticDir != "" && !b.genFlag {
-		b.engine.Static(b.option.staticDir, b.option.staticDir)
+	if len(b.option.staticDir) > 0 && !b.genFlag {
+		for _, s := range b.option.staticDir {
+			b.engine.Static(s, s)
+		}
+
 	}
 }
 
@@ -163,7 +173,7 @@ func (b *KApi) handleSwaggerDoc() {
 		if b.option.docDomain != "" {
 			swaggerUrl = fmt.Sprintf("%s/swagger/index.html", b.option.docDomain)
 		}
-		_log.Infoln("文档地址:", swaggerUrl)
+		internal.Log.Infoln("文档地址:", swaggerUrl)
 		if b.option.redirectToDocWhenAccessRoot {
 			//b.engine.Any("/", func(c *gin.Context) {
 			//	c.Redirect(301, fmt.Sprintf("%s/swagger/", b.option.docDomain))
@@ -175,7 +185,7 @@ func (b *KApi) handleSwaggerDoc() {
 
 		b.engine.GET("/swagger.json", func(c *gin.Context) {
 			if !internal.CheckFileIsExist("swagger.json") {
-				_log.Warningln("swagger.json未找到, 请放置到程序目录下")
+				internal.Log.Warningln("swagger.json未找到, 请放置到程序目录下")
 				c.JSON(404, "swagger.json not found")
 				return
 			}
@@ -187,10 +197,16 @@ func (b *KApi) handleSwaggerDoc() {
 			c.FileFromFS(c.Request.URL.Path, http.FS(swaggerFS))
 		})
 
+		if b.option.needReDoc {
+			b.engine.GET("/redoc/*any", func(c *gin.Context) {
+				c.FileFromFS(c.Request.URL.Path, http.FS(redocFS))
+			})
+		}
+
 		if b.option.openDocInBrowser {
 			err := internal.OpenBrowser(swaggerUrl)
 			if err != nil {
-				_log.Error(err)
+				internal.Log.Error(err)
 			}
 		}
 	}
@@ -201,17 +217,17 @@ func (b *KApi) Run() {
 	b.genDoc()
 	b.handleSwaggerDoc()
 	if b.genFlag {
-		_log.Infoln("生成模式 完成")
+		internal.Log.Infoln("生成模式 完成")
 		return
 	}
 
-	_log.Infof("服务启动 http://%s:%d\n", b.option.intranetIP, b.option.listenPort)
+	internal.Log.Infof("服务启动 http://%s:%d\n", b.option.intranetIP, b.option.listenPort)
 	err := b.engine.Run(fmt.Sprintf(":%d", b.option.listenPort))
 	if err != nil {
 		if e, ok := err.(*net.OpError); ok {
 			if e1, ok := e.Err.(*os.SyscallError); ok {
 				if e.Op == "listen" && e1.Syscall == "bind" {
-					_log.Fatalf("服务启动失败, 监听 :%d 失败, 请检查端口是否被占用", e.Addr.(*net.TCPAddr).Port)
+					internal.Log.Fatalf("服务启动失败, 监听 :%d 失败, 请检查端口是否被占用", e.Addr.(*net.TCPAddr).Port)
 				}
 			}
 
@@ -263,13 +279,7 @@ func (b *KApi) genDoc() {
 	bs, _ := json.Marshal(b.doc.Client)
 	err := ioutil.WriteFile("swagger.json", bs, os.ModePerm)
 	if err != nil {
-		_log.Errorln("写出 swagger.json 失败:", err.Error())
+		internal.Log.Errorln("写出 swagger.json 失败:", err.Error())
 		return
 	}
-}
-
-var _ctlsList = make([]interface{}, 0)
-
-func RegisterController(c interface{}) {
-	_ctlsList = append(_ctlsList, c)
 }

@@ -4,25 +4,8 @@ import (
 	"fmt"
 	"gitee.com/kirile/kapi/internal"
 	"github.com/gin-gonic/gin"
-	"github.com/linxlib/logs"
-	"os"
 	"time"
 )
-
-var _log logs.FieldLogger = &logs.Logger{
-	Out:   os.Stderr,
-	Hooks: make(logs.LevelHooks),
-	Formatter: &logs.TextFormatter{
-		ForceColors:      true,
-		FullTimestamp:    true,
-		TimestampFormat:  "01-02 15:04:05.999",
-		QuoteEmptyFields: false,
-		CallerPrettyfier: nil,
-		HideLevelText:    true,
-	},
-	ReportCaller: false,
-	Level:        logs.TraceLevel,
-}
 
 var defaultLogFormatter = func(param gin.LogFormatterParams) string {
 	var statusColor, methodColor, resetColor string

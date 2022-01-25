@@ -3,6 +3,7 @@ package ast
 import (
 	"errors"
 	"fmt"
+	"gitee.com/kirile/kapi/doc"
 	"gitee.com/kirile/kapi/internal"
 	"go/ast"
 	"go/parser"
@@ -13,6 +14,18 @@ import (
 )
 
 var importFile = make(map[string]string) // 自定义包文件
+
+type ControllerComment struct {
+	TagName     string
+	Route       string
+	TokenHeader string
+}
+
+var (
+	analysisControllerCommentsCache = make(map[string]*ControllerComment)
+	getAstPackagesCache             = make(map[string]*ast.Package)
+	parseStructCache                = make(map[string]*doc.StructInfo)
+)
 
 // AddImportFile 添加自定义import文件列表
 func AddImportFile(k, v string) {
@@ -79,38 +92,43 @@ func EvalSymlinks(modPkg, modFile, objPkg string) string {
 	panic(fmt.Errorf("can not eval pkg:[%v] must include [%v]", objPkg, modPkg))
 }
 
-// GetAstPackages Parsing source file ast structure (with main restriction).解析源文件ast结构(带 main 限制)
-func GetAstPackages(objPkg, objFile string) (*ast.Package, bool) {
-	fileSet := token.NewFileSet()
-	astPkgs, err := parser.ParseDir(fileSet, objFile, func(info os.FileInfo) bool {
-		name := info.Name()
-		return !info.IsDir() && !strings.HasPrefix(name, ".") && strings.HasSuffix(name, ".go")
-	}, parser.ParseComments)
-	if err != nil {
-		return nil, false
-	}
-
-	// check the package is same.判断 package 是否一致
-	for _, pkg := range astPkgs {
-		if objPkg == pkg.Name || strings.HasSuffix(objPkg, "/"+pkg.Name) { // find it
-			return pkg, true
+// GetAstPackage Parsing source file ast structure (with main restriction).解析源文件ast结构(带 main 限制)
+func GetAstPackage(objPkg, objFile string) (*ast.Package, bool) {
+	key := objPkg + "_" + objFile
+	if v, ok := getAstPackagesCache[key]; ok {
+		return v, true
+	} else {
+		fileSet := token.NewFileSet()
+		astPkgs, err := parser.ParseDir(fileSet, objFile, func(info os.FileInfo) bool {
+			name := info.Name()
+			return !info.IsDir() && !strings.HasPrefix(name, ".") && strings.HasSuffix(name, ".go")
+		}, parser.ParseComments)
+		if err != nil {
+			return nil, false
 		}
-	}
 
-	// not find . maybe is main package and find main package
-	if objPkg == "main" {
-		dirs := internal.GetPathDirs(objFile) // get all of dir
-		for _, dir := range dirs {
-			if !strings.HasPrefix(dir, ".") {
-				pkg, b := GetAstPackages(objPkg, objFile+"/"+dir)
-				if b {
-					return pkg, true
+		// check the package is same.判断 package 是否一致
+		for _, pkg := range astPkgs {
+			if objPkg == pkg.Name || strings.HasSuffix(objPkg, "/"+pkg.Name) { // find it
+				getAstPackagesCache[key] = pkg
+				return pkg, true
+			}
+		}
+
+		// not find . maybe is main package and find main package
+		if objPkg == "main" {
+			dirs := internal.GetPathDirs(objFile) // get all of dir
+			for _, dir := range dirs {
+				if !strings.HasPrefix(dir, ".") {
+					pkg, b := GetAstPackage(objPkg, objFile+"/"+dir)
+					if b {
+						getAstPackagesCache[key] = pkg
+						return pkg, true
+					}
 				}
 			}
 		}
 	}
-
-	// ast.Print(fileSet, astPkgs)
 
 	return nil, false
 }
@@ -125,7 +143,6 @@ func GetObjFunMp(astPkg *ast.Package, objName string) map[string]*ast.FuncDecl {
 			switch specDecl := d.(type) {
 			case *ast.FuncDecl:
 				if specDecl.Recv != nil {
-
 					if exp, ok := specDecl.Recv.List[0].Type.(*ast.StarExpr); ok { // Check that the type is correct first beforing throwing to parser
 						if strings.Compare(fmt.Sprint(exp.X), objName) == 0 { // is the same struct
 							funMp[specDecl.Name.String()] = specDecl // catch
@@ -140,9 +157,10 @@ func GetObjFunMp(astPkg *ast.Package, objName string) map[string]*ast.FuncDecl {
 }
 
 // AnalysisImport 分析整合import相关信息
-func AnalysisImport(astPkgs *ast.Package) map[string]string {
+func AnalysisImport(astPkg *ast.Package) map[string]string {
+
 	imports := make(map[string]string)
-	for _, f := range astPkgs.Files {
+	for _, f := range astPkg.Files {
 		for _, p := range f.Imports {
 			k := ""
 			if p.Name != nil {
@@ -164,12 +182,14 @@ func AnalysisImport(astPkgs *ast.Package) map[string]string {
 	return imports
 }
 
-func AnalysisControllerComments(astPkg *ast.Package, controllerName string) (tagName string, route string, tokenHeader string) {
-	tagName = ""
-	route = ""
-	tokenHeader = ""
+func AnalysisControllerComments(astPkg *ast.Package, controllerName string) *ControllerComment {
+	cc := &ControllerComment{TagName: controllerName}
 	if astPkg == nil {
-		return
+		return cc
+	}
+	key := astPkg.Name + "_" + controllerName
+	if v, ok := analysisControllerCommentsCache[key]; ok {
+		return v
 	}
 
 	for _, fl := range astPkg.Files {
@@ -187,17 +207,18 @@ func AnalysisControllerComments(astPkg *ast.Package, controllerName string) (tag
 									for _, v := range specDecl.Doc.List { // 结构体注释
 										t := internal.GetCommentAfterPrefix(v.Text, "//")
 										if strings.HasPrefix(t, "@TAG") {
-											tagName = internal.GetCommentAfterPrefix(t, "@TAG")
+											cc.TagName = internal.GetCommentAfterPrefix(t, "@TAG")
 										} else if strings.HasPrefix(t, "@ROUTE") {
-											route = internal.GetCommentAfterPrefix(t, "@ROUTE")
+											cc.Route = internal.GetCommentAfterPrefix(t, "@ROUTE")
 										} else if strings.HasPrefix(t, "@AUTH") {
-											tokenHeader = internal.GetCommentAfterPrefix(t, "@AUTH")
-											if tokenHeader == "" {
-												tokenHeader = "Authorization"
+											cc.TokenHeader = internal.GetCommentAfterPrefix(t, "@AUTH")
+											if cc.TokenHeader == "" {
+												cc.TokenHeader = "Authorization"
 											}
 										}
 									}
-									return
+									analysisControllerCommentsCache[key] = cc
+									return cc
 								}
 
 							}
@@ -207,7 +228,7 @@ func AnalysisControllerComments(astPkg *ast.Package, controllerName string) (tag
 			}
 		}
 	}
-	return
+	return cc
 
 }
 
