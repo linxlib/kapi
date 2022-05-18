@@ -10,6 +10,7 @@ import (
 type Option struct {
 	isDebug                     bool
 	needDoc                     bool
+	needSwagger                 bool
 	needReDoc                   bool
 	docName                     string
 	openDocInBrowser            bool
@@ -24,6 +25,7 @@ type Option struct {
 	recoverErrorFunc            RecoverErrorFunc
 	intranetIP                  string
 	staticDir                   []string
+	enablePProf                 bool
 }
 
 const SECTION_SERVER_NAME = "server"
@@ -45,7 +47,8 @@ func readConfig(o *Option) *Option {
 	o.corsConfig = corsConfig
 	o.SetIsDebug(_config.Bool(SECTION_SERVER_NAME+".debug", true))
 	o.SetNeedDoc(_config.Bool(SECTION_SERVER_NAME+".needDoc", true))
-	o.SetNeedDoc(_config.Bool(SECTION_SERVER_NAME+".needReDoc", true))
+	o.SetNeedSwagger(_config.Bool(SECTION_SERVER_NAME+".needSwagger", false))
+	o.SetNeedReDoc(_config.Bool(SECTION_SERVER_NAME+".needReDoc", true))
 	o.SetDocName(_config.String(SECTION_SERVER_NAME+".docName", "K-Api"))
 	o.SetOpenDocInBrowser(_config.Bool(SECTION_SERVER_NAME+".openDocInBrowser", false))
 	o.SetDocDomain(_config.String(SECTION_SERVER_NAME+".docDomain", ""))
@@ -55,6 +58,7 @@ func readConfig(o *Option) *Option {
 	o.SetApiBasePath(_config.String(SECTION_SERVER_NAME+".apiBasePath", "/"))
 	o.SetPort(_config.Int(SECTION_SERVER_NAME+".port", 2021))
 	o.SetStaticDirs(_config.Strings(SECTION_SERVER_NAME + ".staticDirs")...)
+	o.SetEnablePProf(_config.Bool(SECTION_SERVER_NAME+".enablePProf", false))
 
 	return o
 }
@@ -93,6 +97,13 @@ func (o *Option) SetNeedDoc(needDoc ...bool) *Option {
 	o.needDoc = true
 	if len(needDoc) > 0 {
 		o.needDoc = needDoc[0]
+	}
+	return o
+}
+func (o *Option) SetNeedSwagger(needSwagger ...bool) *Option {
+	o.needSwagger = true
+	if len(needSwagger) > 0 {
+		o.needSwagger = needSwagger[0]
 	}
 	return o
 }
@@ -184,6 +195,14 @@ func (o *Option) SetStaticDirs(dir ...string) *Option {
 	o.staticDir = []string{"static"}
 	if len(dir) > 0 {
 		o.staticDir = dir
+	}
+	return o
+}
+
+func (o *Option) SetEnablePProf(enable ...bool) *Option {
+	o.enablePProf = false
+	if len(enable) > 0 {
+		o.enablePProf = enable[0]
 	}
 	return o
 }
