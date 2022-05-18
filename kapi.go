@@ -7,6 +7,7 @@ import (
 	"gitee.com/kirile/kapi/doc/swagger"
 	"gitee.com/kirile/kapi/internal"
 	"gitee.com/kirile/kapi/internal/cors"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net"
@@ -108,21 +109,24 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 		b.serverDown = true
 	}
 	b.baseGroup.PATCH("/serverDown", func(context *gin.Context) {
-		if context.GetHeader("Authorization")=="8ReKwuw2x5zvqbnQVs5vOdgLckd1Pwcm" {
+		if context.GetHeader("Authorization") == "8ReKwuw2x5zvqbnQVs5vOdgLckd1Pwcm" {
 			if !b.serverDown {
 				b.serverDown = true
-				ioutil.WriteFile("./.serverdown",[]byte("true"),os.ModePerm)
+				ioutil.WriteFile("./.serverdown", []byte("true"), os.ModePerm)
 			}
 		}
 	})
 	b.baseGroup.Use(func(context *gin.Context) {
 		if b.serverDown {
-			context.String(200,"服务器故障，请检查！")
+			context.String(200, "服务器故障，请检查！")
 			context.Abort()
 		}
 	})
 	b.doRegister(b.baseGroup, cList...)
 	b.handleStatic()
+	if b.option.enablePProf {
+		pprof.Register(b.engine, "/kapi")
+	}
 	internal.Log.Infof("解析耗时:%s", time.Now().Sub(start).String())
 }
 
@@ -170,10 +174,21 @@ func (b *KApi) handleStatic() {
 func (b *KApi) handleSwaggerDoc() {
 	if b.option.needDoc && !b.genFlag {
 		swaggerUrl := fmt.Sprintf("http://%s:%d/swagger/index.html", b.option.intranetIP, b.option.listenPort)
-		if b.option.docDomain != "" {
-			swaggerUrl = fmt.Sprintf("%s/swagger/index.html", b.option.docDomain)
+		redocUrl := fmt.Sprintf("http://%s:%d/redoc/", b.option.intranetIP, b.option.listenPort)
+		if b.option.needSwagger {
+			if b.option.docDomain != "" {
+				swaggerUrl = fmt.Sprintf("%s/swagger/index.html", b.option.docDomain)
+			}
+			internal.Log.Infoln("Swagger文档地址:", swaggerUrl)
 		}
-		internal.Log.Infoln("文档地址:", swaggerUrl)
+		if b.option.needReDoc {
+
+			if b.option.docDomain != "" {
+				redocUrl = fmt.Sprintf("%s/redoc/", b.option.docDomain)
+			}
+			internal.Log.Infoln("ReDoc文档地址:", redocUrl)
+		}
+
 		if b.option.redirectToDocWhenAccessRoot {
 			//b.engine.Any("/", func(c *gin.Context) {
 			//	c.Redirect(301, fmt.Sprintf("%s/swagger/", b.option.docDomain))
@@ -192,10 +207,11 @@ func (b *KApi) handleSwaggerDoc() {
 			bs, _ := ioutil.ReadFile("swagger.json")
 			c.String(200, string(bs))
 		})
-
-		b.engine.GET("/swagger/*any", func(c *gin.Context) {
-			c.FileFromFS(c.Request.URL.Path, http.FS(swaggerFS))
-		})
+		if b.option.needSwagger {
+			b.engine.GET("/swagger/*any", func(c *gin.Context) {
+				c.FileFromFS(c.Request.URL.Path, http.FS(swaggerFS))
+			})
+		}
 
 		if b.option.needReDoc {
 			b.engine.GET("/redoc/*any", func(c *gin.Context) {
@@ -204,7 +220,11 @@ func (b *KApi) handleSwaggerDoc() {
 		}
 
 		if b.option.openDocInBrowser {
-			err := internal.OpenBrowser(swaggerUrl)
+			url := swaggerUrl
+			if !b.option.needSwagger && b.option.needReDoc {
+				url = redocUrl
+			}
+			err := internal.OpenBrowser(url)
 			if err != nil {
 				internal.Log.Error(err)
 			}

@@ -15,6 +15,8 @@ const (
 	RESULT_CODE_FAIL                       // FailExit
 	RESULT_CODE_ERROR                      //FailExit时传参error
 	RESULT_CODE_UNAUTHED
+	RESULT_CODE_NOPERMISSION
+	RESULT_CODE_NOTFOUND
 )
 
 // RegisterFuncGetResult 注册返回json结构的func
@@ -43,6 +45,20 @@ func _defaultGetResult(code RESULT_CODE, msg string, count int64, data interface
 		}
 	} else if code == RESULT_CODE_UNAUTHED {
 		return 401, messageBody{
+			Code:  "FAIL",
+			Msg:   msg,
+			Count: count,
+			Data:  data,
+		}
+	} else if code == RESULT_CODE_NOPERMISSION {
+		return 403, messageBody{
+			Code:  "FAIL",
+			Msg:   msg,
+			Count: count,
+			Data:  data,
+		}
+	} else if code == RESULT_CODE_NOTFOUND {
+		return 404, messageBody{
 			Code:  "FAIL",
 			Msg:   msg,
 			Count: count,
@@ -78,6 +94,12 @@ func (c *Context) writeFailMsg(msg string) {
 func (c *Context) writeList(count int64, list interface{}) {
 	c.JSON(GetResultFunc(RESULT_CODE_SUCCESS, "", count, list))
 }
+func (c *Context) writeNoPermissionMsg(msg string) {
+	c.JSON(GetResultFunc(RESULT_CODE_NOPERMISSION, msg, 0, nil))
+}
+func (c *Context) writeNotFoundMsg(msg string) {
+	c.JSON(GetResultFunc(RESULT_CODE_NOTFOUND, msg, 0, nil))
+}
 
 func (c *Context) ListExit(count int64, list interface{}) {
 	c.writeList(count, list)
@@ -106,6 +128,25 @@ func (c *Context) SuccessExit(data ...interface{}) {
 		c.Exit()
 	}
 }
+func (c *Context) NoPermissionExit(msg ...string) {
+	if len(msg) > 0 {
+		c.writeNoPermissionMsg(msg[0])
+		c.Exit()
+	} else {
+		c.writeNoPermissionMsg("no permission")
+		c.Exit()
+	}
+}
+
+func (c *Context) NotFoundExit(msg ...string) {
+	if len(msg) > 0 {
+		c.writeNotFoundMsg(msg[0])
+		c.Exit()
+	} else {
+		c.writeNotFoundMsg("not found")
+		c.Exit()
+	}
+}
 
 func (c *Context) FailAndExit(data ...interface{}) {
 	if len(data) > 0 {
@@ -126,7 +167,7 @@ func (c *Context) FailAndExit(data ...interface{}) {
 			c.Exit()
 		}
 	} else {
-		c.writeFailMsg("操作失败")
+		c.writeFailMsg("action failed")
 		c.Exit()
 	}
 }

@@ -65,14 +65,18 @@ func (doc *DocSwagger) AddPatch(url string, p Param, methods ...string) {
 	}
 	if p.Responses == nil {
 		p.Responses = map[string]Resp{
-			"500": {Description: "操作失败"},
+			"500": {Description: "操作异常"},
 			"400": {Description: "参数错误"},
 			"401": {Description: "鉴权失败"},
+			"403": {Description: "权限问题"},
+			"404": {Description: "资源未找到"},
 		}
 	} else {
-		p.Responses["500"] = Resp{Description: "发生错误"}
-		p.Responses["400"] = Resp{Description: "参数错误 失败"}
+		p.Responses["500"] = Resp{Description: "发生异常"}
+		p.Responses["400"] = Resp{Description: "参数错误"}
 		p.Responses["401"] = Resp{Description: "鉴权失败"}
+		p.Responses["403"] = Resp{Description: "权限问题"}
+		p.Responses["404"] = Resp{Description: "资源未找到"}
 	}
 	for _, v := range methods {
 		doc.Client.Paths[url][strings.ToLower(v)] = p
