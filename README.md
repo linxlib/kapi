@@ -1,5 +1,8 @@
 # kapi
 
+## PS
+目前正在从gitee转移到github...., 慢慢更新中
+
 ## 介绍
 基于gin的扩展, 支持 //@POST 式注释路由, 解析结构体并生成swagger文档
 
@@ -16,7 +19,7 @@
 
 ## 快速开始
 
-1. 到 `https://gitee.com/kirile/k-cli` 安装cli
+1. 到 `https://github.com/linxlib/k` 安装cli
 2. 安装后执行`go mod init {module_name}` 然后 `k init`, 自动创建 config.toml build.toml main.go 等
 3. 
 ```go
@@ -117,7 +120,7 @@ type GetBannerListReq struct {
 
 使用kapi进行开发, 建议同时使用k-cli, 由于kapi的swagger文档以及路由注册需要在开发环境运行后才会生成, 使用go自带的编译可能无法正常使用文档和注册路由
 
-**目前移动到 https://gitee.com/kirile/k-cli** 仓库
+**目前移动到 https://github.com/linxlib/k** 仓库
 
 
 # app
@@ -125,4 +128,4 @@ type GetBannerListReq struct {
 #### 介绍
 app包, 包装了xorm mysql 和 redis的初始化连接以及一些简单的封装方法. 还包括了一个toml读取的辅助. 不是必要的, 你可以用你喜欢的库进行数据库操作
 
-**目前移动到https://gitee.com/kirile/kapp**
+**目前移动到https://github.com/linxlib/kapp**
