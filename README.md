@@ -24,6 +24,7 @@
 3. 
 ```go
    k := kapi.New(func(option *kapi.Option) {
+	   // 这里也可以为空 已经从配置文件中进行读取
 	   // 也可以在config.toml中进行修改, 这里写的话将覆盖配置文件中的设置
         option.SetNeedDoc(true) //是否需要生成swagger文档
         option.SetDocName("系统")
@@ -46,10 +47,32 @@
 ```
 3. 创建 controller.HelloController , 并实现一个路由方法
 ```go
+//HelloController ...
+//@TAG HelloController
+//@AUTH Authorization
+//@ROUTE /api
+type HelloController struct {
+	BaseAuthController
+}
+
+type PageSize struct {
+	Page int `query:"page" default:"1"`
+	Size int `query:"size" default:"15"`
+}
+
+func (ps *PageSize) GetLimit() (int,int) {
+	return ps.Size,(ps.Page-1)*ps.Size
+}
+
+type HelloWorld1Req struct {
+	PageSize
+	Name string `query:"name" binding:"required"`
+	Authorization string `header:"Authorization"`
+	
+}
 // World1 World1
-// 一个Context参数的方法
 // @GET /hello/list
-func (h *HelloController) World1(c *kapi.Context) {
+func (h *HelloController) World1(c *kapi.Context,req *HelloWorld1Req) {
 	c.SuccessExit()
 }
 ```
@@ -107,7 +130,7 @@ type GetBannerListReq struct {
 - [x] 增加命令行参数用于仅生成路由和文档, 实现编译前无需运行即可更新文档
 - [x] 优化ast包解析, 减少循环 (目前通过增加map来缓存需要的数据, 重复的对象不会多次遍历ast树)
 - [ ] 加入枚举支持
-- [ ] k cli 加入项目判断, 使其可用于其他纯go项目的编译
+- [x] k cli 加入项目判断, 使其可用于其他纯go项目的编译
   
 ## 感谢
 
