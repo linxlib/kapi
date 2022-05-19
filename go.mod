@@ -1,4 +1,4 @@
-module gitee.com/kirile/kapi
+module github.com/linxlib/kapi
 
 go 1.16
 

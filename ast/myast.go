@@ -2,8 +2,8 @@ package ast
 
 import (
 	"fmt"
-	"gitee.com/kirile/kapi/doc"
-	"gitee.com/kirile/kapi/internal"
+	"github.com/linxlib/kapi/doc"
+	"github.com/linxlib/kapi/internal"
 	"go/ast"
 	"go/token"
 	"reflect"

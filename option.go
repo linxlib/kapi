@@ -1,10 +1,10 @@
 package kapi
 
 import (
-	"gitee.com/kirile/kapi/internal"
-	"gitee.com/kirile/kapi/internal/cors"
-	"gitee.com/kirile/kapi/lib/toml"
 	"github.com/gin-gonic/gin"
+	"github.com/linxlib/kapi/internal"
+	"github.com/linxlib/kapi/internal/cors"
+	"github.com/linxlib/kapi/lib/toml"
 )
 
 type Option struct {

@@ -1,7 +1,7 @@
 package swagger
 
 import (
-	"gitee.com/kirile/kapi/internal"
+	"github.com/linxlib/kapi/internal"
 	"strings"
 )
 

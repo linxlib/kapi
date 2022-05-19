@@ -3,8 +3,8 @@ package ast
 import (
 	"errors"
 	"fmt"
-	"gitee.com/kirile/kapi/doc"
-	"gitee.com/kirile/kapi/internal"
+	"github.com/linxlib/kapi/doc"
+	"github.com/linxlib/kapi/internal"
 	"go/ast"
 	"go/parser"
 	"go/token"

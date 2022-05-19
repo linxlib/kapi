@@ -2,6 +2,5 @@ module test_kapi
 
 go 1.16
 
-require gitee.com/kirile/kapi v0.2.2
+require github.com/linxlib/kapi v0.2.9
 
-replace gitee.com/kirile/kapi => ../

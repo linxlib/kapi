@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"gitee.com/kirile/kapi"
+	"github.com/linxlib/kapi"
 )
 
 //Hello Hello1 World

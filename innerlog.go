@@ -2,8 +2,8 @@ package kapi
 
 import (
 	"fmt"
-	"gitee.com/kirile/kapi/internal"
 	"github.com/gin-gonic/gin"
+	"github.com/linxlib/kapi/internal"
 	"time"
 )
 

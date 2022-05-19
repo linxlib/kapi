@@ -1,7 +1,7 @@
 package doc
 
 import (
-	"gitee.com/kirile/kapi/doc/swagger"
+	"github.com/linxlib/kapi/doc/swagger"
 	"reflect"
 	"strings"
 )

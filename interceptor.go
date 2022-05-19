@@ -2,7 +2,7 @@ package kapi
 
 import (
 	"context"
-	"gitee.com/kirile/kapi/internal"
+	"github.com/linxlib/kapi/internal"
 	"time"
 )
 

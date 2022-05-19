@@ -3,7 +3,7 @@ package kapi
 import (
 	"bytes"
 	"encoding/gob"
-	"gitee.com/kirile/kapi/internal"
+	"github.com/linxlib/kapi/internal"
 	"strings"
 	"sync"
 	"time"

@@ -1,10 +1,9 @@
 package main
 
 import (
-	"gitee.com/kirile/kapi"
+	"github.com/linxlib/kapi"
 	"test_kapi/api/controller"
 )
-
 
 func main() {
 	k := kapi.New(func(option *kapi.Option) {
@@ -18,7 +17,6 @@ func main() {
 		new(controller.LoginController),
 		new(controller.CategoryController),
 	)
-
 
 	k.Run()
 

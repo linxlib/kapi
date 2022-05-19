@@ -1,6 +1,6 @@
 package controller
 
-import "gitee.com/kirile/kapi"
+import "github.com/linxlib/kapi"
 
 type BaseController struct {
 	MyCustomData string
@@ -14,4 +14,3 @@ func (b *BaseController) Before(req *kapi.InterceptorContext) bool {
 func (b *BaseController) After(req *kapi.InterceptorContext) bool {
 	return true
 }
-
