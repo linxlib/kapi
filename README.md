@@ -129,8 +129,13 @@ type GetBannerListReq struct {
 - [x] 配置文件配置服务 (需要配合 k init)
 - [x] 增加命令行参数用于仅生成路由和文档, 实现编译前无需运行即可更新文档
 - [x] 优化ast包解析, 减少循环 (目前通过增加map来缓存需要的数据, 重复的对象不会多次遍历ast树)
-- [ ] 加入枚举支持
 - [x] k cli 加入项目判断, 使其可用于其他纯go项目的编译
+- [ ] 加入枚举支持
+- [ ] [RapiDoc](https://github.com/rapi-doc/RapiDoc)
+- [ ] 增加一个注解用于注释返回结构类型, 特指只有一个Context的方法
+- [ ] k编译打包时增加进度显示, 优化打包速度
+- [ ] 精简引用包，减小体积
+- [ ] 加入markdown形式的文档
   
 ## 感谢
 
@@ -146,9 +151,3 @@ type GetBannerListReq struct {
 **目前移动到 https://github.com/linxlib/k** 仓库
 
 
-# app
-
-#### 介绍
-app包, 包装了xorm mysql 和 redis的初始化连接以及一些简单的封装方法. 还包括了一个toml读取的辅助. 不是必要的, 你可以用你喜欢的库进行数据库操作
-
-**目前移动到https://github.com/linxlib/kapp**
