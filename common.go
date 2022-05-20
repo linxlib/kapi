@@ -491,7 +491,7 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 				if _b {
 					if sdl, ok := funMp[method.Name]; ok {
 						isDeprecated, gcs, req, resp := b.parseComments(sdl, cc.Route, method.Name, imports, objPkg, num)
-						if b.option.needDoc { // output newDoc
+						if b.option.Server.NeedDoc { // output newDoc
 							docReq, docResp := b.parseStruct(req, resp, astPkg, modPkg, modFile)
 							for _, gc := range gcs {
 								newDoc.AddOne(cc.TagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp, cc.TokenHeader, isDeprecated)
@@ -509,7 +509,7 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 		}
 	}
 
-	if b.option.needDoc {
+	if b.option.Server.NeedDoc {
 		b.addDocModel(newDoc)
 	}
 	return true

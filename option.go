@@ -2,35 +2,61 @@ package kapi
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/linxlib/conf"
 	"github.com/linxlib/kapi/internal"
 	"github.com/linxlib/kapi/internal/cors"
-	"github.com/linxlib/kapi/lib/toml"
 )
 
+var defaultConf = `
+[server]
+debug = true
+needDoc = true
+needReDoc = false
+needSwagger = true
+docName = "K-Api"
+docDesc = "K-Api"
+port = 2022
+openDocInBrowser = true
+docDomain = ""
+docVer = "v1"
+redirectToDocWhenAccessRoot = true
+apiBasePath = ""
+staticDirs = ["static"]
+enablePProf = false
+[server.cors]
+allowHeaders = ["Origin","Content-Length","Content-Type"]
+`
+
 type Option struct {
-	isDebug                     bool
-	needDoc                     bool
-	needSwagger                 bool
-	needReDoc                   bool
-	docName                     string
-	openDocInBrowser            bool
-	redirectToDocWhenAccessRoot bool
-	docDomain                   string
-	docDesc                     string
-	docVer                      string
-	ginLoggerFormatter          gin.LogFormatter
-	corsConfig                  cors.Config
-	apiBasePath                 string
-	listenPort                  int
-	recoverErrorFunc            RecoverErrorFunc
-	intranetIP                  string
-	staticDir                   []string
-	enablePProf                 bool
+	ginLoggerFormatter gin.LogFormatter
+	corsConfig         cors.Config
+	recoverErrorFunc   RecoverErrorFunc
+	intranetIP         string
+
+	Server struct {
+		Debug                       bool     `conf:"debug" default:"true"`
+		NeedDoc                     bool     `conf:"needDoc" default:"true"`
+		NeedReDoc                   bool     `conf:"needReDoc" default:"false"`
+		NeedSwagger                 bool     `conf:"needSwagger" default:"true"`
+		DocName                     string   `conf:"docName" default:"K-Api"`
+		DocDesc                     string   `conf:"docDesc" default:"K-Api"`
+		Port                        int      `conf:"port" default:"2022"`
+		OpenDocInBrowser            bool     `conf:"openDocInBrowser" default:"true"`
+		DocDomain                   string   `conf:"docDomain"`
+		DocVer                      string   `conf:"docVer" default:"v1"`
+		RedirectToDocWhenAccessRoot bool     `conf:"redirectToDocWhenAccessRoot" default:"true"`
+		APIBasePath                 string   `conf:"apiBasePath" default:""`
+		StaticDirs                  []string `conf:"staticDirs" default:"[static]"`
+		EnablePProf                 bool     `conf:"enablePProf" default:"false"`
+		Cors                        struct {
+			AllowHeaders []string `conf:"allowHeaders" default:"[Origin,Content-Length,Content-Type,Authorization,x-requested-with]"`
+		} `conf:"cors"`
+	} `conf:"server"`
 }
 
-const SECTION_SERVER_NAME = "server"
-
-var _config = toml.ParseFile("config.toml")
+func GetEmptyConfig() []byte {
+	return []byte(defaultConf)
+}
 
 func readConfig(o *Option) *Option {
 	//配置cors
@@ -38,28 +64,11 @@ func readConfig(o *Option) *Option {
 	corsConfig.AllowAllOrigins = true
 	corsConfig.AllowPrivateNetwork = true
 
-	arr := _config.Array(SECTION_SERVER_NAME+".cors.allowHeaders", toml.ParseDefaultArray(`["Origin","Content-Length","Content-Type","Authorization","x-requested-with"]`))
-	allowHeaders := make([]string, 0)
-	for _, value := range arr {
-		allowHeaders = append(allowHeaders, value.AsString())
-	}
-	corsConfig.AllowHeaders = allowHeaders
-	o.corsConfig = corsConfig
-	o.SetIsDebug(_config.Bool(SECTION_SERVER_NAME+".debug", true))
-	o.SetNeedDoc(_config.Bool(SECTION_SERVER_NAME+".needDoc", true))
-	o.SetNeedSwagger(_config.Bool(SECTION_SERVER_NAME+".needSwagger", false))
-	o.SetNeedReDoc(_config.Bool(SECTION_SERVER_NAME+".needReDoc", true))
-	o.SetDocName(_config.String(SECTION_SERVER_NAME+".docName", "K-Api"))
-	o.SetOpenDocInBrowser(_config.Bool(SECTION_SERVER_NAME+".openDocInBrowser", false))
-	o.SetDocDomain(_config.String(SECTION_SERVER_NAME+".docDomain", ""))
-	o.SetDocVersion(_config.String(SECTION_SERVER_NAME+".docVer", "v1"))
-	o.SetRedirectToDocWhenAccessRoot(_config.Bool(SECTION_SERVER_NAME+".redirectToDocWhenAccessRoot", true))
-	o.SetDocDescription(_config.String(SECTION_SERVER_NAME+".docDesc", "K-Api"))
-	o.SetApiBasePath(_config.String(SECTION_SERVER_NAME+".apiBasePath", "/"))
-	o.SetPort(_config.Int(SECTION_SERVER_NAME+".port", 2021))
-	o.SetStaticDirs(_config.Strings(SECTION_SERVER_NAME + ".staticDirs")...)
-	o.SetEnablePProf(_config.Bool(SECTION_SERVER_NAME+".enablePProf", false))
+	conf.Load(o, conf.File("config.toml"),
+		conf.Dirs("./", "./config"))
 
+	corsConfig.AllowHeaders = o.Server.Cors.AllowHeaders
+	o.corsConfig = corsConfig
 	return o
 }
 
@@ -79,85 +88,6 @@ func defaultOption() *Option {
 		},
 	}
 	return readConfig(o)
-}
-
-// SetIsDebug 设置是否调试模式 当不是开发情况时自动变为false
-func (o *Option) SetIsDebug(isDebug ...bool) *Option {
-	o.isDebug = true
-	if len(isDebug) > 0 {
-		o.isDebug = isDebug[0]
-	}
-	if !internal.CheckFileIsExist("main.go") {
-		o.isDebug = false
-	}
-	return o
-}
-
-func (o *Option) SetNeedDoc(needDoc ...bool) *Option {
-	o.needDoc = true
-	if len(needDoc) > 0 {
-		o.needDoc = needDoc[0]
-	}
-	return o
-}
-func (o *Option) SetNeedSwagger(needSwagger ...bool) *Option {
-	o.needSwagger = true
-	if len(needSwagger) > 0 {
-		o.needSwagger = needSwagger[0]
-	}
-	return o
-}
-func (o *Option) SetNeedReDoc(needReDoc ...bool) *Option {
-	o.needReDoc = true
-	if len(needReDoc) > 0 {
-		o.needReDoc = needReDoc[0]
-	}
-	return o
-}
-
-// SetDocName 设置文档名称
-func (o *Option) SetDocName(docName string) *Option {
-	o.docName = docName
-	return o
-}
-
-//SetDocVersion 设置文档版本
-func (o *Option) SetDocVersion(ver string) *Option {
-	o.docVer = ver
-	return o
-}
-
-//SetDocDescription 设置文档描述
-func (o *Option) SetDocDescription(desc string) *Option {
-	o.docDesc = desc
-	return o
-}
-
-func (o *Option) SetOpenDocInBrowser(open ...bool) *Option {
-	o.openDocInBrowser = true
-	if len(open) > 0 {
-		o.openDocInBrowser = open[0]
-	}
-	return o
-}
-
-func (o *Option) SetDocDomain(docDomain string) *Option {
-	o.docDomain = docDomain
-	return o
-}
-
-func (o *Option) SetApiBasePath(path string) *Option {
-	o.apiBasePath = path
-	return o
-}
-
-func (o *Option) SetPort(port int) *Option {
-	o.listenPort = port
-	return o
-}
-func (o *Option) SetCors(cors cors.Config) *Option {
-	o.corsConfig = cors
-	return o
 }
 
 func (o *Option) SetGinLoggerFormatter(formatter gin.LogFormatter) *Option {
@@ -180,29 +110,5 @@ func (o *Option) SetRecoverFunc(f func(interface{})) *Option {
 
 func (o *Option) SetIntranetIP(ip string) *Option {
 	o.intranetIP = ip
-	return o
-}
-
-func (o *Option) SetRedirectToDocWhenAccessRoot(redirect ...bool) *Option {
-	o.redirectToDocWhenAccessRoot = true
-	if len(redirect) > 0 {
-		o.redirectToDocWhenAccessRoot = redirect[0]
-	}
-	return o
-}
-
-func (o *Option) SetStaticDirs(dir ...string) *Option {
-	o.staticDir = []string{"static"}
-	if len(dir) > 0 {
-		o.staticDir = dir
-	}
-	return o
-}
-
-func (o *Option) SetEnablePProf(enable ...bool) *Option {
-	o.enablePProf = false
-	if len(enable) > 0 {
-		o.enablePProf = enable[0]
-	}
 	return o
 }

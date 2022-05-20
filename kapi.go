@@ -87,7 +87,7 @@ func New(f func(*Option)) *KApi {
 	b.engine.Use(gin.LoggerWithFormatter(b.option.ginLoggerFormatter))
 	b.engine.Use(cors.New(b.option.corsConfig))
 	if !b.genFlag {
-		internal.Log.Infof("localIP:%s docName:%s port:%d", b.option.intranetIP, b.option.docName, b.option.listenPort)
+		internal.Log.Infof("localIP:%s docName:%s port:%d", b.option.intranetIP, b.option.Server.DocName, b.option.Server.Port)
 	} else {
 		internal.Log.Infoln("生成模式")
 	}
@@ -104,7 +104,7 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 	}
 
 	b.handleSwaggerBase()
-	b.baseGroup = b.engine.Group(b.option.apiBasePath)
+	b.baseGroup = b.engine.Group(b.option.Server.APIBasePath)
 	if internal.CheckFileIsExist("./.serverdown") {
 		b.serverDown = true
 	}
@@ -124,7 +124,7 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 	})
 	b.doRegister(b.baseGroup, cList...)
 	b.handleStatic()
-	if b.option.enablePProf {
+	if b.option.Server.EnablePProf {
 		pprof.Register(b.engine, "/kapi")
 	}
 	internal.Log.Infof("解析耗时:%s", time.Now().Sub(start).String())
@@ -139,32 +139,32 @@ func (b *KApi) handleSwaggerBase() {
 		Version:     "1.0.0",
 		Title:       "KAPI",
 	}
-	if b.option.needDoc {
-		if b.option.docDomain != "" {
-			internal.Log.Debug("域名:" + b.option.docDomain)
-			if strings.HasPrefix(b.option.docDomain, "https") {
+	if b.option.Server.NeedDoc {
+		if b.option.Server.DocDomain != "" {
+			internal.Log.Debug("域名:" + b.option.Server.DocDomain)
+			if strings.HasPrefix(b.option.Server.DocDomain, "https") {
 				schemes = []string{"https", "http"}
 			} else {
 				schemes = []string{"http", "https"}
 			}
-			host = strings.TrimPrefix(b.option.docDomain, "http://")
+			host = strings.TrimPrefix(b.option.Server.DocDomain, "http://")
 			host = strings.TrimPrefix(host, "https://")
 		} else {
 			schemes = []string{"http"}
-			host = fmt.Sprintf("%s:%d", b.option.intranetIP, b.option.listenPort)
+			host = fmt.Sprintf("%s:%d", b.option.intranetIP, b.option.Server.Port)
 		}
 		info = swagger.Info{
-			Description: b.option.docName,
-			Version:     b.option.docVer,
-			Title:       b.option.docDesc,
+			Description: b.option.Server.DocName,
+			Version:     b.option.Server.DocVer,
+			Title:       b.option.Server.DocDesc,
 		}
 	}
 	b.doc = swagger.NewDoc(host, info, basePath, schemes)
 }
 
 func (b *KApi) handleStatic() {
-	if len(b.option.staticDir) > 0 && !b.genFlag {
-		for _, s := range b.option.staticDir {
+	if len(b.option.Server.StaticDirs) > 0 && !b.genFlag {
+		for _, s := range b.option.Server.StaticDirs {
 			b.engine.Static(s, s)
 		}
 
@@ -172,29 +172,29 @@ func (b *KApi) handleStatic() {
 }
 
 func (b *KApi) handleSwaggerDoc() {
-	if b.option.needDoc && !b.genFlag {
-		swaggerUrl := fmt.Sprintf("http://%s:%d/swagger/index.html", b.option.intranetIP, b.option.listenPort)
-		redocUrl := fmt.Sprintf("http://%s:%d/redoc/", b.option.intranetIP, b.option.listenPort)
-		if b.option.needSwagger {
-			if b.option.docDomain != "" {
-				swaggerUrl = fmt.Sprintf("%s/swagger/index.html", b.option.docDomain)
+	if b.option.Server.NeedDoc && !b.genFlag {
+		swaggerUrl := fmt.Sprintf("http://%s:%d/swagger/index.html", b.option.intranetIP, b.option.Server.Port)
+		redocUrl := fmt.Sprintf("http://%s:%d/redoc/", b.option.intranetIP, b.option.Server.Port)
+		if b.option.Server.NeedSwagger {
+			if b.option.Server.DocDomain != "" {
+				swaggerUrl = fmt.Sprintf("%s/swagger/index.html", b.option.Server.DocDomain)
 			}
 			internal.Log.Infoln("Swagger文档地址:", swaggerUrl)
 		}
-		if b.option.needReDoc {
+		if b.option.Server.NeedReDoc {
 
-			if b.option.docDomain != "" {
-				redocUrl = fmt.Sprintf("%s/redoc/", b.option.docDomain)
+			if b.option.Server.DocDomain != "" {
+				redocUrl = fmt.Sprintf("%s/redoc/", b.option.Server.DocDomain)
 			}
 			internal.Log.Infoln("ReDoc文档地址:", redocUrl)
 		}
 
-		if b.option.redirectToDocWhenAccessRoot {
+		if b.option.Server.RedirectToDocWhenAccessRoot {
 			//b.engine.Any("/", func(c *gin.Context) {
 			//	c.Redirect(301, fmt.Sprintf("%s/swagger/", b.option.docDomain))
 			//})
 			b.engine.Any("", func(c *gin.Context) {
-				c.Redirect(301, fmt.Sprintf("%s/swagger/", b.option.docDomain))
+				c.Redirect(301, fmt.Sprintf("%s/swagger/", b.option.Server.DocDomain))
 			})
 		}
 
@@ -207,21 +207,21 @@ func (b *KApi) handleSwaggerDoc() {
 			bs, _ := ioutil.ReadFile("swagger.json")
 			c.String(200, string(bs))
 		})
-		if b.option.needSwagger {
+		if b.option.Server.NeedSwagger {
 			b.engine.GET("/swagger/*any", func(c *gin.Context) {
 				c.FileFromFS(c.Request.URL.Path, http.FS(swaggerFS))
 			})
 		}
 
-		if b.option.needReDoc {
+		if b.option.Server.NeedReDoc {
 			b.engine.GET("/redoc/*any", func(c *gin.Context) {
 				c.FileFromFS(c.Request.URL.Path, http.FS(redocFS))
 			})
 		}
 
-		if b.option.openDocInBrowser {
+		if b.option.Server.OpenDocInBrowser {
 			url := swaggerUrl
-			if !b.option.needSwagger && b.option.needReDoc {
+			if !b.option.Server.NeedSwagger && b.option.Server.NeedReDoc {
 				url = redocUrl
 			}
 			err := internal.OpenBrowser(url)
@@ -241,8 +241,8 @@ func (b *KApi) Run() {
 		return
 	}
 
-	internal.Log.Infof("服务启动 http://%s:%d\n", b.option.intranetIP, b.option.listenPort)
-	err := b.engine.Run(fmt.Sprintf(":%d", b.option.listenPort))
+	internal.Log.Infof("服务启动 http://%s:%d\n", b.option.intranetIP, b.option.Server.Port)
+	err := b.engine.Run(fmt.Sprintf(":%d", &b.option.Server.Port))
 	if err != nil {
 		if e, ok := err.(*net.OpError); ok {
 			if e1, ok := e.Err.(*os.SyscallError); ok {
@@ -276,7 +276,7 @@ func (b *KApi) Model(middleware ApiFunc) *KApi {
 // Register 注册多个Controller struct
 func (b *KApi) doRegister(router gin.IRoutes, cList ...interface{}) bool {
 	//开发时 生成路由注册文件 gen.gob
-	if b.option.isDebug {
+	if b.option.Server.Debug {
 		b.tryGenRegister(router, cList...)
 	}
 
@@ -285,7 +285,7 @@ func (b *KApi) doRegister(router gin.IRoutes, cList ...interface{}) bool {
 
 // genRouterCode 生成gen.gob
 func (b *KApi) genRouterCode() {
-	if !b.option.isDebug {
+	if !b.option.Server.Debug {
 		return
 	}
 	genOutPut()
@@ -293,7 +293,7 @@ func (b *KApi) genRouterCode() {
 
 // genDoc 生成swagger.json
 func (b *KApi) genDoc() {
-	if !b.option.isDebug || !b.option.needDoc {
+	if !b.option.Server.Debug || !b.option.Server.NeedDoc {
 		return
 	}
 	bs, _ := json.Marshal(b.doc.Client)
