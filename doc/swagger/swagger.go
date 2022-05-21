@@ -48,8 +48,7 @@ func (doc *DocSwagger) AddDefinitions(key string, def Definition) {
 	doc.Client.Definitions[key] = def
 }
 
-// AddPatch ... API 路径 paths 和操作在 API 规范的全局部分定义
-func (doc *DocSwagger) AddPatch(url string, p Param, methods ...string) {
+func (doc *DocSwagger) AddPatch2(url string, p Param, method string) {
 	if !strings.HasPrefix(url, "/") {
 		url = "/" + url
 	}
@@ -78,9 +77,7 @@ func (doc *DocSwagger) AddPatch(url string, p Param, methods ...string) {
 		p.Responses["403"] = Resp{Description: "权限问题"}
 		p.Responses["404"] = Resp{Description: "资源未找到"}
 	}
-	for _, v := range methods {
-		doc.Client.Paths[url][strings.ToLower(v)] = p
-	}
+	doc.Client.Paths[url][strings.ToLower(method)] = p
 }
 
 // GetAPIString 获取返回数据
@@ -114,20 +111,17 @@ var kvFormat = map[string]string{}
 // GetKvType 获取类型转换
 func GetKvType(k string, isArray, isType bool) string {
 	if isArray {
-		if isType {
-			return "array"
-		}
 		return "array"
 	}
 
 	if isType {
-		if _, ok := kvType[k]; ok {
-			return kvType[k]
+		if kt, ok := kvType[k]; ok {
+			return kt
 		}
 		return "object"
 	}
-	if _, ok := kvFormat[k]; ok {
-		return kvFormat[k]
+	if kf, ok := kvFormat[k]; ok {
+		return kf
 	}
 	return k
 }

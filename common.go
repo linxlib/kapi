@@ -512,21 +512,23 @@ func (b *KApi) addDocModel(model *doc.Model) {
 	sort.Strings(tags)
 
 	for _, theTag := range tags {
-		v := model.TagControllers[theTag]
+		tagControllers := model.TagControllers[theTag]
 		tag := swagger.Tag{Name: theTag}
 		b.doc.AddTag(tag)
-		for _, v1 := range v {
+		//TODO: 重名方法 但是 METHOD不一样的情况
+		for _, tagControllerMethod := range tagControllers {
 			var p swagger.Param
 			p.Tags = []string{theTag}
-			p.Summary = v1.Note
-			p.Description = v1.Note
-			p.OperationID = v1.Methods[0] + "_" + strings.ReplaceAll(v1.RouterPath, "/", "_")
+			p.Summary = tagControllerMethod.Note
+			p.Description = tagControllerMethod.Note
+			url := buildRelativePath(model.Group, tagControllerMethod.RouterPath)
+
 			myreqRef := ""
 			p.Parameters = make([]swagger.Element, 0)
-			p.Deprecated = v1.IsDeprecated
+			p.Deprecated = tagControllerMethod.IsDeprecated
 
-			if v1.Req != nil {
-				for _, item := range v1.Req.Items {
+			if tagControllerMethod.Req != nil {
+				for _, item := range tagControllerMethod.Req.Items {
 					switch item.ParamType {
 					case doc.ParamTypeHeader:
 						p.Parameters = append(p.Parameters, swagger.Element{
@@ -569,17 +571,17 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Default:     item.Default,
 						})
 					default:
-						myreqRef = "#/definitions/" + v1.Req.Name
+						myreqRef = "#/definitions/" + tagControllerMethod.Req.Name
 						exist := false
 						for _, parameter := range p.Parameters {
-							if parameter.Name == v1.Req.Name {
+							if parameter.Name == tagControllerMethod.Req.Name {
 								exist = true
 							}
 						}
 						if !exist {
 							p.Parameters = append(p.Parameters, swagger.Element{
 								In:          "body",
-								Name:        v1.Req.Name,
+								Name:        tagControllerMethod.Req.Name,
 								Description: item.Note,
 								Required:    true,
 								Schema: &swagger.Schema{
@@ -592,30 +594,28 @@ func (b *KApi) addDocModel(model *doc.Model) {
 
 				}
 
-			} else {
-
 			}
-			if v1.TokenHeader != "" {
+			if tagControllerMethod.TokenHeader != "" {
 				p.Parameters = append(p.Parameters, swagger.Element{
 					In:          "header",
-					Name:        v1.TokenHeader,
-					Description: v1.TokenHeader,
+					Name:        tagControllerMethod.TokenHeader,
+					Description: tagControllerMethod.TokenHeader,
 					Required:    true,
 					Type:        "string",
 					Schema:      nil,
 					Default:     "",
 				})
 			}
-			if v1.Resp != nil {
+			if tagControllerMethod.Resp != nil {
 				p.Responses = make(map[string]swagger.Resp)
-				for _, item := range v1.Resp.Items {
+				for _, item := range tagControllerMethod.Resp.Items {
 					if item.IsArray {
 						p.Responses["200"] = swagger.Resp{
 							Description: "成功返回",
 							Schema: map[string]interface{}{
 								"type": "array",
 								"items": map[string]string{
-									"$ref": "#/definitions/" + v1.Resp.Name,
+									"$ref": "#/definitions/" + tagControllerMethod.Resp.Name,
 								},
 							},
 						}
@@ -623,14 +623,18 @@ func (b *KApi) addDocModel(model *doc.Model) {
 						p.Responses["200"] = swagger.Resp{
 							Description: "成功返回",
 							Schema: map[string]interface{}{
-								"$ref": "#/definitions/" + v1.Resp.Name,
+								"$ref": "#/definitions/" + tagControllerMethod.Resp.Name,
 							},
 						}
 					}
 				}
 			}
 
-			b.doc.AddPatch(buildRelativePath(model.Group, v1.RouterPath), p, v1.Methods...)
+			for _, s := range tagControllerMethod.Methods {
+				p.OperationID = s + "_" + strings.ReplaceAll(tagControllerMethod.RouterPath, "/", "_")
+				b.doc.AddPatch2(url, p, s)
+			}
+
 		}
 	}
 }
