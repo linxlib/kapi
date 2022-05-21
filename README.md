@@ -134,6 +134,7 @@ type GetBannerListReq struct {
 - [x] k cli 加入项目判断, 使其可用于其他纯go项目的编译
 - [x] 重构ast解析部分，提升效率
 - [ ] 部分功能提取为单独包
+- [x] 新的参数默认值，废弃旧的 default tag，改为使用gin的 `query:"name,default=hello"`
 - [ ] 拦截器实现多个顺序执行机制（栈）
 - [ ] 加入枚举支持
 - [ ] [RapiDoc](https://github.com/rapi-doc/RapiDoc)

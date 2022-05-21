@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"github.com/linxlib/kapi"
 	"test_kapi/api/model"
 	"test_kapi/lib"
@@ -19,7 +20,7 @@ type GetCategoryListReq struct {
 //GetCategoryList
 //@GET /category/list
 func (p *CategoryController) GetCategoryList(c *kapi.Context, req *GetCategoryListReq) {
-
+	fmt.Println(req.PageSize)
 }
 
 type GetCategoryOneReq struct {

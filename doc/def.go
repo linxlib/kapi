@@ -53,19 +53,43 @@ func (ei *ElementInfo) execute() {
 		}
 	}
 	// 默认值
-	ei.Default = tag.Get("default")
+	//ei.Default = tag.Get("default")
 	//query
 	v, b := tag.Lookup("query")
 	if b {
 		ei.ParamType = ParamTypeQuery
-		ei.Name = v
+		tmp := strings.Split(v, ",")
+		if len(tmp) > 1 {
+			for _, s := range tmp {
+				if strings.HasPrefix(s, "default=") {
+					ei.Default = strings.TrimPrefix(s, "default=")
+					break
+				}
+			}
+			ei.Name = tmp[0]
+		} else {
+			ei.Name = tmp[0]
+		}
+
 	}
 	//请求头header
 	v, b = tag.Lookup("header")
 	ei.IsHeader = b
 	if b {
 		ei.ParamType = ParamTypeHeader
-		ei.Name = v
+		//ei.Name = v
+		tmp := strings.Split(v, ",")
+		if len(tmp) > 1 {
+			for _, s := range tmp {
+				if strings.HasPrefix(s, "default=") {
+					ei.Default = strings.TrimPrefix(s, "default=")
+					break
+				}
+			}
+			ei.Name = tmp[0]
+		} else {
+			ei.Name = tmp[0]
+		}
 		ei.Required = true
 	}
 	//表单 formData
@@ -75,7 +99,18 @@ func (ei *ElementInfo) execute() {
 	if b {
 		ei.ParamType = ParamTypeForm
 		ei.IsHeader = false
-		ei.Name = v
+		tmp := strings.Split(v, ",")
+		if len(tmp) > 1 {
+			for _, s := range tmp {
+				if strings.HasPrefix(s, "default=") {
+					ei.Default = strings.TrimPrefix(s, "default=")
+					break
+				}
+			}
+			ei.Name = tmp[0]
+		} else {
+			ei.Name = tmp[0]
+		}
 	}
 	//url path
 	v, b = tag.Lookup("path")
@@ -84,14 +119,36 @@ func (ei *ElementInfo) execute() {
 		ei.ParamType = ParamTypePath
 		ei.IsHeader = false
 		ei.IsFormData = false
-		ei.Name = v
+		tmp := strings.Split(v, ",")
+		if len(tmp) > 1 {
+			for _, s := range tmp {
+				if strings.HasPrefix(s, "default=") {
+					ei.Default = strings.TrimPrefix(s, "default=")
+					break
+				}
+			}
+			ei.Name = tmp[0]
+		} else {
+			ei.Name = tmp[0]
+		}
 	} else {
 		v, b = tag.Lookup("uri")
 		ei.IsPath = b
 		if b {
 			ei.IsHeader = false
 			ei.IsFormData = false
-			ei.Name = v
+			tmp := strings.Split(v, ",")
+			if len(tmp) > 1 {
+				for _, s := range tmp {
+					if strings.HasPrefix(s, "default=") {
+						ei.Default = strings.TrimPrefix(s, "default=")
+						break
+					}
+				}
+				ei.Name = tmp[0]
+			} else {
+				ei.Name = tmp[0]
+			}
 		}
 	}
 }

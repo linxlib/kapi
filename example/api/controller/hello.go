@@ -11,8 +11,10 @@ type Hello struct {
 }
 
 type PageSize struct {
-	Page int `query:"page" default:"1"`
-	Size int `query:"size" default:"15"`
+	Page     int    `query:"page,default=1"`
+	Size     int    `query:"size,default=18"`
+	Auth     string `header:"Auth,default=12138"`
+	TestPath string `path:"TestPath,default=12138"`
 }
 
 func (p *PageSize) GetLimit() (int, int) {
@@ -22,6 +24,7 @@ func (p *PageSize) GetLimit() (int, int) {
 type TestReq struct {
 	PageSize
 	Name string `query:"name"` //名称查找
+
 }
 
 //List 获取列表
