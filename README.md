@@ -111,6 +111,7 @@ type GetBannerListReq struct {
 - 实现了 kapi.Interceptor 的中间件, 可以存储一些上下文数据, 比如 当前用户 CurrentUser *model.User, 无需使用Context的相关方法
 - `kapi.RegisterFuncGetResult` 可以修改默认的返回json的结构, 为自带的 `*Exit`系方法自定义返回
 - since v0.3.2 `//@RESP model.User` 可以注明方法返回结构体，用于没有返回值的方法在文档中显示返回类型
+- since v0.3.2 可以在方法上指定多个HTTP METHOD 例如可以写多行 @GET @POST @PUT， 不过请求路径会以最后一个为准
 
 ## 部署
 `k build`后 `./bin/版本/系统_架构/`目录下的文件即为全部, 如果是自行编译, 则需要同时拷贝swagger.json和gen.gob以及config.toml.
@@ -131,12 +132,12 @@ type GetBannerListReq struct {
 - [x] 增加命令行参数用于仅生成路由和文档, 实现编译前无需运行即可更新文档
 - [x] 优化ast包解析, 减少循环 (目前通过增加map来缓存需要的数据, 重复的对象不会多次遍历ast树)
 - [x] k cli 加入项目判断, 使其可用于其他纯go项目的编译
-- [ ] 重构ast解析部分，提升效率
+- [x] 重构ast解析部分，提升效率
 - [ ] 部分功能提取为单独包
 - [ ] 拦截器实现多个顺序执行机制（栈）
 - [ ] 加入枚举支持
 - [ ] [RapiDoc](https://github.com/rapi-doc/RapiDoc)
-- [ ] 增加一个注解用于注释返回结构类型, 特指只有一个Context的方法
+- [x] 增加一个注解用于注释返回结构类型, 特指只有一个Context的方法
 - [ ] k编译打包时增加进度显示, 优化打包速度
 - [ ] 精简引用包，减小体积
 - [ ] 加入markdown形式的文档

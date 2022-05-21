@@ -31,6 +31,10 @@ func (c *Context) Exit() {
 	panic(KAPIEXIT)
 }
 
+func (c *Context) Method() string {
+	return c.Request.Method
+}
+
 func (c *Context) GetQueryString(key string) string {
 	tmp, b := c.GetQuery(key)
 	if b {
