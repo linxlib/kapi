@@ -320,6 +320,17 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 	return nil
 }
 
+func (b *KApi) analysisMethodReqRespByString(Import, objName string, p *goast.Package, modulePkg, moduleFile string) (si *doc.StructInfo) {
+	ant := ast.NewStructAnalysis(modulePkg, moduleFile)
+	if p == nil {
+		bb := ast.EvalSymlinks(modulePkg, moduleFile, Import)
+		p, _ = ast.GetAstPackage(Import, bb) // get ast trees.
+	}
+	si = ant.ParseStruct(p, objName)
+
+	return
+}
+
 // analysisMethodReqResp 解析方法的请求参数或返回参数
 func (b *KApi) analysisMethodReqResp(req goast.Expr, imports map[string]string, objPkg string, astPkg *goast.Package, modPkg, modFile string) (si *doc.StructInfo) {
 	param := &paramInfo{}
@@ -372,8 +383,7 @@ func (b *KApi) analysisMethodReqResp(req goast.Expr, imports map[string]string, 
 }
 
 // analysisMethodComment 解析方法注解
-func (b *KApi) analysisMethodComment(f *goast.FuncDecl, controllerRoute, objFunc string) (isDeprecated bool, gc *genComment) {
-	isDeprecated = false
+func (b *KApi) analysisMethodComment(f *goast.FuncDecl, controllerRoute, objFunc string) (gc *genComment) {
 	gc = &genComment{}
 
 	if f.Doc != nil {
@@ -381,7 +391,10 @@ func (b *KApi) analysisMethodComment(f *goast.FuncDecl, controllerRoute, objFunc
 			if prefix, comment, success := internal.GetCommentAfterPrefixRegex(c.Text, objFunc); success {
 				switch prefix {
 				case "@DEPRECATED":
-					isDeprecated = true
+					gc.IsDeprecated = true
+					break
+				case "@RESP":
+					gc.ResultType = comment
 					break
 				case "@GET", "@POST", "@PUT", "@DELETE", "@PATCH", "@OPTION", "@HEAD":
 					gc.RouterPath = comment
@@ -430,7 +443,7 @@ func (b *KApi) analysisController(controller interface{}, model *doc.Model, modP
 			_, _b := b.checkHandlerFunc(method.Type, true)
 			if _b && method.IsExported() {
 				if sdl, ok := funMp[method.Name]; ok {
-					isDeprecated, gc := b.analysisMethodComment(sdl, cc.Route, method.Name)
+					gc := b.analysisMethodComment(sdl, cc.Route, method.Name)
 					if gc != nil {
 						checkOnceAdd(controllerName+"/"+method.Name, gc.RouterPath, gc.Methods)
 					}
@@ -441,9 +454,22 @@ func (b *KApi) analysisController(controller interface{}, model *doc.Model, modP
 						}
 						if sdl.Type.Results.NumFields() > 1 {
 							docResp = b.analysisMethodReqResp(sdl.Type.Results.List[0].Type, imports, controllerPkgPath, controllerAstPkg, modPkg, modFile)
+						} else {
+							if gc.ResultType != "" {
+								fmt.Println("@RESP")
+								aa := strings.Split(gc.ResultType, ".")
+								if len(aa) > 1 {
+									if importPath, ok := imports[aa[0]]; ok {
+										docResp = b.analysisMethodReqRespByString(importPath, aa[1], nil, modPkg, modFile)
+									}
+								} else {
+									docResp = b.analysisMethodReqRespByString(controllerPkgPath, gc.ResultType, controllerAstPkg, modPkg, modFile)
+								}
+
+							}
 						}
 						if gc != nil {
-							model.AddOne(cc.TagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp, cc.TokenHeader, isDeprecated)
+							model.AddOne(cc.TagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp, cc.TokenHeader, gc.IsDeprecated)
 						}
 					}
 

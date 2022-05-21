@@ -21,10 +21,12 @@ type paramInfo struct {
 
 // store the comment for the controller method. 生成注解路由
 type genComment struct {
-	RouterPath  string
-	Note        string // 注释
-	Methods     []string
-	TokenHeader string
+	RouterPath   string
+	IsDeprecated bool
+	ResultType   string
+	Note         string // 注释
+	Methods      []string
+	TokenHeader  string
 }
 
 // router style list.路由规则列表

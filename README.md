@@ -110,6 +110,7 @@ type GetBannerListReq struct {
 - `kapi.Context`包含一些Exit方法, 可以不用return直接跳出流程, 这是通过panic实现的, 当然如果方法使用了返回值, 就不能用这个方式了
 - 实现了 kapi.Interceptor 的中间件, 可以存储一些上下文数据, 比如 当前用户 CurrentUser *model.User, 无需使用Context的相关方法
 - `kapi.RegisterFuncGetResult` 可以修改默认的返回json的结构, 为自带的 `*Exit`系方法自定义返回
+- since v0.3.2 `//@RESP model.User` 可以注明方法返回结构体，用于没有返回值的方法在文档中显示返回类型
 
 ## 部署
 `k build`后 `./bin/版本/系统_架构/`目录下的文件即为全部, 如果是自行编译, 则需要同时拷贝swagger.json和gen.gob以及config.toml.
