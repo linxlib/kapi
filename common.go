@@ -14,7 +14,6 @@ import (
 	"io"
 	"net/http"
 	"reflect"
-	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -128,6 +127,7 @@ func (b *KApi) preCall(c *gin.Context, obj reflect.Value, req interface{}, metho
 	}
 	//处理控制器的拦截器
 	is := true
+
 	if preObj, ok := obj.Interface().(Interceptor); ok { // 本类型
 		is = preObj.Before(info)
 	}
@@ -320,144 +320,143 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 	return nil
 }
 
-func (b *KApi) parseStruct(req, resp *paramInfo, astPkg *goast.Package, modPkg, modFile string) (r, p *doc.StructInfo) {
+// analysisMethodReqResp 解析方法的请求参数或返回参数
+func (b *KApi) analysisMethodReqResp(req goast.Expr, imports map[string]string, objPkg string, astPkg *goast.Package, modPkg, modFile string) (si *doc.StructInfo) {
+	param := &paramInfo{}
+	switch exp := req.(type) {
+	case *goast.SelectorExpr: // 非本文件包
+		param.Type = exp.Sel.Name
+		if x, ok := exp.X.(*goast.Ident); ok {
+			param.Import = imports[x.Name]
+			param.Pkg = ast.GetImportPkg(param.Import)
+		}
+	case *goast.StarExpr: // 本文件
+		switch expx := exp.X.(type) {
+		case *goast.SelectorExpr: // 非本地包
+			param.Type = expx.Sel.Name
+			if x, ok := expx.X.(*goast.Ident); ok {
+				param.Pkg = x.Name
+				param.Import = imports[param.Pkg]
+			}
+		case *goast.Ident: // 本文件
+			param.Type = expx.Name
+			param.Import = objPkg // 本包
+		default:
+			//log.ErrorString(fmt.Sprintf("not find any expx.(%v) [%v]", reflect.TypeOf(expx), objPkg))
+		}
+	case *goast.Ident: // 本文件
+		param.Type = exp.Name
+		param.Import = objPkg // 本包
+	default:
+		//log.ErrorString(fmt.Sprintf("not find any exp.(%v) [%v]", reflect.TypeOf(d), objPkg))
+	}
+	if len(param.Pkg) > 0 {
+		var pkg string
+		n := strings.LastIndex(param.Import, "/")
+		if n > 0 {
+			pkg = param.Import[n+1:]
+		}
+		if len(pkg) > 0 {
+			param.Pkg = pkg
+		}
+	}
 	ant := ast.NewStructAnalysis(modPkg, modFile)
-	if req != nil {
-		tmp := astPkg
-		if len(req.Pkg) > 0 {
-			objFile := ast.EvalSymlinks(modPkg, modFile, req.Import)
-			tmp, _ = ast.GetAstPackage(req.Pkg, objFile) // get ast trees.
-		}
-		r = ant.ParseStruct(tmp, req.Type)
+	tmp := astPkg
+	if len(param.Pkg) > 0 {
+		objFile := ast.EvalSymlinks(modPkg, modFile, param.Import)
+		tmp, _ = ast.GetAstPackage(param.Pkg, objFile) // get ast trees.
 	}
-
-	if resp != nil {
-		tmp := astPkg
-		if len(resp.Pkg) > 0 {
-			objFile := ast.EvalSymlinks(modPkg, modFile, resp.Import)
-			tmp, _ = ast.GetAstPackage(resp.Pkg, objFile) // get ast trees.
-		}
-		p = ant.ParseStruct(tmp, resp.Type)
-	}
+	si = ant.ParseStruct(tmp, param.Type)
 
 	return
 }
 
-func analysisParam(f *goast.FieldList, imports map[string]string, objPkg string, n int) (param *paramInfo) {
-	if f != nil {
-		if f.NumFields() > 1 {
-			param = &paramInfo{}
-			d := f.List[n].Type
-			switch exp := d.(type) {
-			case *goast.SelectorExpr: // 非本文件包
-				param.Type = exp.Sel.Name
-				if x, ok := exp.X.(*goast.Ident); ok {
-					param.Import = imports[x.Name]
-					param.Pkg = ast.GetImportPkg(param.Import)
-				}
-			case *goast.StarExpr: // 本文件
-				switch expx := exp.X.(type) {
-				case *goast.SelectorExpr: // 非本地包
-					param.Type = expx.Sel.Name
-					if x, ok := expx.X.(*goast.Ident); ok {
-						param.Pkg = x.Name
-						param.Import = imports[param.Pkg]
-					}
-				case *goast.Ident: // 本文件
-					param.Type = expx.Name
-					param.Import = objPkg // 本包
-				default:
-					//log.ErrorString(fmt.Sprintf("not find any expx.(%v) [%v]", reflect.TypeOf(expx), objPkg))
-				}
-			case *goast.Ident: // 本文件
-				param.Type = exp.Name
-				param.Import = objPkg // 本包
-			default:
-				//log.ErrorString(fmt.Sprintf("not find any exp.(%v) [%v]", reflect.TypeOf(d), objPkg))
-			}
-		}
-	}
-
-	if param != nil {
-		if len(param.Pkg) > 0 {
-			var pkg string
-			n := strings.LastIndex(param.Import, "/")
-			if n > 0 {
-				pkg = param.Import[n+1:]
-			}
-			if len(pkg) > 0 {
-				param.Pkg = pkg
-			}
-		}
-	}
-	return
-}
-
-var routeRegex = regexp.MustCompile(`(@\w+)\s+(\S+)`)
-var deprecatedRegex = regexp.MustCompile(`(@\w+)`)
-
-func (b *KApi) parseComments(f *goast.FuncDecl, controllerRoute, objFunc string, imports map[string]string, objPkg string, num int) (bool, []genComment, *paramInfo, *paramInfo) {
-	var note string
-	var isDeprecated = false
-	var gcs []genComment
-	req := analysisParam(f.Type.Params, imports, objPkg, 1)   // 第二个参数作为请求参数
-	resp := analysisParam(f.Type.Results, imports, objPkg, 0) // 第一个返回值作为resp
+// analysisMethodComment 解析方法注解
+func (b *KApi) analysisMethodComment(f *goast.FuncDecl, controllerRoute, objFunc string) (isDeprecated bool, gc *genComment) {
+	isDeprecated = false
+	gc = &genComment{}
 
 	if f.Doc != nil {
 		for _, c := range f.Doc.List { // 读取方法的注释
-			gc := genComment{}
-			t := strings.TrimSpace(strings.TrimPrefix(c.Text, "//")) //去掉注释前缀并移除首尾的空格
-			if strings.HasPrefix(t, "@") {                           //以
-				matches := routeRegex.FindStringSubmatch(t)
-				if len(matches) == 3 { // 第一个是自身全部
-					gc.RouterPath = matches[2]
+			if prefix, comment, success := internal.GetCommentAfterPrefixRegex(c.Text, objFunc); success {
+				switch prefix {
+				case "@DEPRECATED":
+					isDeprecated = true
+					break
+				case "@GET", "@POST", "@PUT", "@DELETE", "@PATCH", "@OPTION", "@HEAD":
+					gc.RouterPath = comment
 					if controllerRoute != "" {
 						gc.RouterPath = controllerRoute + gc.RouterPath
 					}
-					if strings.Contains(gc.RouterPath, "/") {
-						gc.RouterPath = strings.TrimSuffix(gc.RouterPath, "/")
-					}
-					methods := matches[1]
-					if methods == "" {
-						gc.Methods = []string{"get"}
+
+					if len(gc.Methods) > 0 { // 一个方法可以有多个 @HTTPMETHOD 注解
+						gc.Methods = append(gc.Methods, strings.ToUpper(strings.TrimPrefix(prefix, "@")))
 					} else {
-						gc.Methods = []string{strings.ToLower(strings.TrimPrefix(methods, "@"))}
+						gc.Methods = []string{strings.ToUpper(strings.TrimPrefix(prefix, "@"))}
 					}
-					gcs = append(gcs, gc)
-				} else {
-					//处理其他注释
-					matches1 := deprecatedRegex.FindStringSubmatch(t)
-
-					if len(matches1) == 2 && matches1[1] == "@DEPRECATED" {
-						isDeprecated = true
-					}
+					break
+				case objFunc:
+					gc.Note += comment // 方法注释可以有多个 只要都以方法名开头即可
+					break
 				}
-
-			} else if strings.HasPrefix(t, objFunc) { // 以方法名开头的注释 设置为api的描述
-				t = strings.TrimSpace(strings.TrimPrefix(t, objFunc))
-				note += t
 			}
+
 		}
 
 	}
-
-	//default
-	if len(gcs) == 0 {
-		return isDeprecated, make([]genComment, 0), nil, nil
-	}
-
-	// add note 添加注释
-	for i := 0; i < len(gcs); i++ {
-		gcs[i].Note = note
-	}
-
-	return isDeprecated, gcs, req, resp
+	return
 }
 
-// tryGenRegister gen out the Registered config info  by struct object,[prepath + objname.]
-func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bool {
-	//TODO: 需要解析controller的注释，然后解析controller下方法的注释， 然后解析每个方法的参数, 优化解析性能
+func (b *KApi) analysisController(controller interface{}, model *doc.Model, modPkg string, modFile string) {
+	controllerRefVal := reflect.ValueOf(controller)
+	internal.Log.Debugf("解析 --> %s", controllerRefVal.Type().String())
+	controllerType := reflect.Indirect(controllerRefVal).Type()
 
+	controllerPkgPath := controllerType.PkgPath()
+
+	controllerName := controllerType.Name()
+
+	// find path
+	controllerFile := ast.EvalSymlinks(modPkg, modFile, controllerPkgPath)
+
+	controllerAstPkg, _b := ast.GetAstPackage(controllerPkgPath, controllerFile) // get ast trees.
+	if _b {
+		imports, funMp, cc := ast.AnalysisControllerFile(controllerAstPkg, controllerName)
+
+		refTyp := reflect.TypeOf(controller)
+		// 遍历controller方法
+		for m := 0; m < refTyp.NumMethod(); m++ {
+			method := refTyp.Method(m)
+			_, _b := b.checkHandlerFunc(method.Type, true)
+			if _b && method.IsExported() {
+				if sdl, ok := funMp[method.Name]; ok {
+					isDeprecated, gc := b.analysisMethodComment(sdl, cc.Route, method.Name)
+					if gc != nil {
+						checkOnceAdd(controllerName+"/"+method.Name, gc.RouterPath, gc.Methods)
+					}
+					if b.option.Server.NeedDoc { // output newDoc
+						var docReq, docResp *doc.StructInfo
+						if sdl.Type.Params.NumFields() > 1 {
+							docReq = b.analysisMethodReqResp(sdl.Type.Params.List[1].Type, imports, controllerPkgPath, controllerAstPkg, modPkg, modFile)
+						}
+						if sdl.Type.Results.NumFields() > 1 {
+							docResp = b.analysisMethodReqResp(sdl.Type.Results.List[0].Type, imports, controllerPkgPath, controllerAstPkg, modPkg, modFile)
+						}
+						if gc != nil {
+							model.AddOne(cc.TagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp, cc.TokenHeader, isDeprecated)
+						}
+					}
+
+				}
+			}
+		}
+	}
+}
+
+// analysisControllers gen out the Registered config info  by struct object,[prepath + objname.]
+func (b *KApi) analysisControllers(router gin.IRoutes, controllers ...interface{}) bool {
+	//TODO: 需要解析controller的注释，然后解析controller下方法的注释， 然后解析每个方法的参数, 优化解析性能
+	//TODO: groupPath也要加入到文档的路由中
 	modPkg, modFile, isFind := ast.GetModuleInfo(2)
 	if !isFind {
 		return false
@@ -466,47 +465,7 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 	groupPath := b.BasePath(router)
 	newDoc := doc.NewDoc(groupPath)
 	for _, c := range controllers {
-		refVal := reflect.ValueOf(c)
-		internal.Log.Debugf("解析 --> %s", refVal.Type().String())
-		t := reflect.Indirect(refVal).Type()
-
-		objPkg := t.PkgPath()
-
-		objName := t.Name()
-
-		// find path
-		objFile := ast.EvalSymlinks(modPkg, modFile, objPkg)
-
-		astPkg, _b := ast.GetAstPackage(objPkg, objFile) // get ast trees.
-		if _b {
-			imports := ast.AnalysisImport(astPkg)
-			funMp := ast.GetObjFunMp(astPkg, objName)
-			cc := ast.AnalysisControllerComments(astPkg, objName)
-
-			refTyp := reflect.TypeOf(c)
-			// Install the methods
-			for m := 0; m < refTyp.NumMethod(); m++ {
-				method := refTyp.Method(m)
-				num, _b := b.checkHandlerFunc(method.Type, true)
-				if _b {
-					if sdl, ok := funMp[method.Name]; ok {
-						isDeprecated, gcs, req, resp := b.parseComments(sdl, cc.Route, method.Name, imports, objPkg, num)
-						if b.option.Server.NeedDoc { // output newDoc
-							docReq, docResp := b.parseStruct(req, resp, astPkg, modPkg, modFile)
-							for _, gc := range gcs {
-								newDoc.AddOne(cc.TagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp, cc.TokenHeader, isDeprecated)
-								checkOnceAdd(objName+"/"+method.Name, gc.RouterPath, gc.Methods)
-							}
-						} else {
-							for _, gc := range gcs {
-								checkOnceAdd(objName+"/"+method.Name, gc.RouterPath, gc.Methods)
-							}
-						}
-
-					}
-				}
-			}
-		}
+		b.analysisController(c, newDoc, modPkg, modFile)
 	}
 
 	if b.option.Server.NeedDoc {
@@ -516,23 +475,23 @@ func (b *KApi) tryGenRegister(router gin.IRoutes, controllers ...interface{}) bo
 }
 
 func (b *KApi) addDocModel(model *doc.Model) {
-	var sortStr []string
-	for k, v := range model.MP {
+	var tags []string
+	for k, v := range model.TagControllers {
 		for _, v1 := range v {
 			model.SetDefinition(b.doc, v1.Req)
 			model.SetDefinition(b.doc, v1.Resp)
 		}
-		sortStr = append(sortStr, k)
+		tags = append(tags, k)
 	}
-	sort.Strings(sortStr)
+	sort.Strings(tags)
 
-	for _, k := range sortStr {
-		v := model.MP[k]
-		tag := swagger.Tag{Name: k}
+	for _, theTag := range tags {
+		v := model.TagControllers[theTag]
+		tag := swagger.Tag{Name: theTag}
 		b.doc.AddTag(tag)
 		for _, v1 := range v {
 			var p swagger.Param
-			p.Tags = []string{k}
+			p.Tags = []string{theTag}
 			p.Summary = v1.Note
 			p.Description = v1.Note
 			p.OperationID = v1.Methods[0] + "_" + strings.ReplaceAll(v1.RouterPath, "/", "_")
@@ -626,7 +585,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 				for _, item := range v1.Resp.Items {
 					if item.IsArray {
 						p.Responses["200"] = swagger.Resp{
-							Description: "successful result",
+							Description: "成功返回",
 							Schema: map[string]interface{}{
 								"type": "array",
 								"items": map[string]string{

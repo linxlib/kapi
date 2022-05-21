@@ -2,87 +2,16 @@ package doc
 
 import (
 	"github.com/linxlib/kapi/doc/swagger"
-	"reflect"
-	"strings"
 )
 
 func (m *Model) analysisStructInfo(info *StructInfo) {
 	if info != nil {
-		for i := 0; i < len(info.Items); i++ {
-			tag := reflect.StructTag(strings.Trim(info.Items[i].Tag, "`"))
-			info.Items[i].IsQuery = false
-			info.Items[i].IsHeader = false
-			info.Items[i].IsFormData = false
-			info.Items[i].IsPath = false
-			// json
-			tagStr := tag.Get("json")
-			if tagStr == "-" || tagStr == "" {
-				tagStr = tag.Get("url")
-			}
-			tagStrs := strings.Split(tagStr, ",")
-			if len(tagStrs[0]) > 0 {
-				info.Items[i].ParamType = -1
-				info.Items[i].Name = tagStrs[0]
-			}
-			// -------- end
-
-			// 必填
-			tagStr = tag.Get("binding")
-			tagStrs = strings.Split(tagStr, ",")
-			for _, v := range tagStrs {
-				if strings.EqualFold(v, "required") {
-					info.Items[i].Required = true
-					break
-				}
-			}
-			// 默认值
-			info.Items[i].Default = tag.Get("default")
-			//query
-			v, b := tag.Lookup("query")
-			if b {
-				info.Items[i].ParamType = ParamTypeQuery
-				info.Items[i].Name = v
-			}
-			//请求头header
-			v, b = tag.Lookup("header")
-			info.Items[i].IsHeader = b
-			if b {
-				info.Items[i].ParamType = ParamTypeHeader
-				info.Items[i].Name = v
-				info.Items[i].Required = true
-			}
-			//表单 formData
-			v, b = tag.Lookup("form")
-
-			info.Items[i].IsFormData = b
-			if b {
-				info.Items[i].ParamType = ParamTypeForm
-				info.Items[i].IsHeader = false
-				info.Items[i].Name = v
-			}
-			//url path
-			v, b = tag.Lookup("path")
-			info.Items[i].IsPath = b
-			if b {
-				info.Items[i].ParamType = ParamTypePath
-				info.Items[i].IsHeader = false
-				info.Items[i].IsFormData = false
-				info.Items[i].Name = v
-			} else {
-				v, b = tag.Lookup("uri")
-				info.Items[i].IsPath = b
-				if b {
-					info.Items[i].IsHeader = false
-					info.Items[i].IsFormData = false
-					info.Items[i].Name = v
-				}
-			}
-
-			if info.Items[i].TypeRef != nil {
-				m.analysisStructInfo(info.Items[i].TypeRef)
+		for _, item := range info.Items {
+			item.execute()
+			if item.TypeRef != nil {
+				m.analysisStructInfo(item.TypeRef)
 			}
 		}
-
 	}
 }
 

@@ -7,14 +7,14 @@ import (
 )
 
 type Model struct {
-	Group string // group 标记
-	MP    map[string]map[string]DocModel
+	Group          string // group 标记
+	TagControllers map[string]map[string]DocModel
 }
 
 // NewDoc 新建一个doc模板
 // 一次Register产生一个
 func NewDoc(group string) *Model {
-	doc := &Model{Group: group, MP: make(map[string]map[string]DocModel)}
+	doc := &Model{Group: group, TagControllers: make(map[string]map[string]DocModel)}
 	return doc
 }
 
@@ -41,14 +41,14 @@ func replacePathTo(origin string) string {
 
 // AddOne 添加一个方法
 func (m *Model) AddOne(group string, routerPath string, methods []string, note string, req, resp *StructInfo, tokenHeader string, isDeprecated bool) {
-	if m.MP[group] == nil {
-		m.MP[group] = make(map[string]DocModel)
+	if m.TagControllers[group] == nil {
+		m.TagControllers[group] = make(map[string]DocModel)
 	}
 	myRouterPath := replacePathTo(routerPath)
 	// 解析一个路由方法 并存为文档所需
 	m.analysisStructInfo(req)
 	m.analysisStructInfo(resp)
-	m.MP[group][methods[0]+" "+myRouterPath] = DocModel{
+	m.TagControllers[group][methods[0]+" "+myRouterPath] = DocModel{
 		RouterPath:   myRouterPath,
 		Methods:      methods,
 		Note:         note,

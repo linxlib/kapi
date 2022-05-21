@@ -76,34 +76,38 @@ func (a *structAnalysis) ParseStruct(astPkg *ast.Package, structName string) *do
 	return nil
 }
 
-func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, structType *ast.StructType) (items []doc.ElementInfo) {
+func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, structType *ast.StructType) (items []*doc.ElementInfo) {
 	if structType == nil || structType.Fields == nil {
 		return
 	}
 
-	items = make([]doc.ElementInfo, 0)
-
-	importMP := AnalysisImport(astPkg)
+	items = make([]*doc.ElementInfo, 0)
+	importMP := make(map[string]string)
+	for _, f := range astPkg.Files {
+		for _, p := range f.Imports {
+			handleImportSpec(p, importMP)
+		}
+	}
 
 	//遍历结构体字段
 	for _, field := range structType.Fields.List {
-		info := doc.ElementInfo{}
+		info := &doc.ElementInfo{}
 
 		for _, fieldName := range field.Names {
 			info.Name += fieldName.Name
 		}
 		if info.Name == "" { //处理没有字段名的 （类似继承）
 			if exp, ok := field.Type.(*ast.Ident); ok { //比如报名,函数名,变量名
-				a.dealIdent(astPkg, exp, &info)
+				a.dealIdent(astPkg, exp, info)
 			} else if exp, ok := field.Type.(*ast.StarExpr); ok {
 				switch x := exp.X.(type) {
 				case *ast.SelectorExpr: // 选择结构,类似于a.b的结构
-					a.dealSelectorExpr(x, &info, importMP)
+					a.dealSelectorExpr(x, info, importMP)
 				case *ast.Ident: //报名,函数名,变量名
-					a.dealIdent(astPkg, x, &info)
+					a.dealIdent(astPkg, x, info)
 				}
 			} else if exp, ok := field.Type.(*ast.SelectorExpr); ok {
-				a.dealSelectorExpr(exp, &info, importMP)
+				a.dealSelectorExpr(exp, info, importMP)
 			}
 			items = append(items, info.TypeRef.Items...)
 
@@ -134,34 +138,34 @@ func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, structType *ast.St
 
 		switch exp := field.Type.(type) {
 		case *ast.SelectorExpr: // 非本文件包
-			a.dealSelectorExpr(exp, &info, importMP)
+			a.dealSelectorExpr(exp, info, importMP)
 		case *ast.ArrayType: //数组
 			info.IsArray = true
 			switch x := exp.Elt.(type) {
 			case *ast.SelectorExpr: // 非本文件包
-				a.dealSelectorExpr(x, &info, importMP)
+				a.dealSelectorExpr(x, info, importMP)
 			case *ast.Ident:
-				a.dealIdent(astPkg, x, &info)
+				a.dealIdent(astPkg, x, info)
 			case *ast.StarExpr:
 				switch x1 := x.X.(type) {
 				case *ast.SelectorExpr: // 非本文件包
-					a.dealSelectorExpr(x1, &info, importMP)
+					a.dealSelectorExpr(x1, info, importMP)
 				case *ast.Ident:
-					a.dealIdent(astPkg, x1, &info)
+					a.dealIdent(astPkg, x1, info)
 				}
 			case *ast.ArrayType: //这里支持二维数组
 				info.IsTDArray = true
 				switch y := x.Elt.(type) {
 				case *ast.SelectorExpr: // 非本文件包
-					a.dealSelectorExpr(y, &info, importMP)
+					a.dealSelectorExpr(y, info, importMP)
 				case *ast.Ident:
-					a.dealIdent(astPkg, y, &info)
+					a.dealIdent(astPkg, y, info)
 				case *ast.StarExpr:
 					switch x1 := y.X.(type) {
 					case *ast.SelectorExpr: // 非本文件包
-						a.dealSelectorExpr(x1, &info, importMP)
+						a.dealSelectorExpr(x1, info, importMP)
 					case *ast.Ident:
-						a.dealIdent(astPkg, x1, &info)
+						a.dealIdent(astPkg, x1, info)
 					}
 				}
 
@@ -169,12 +173,12 @@ func (a *structAnalysis) structFieldInfo(astPkg *ast.Package, structType *ast.St
 		case *ast.StarExpr: //类型
 			switch x := exp.X.(type) {
 			case *ast.SelectorExpr: // 非本文件包
-				a.dealSelectorExpr(x, &info, importMP)
+				a.dealSelectorExpr(x, info, importMP)
 			case *ast.Ident:
-				a.dealIdent(astPkg, x, &info)
+				a.dealIdent(astPkg, x, info)
 			}
 		case *ast.Ident: // 本文件
-			a.dealIdent(astPkg, exp, &info)
+			a.dealIdent(astPkg, exp, info)
 		case *ast.MapType: // map
 			key := ""
 			value := ""

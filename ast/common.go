@@ -22,9 +22,8 @@ type ControllerComment struct {
 }
 
 var (
-	analysisControllerCommentsCache = make(map[string]*ControllerComment)
-	getAstPackagesCache             = make(map[string]*ast.Package)
-	parseStructCache                = make(map[string]*doc.StructInfo)
+	getAstPackagesCache = make(map[string]*ast.Package)
+	parseStructCache    = make(map[string]*doc.StructInfo)
 )
 
 // AddImportFile 添加自定义import文件列表
@@ -133,68 +132,70 @@ func GetAstPackage(objPkg, objFile string) (*ast.Package, bool) {
 	return nil, false
 }
 
-// GetObjFunMp find all exported func of struct objName
-// GetObjFunMp 类中的所有导出函数
-func GetObjFunMp(astPkg *ast.Package, objName string) map[string]*ast.FuncDecl {
-	funMp := make(map[string]*ast.FuncDecl)
-	// find all exported func of struct objName
-	for _, fl := range astPkg.Files {
-		for _, d := range fl.Decls {
+//// AnalysisImport 分析整合import相关信息
+//func AnalysisImport(astPkg *ast.Package) map[string]string {
+//
+//	imports := make(map[string]string)
+//	for _, f := range astPkg.Files {
+//		for _, p := range f.Imports {
+//			k := ""
+//			if p.Name != nil {
+//				k = p.Name.Name
+//			}
+//			v := strings.Trim(p.Path.Value, `"`)
+//			if len(k) == 0 {
+//				n := strings.LastIndex(v, "/")
+//				if n > 0 {
+//					k = v[n+1:]
+//				} else {
+//					k = v
+//				}
+//			}
+//			imports[k] = v
+//		}
+//	}
+//
+//	return imports
+//}
+
+//handleImportSpec 处理导入
+func handleImportSpec(p *ast.ImportSpec, imports map[string]string) {
+	k := ""
+	if p.Name != nil {
+		k = p.Name.Name
+	}
+	v := strings.Trim(p.Path.Value, `"`)
+	if len(k) == 0 {
+		n := strings.LastIndex(v, "/")
+		if n > 0 {
+			k = v[n+1:]
+		} else {
+			k = v
+		}
+	}
+	imports[k] = v
+}
+
+//AnalysisControllerFile 处理控制器
+func AnalysisControllerFile(astPkg *ast.Package, controllerName string) (imports map[string]string, funcMap map[string]*ast.FuncDecl, comment *ControllerComment) {
+	imports = make(map[string]string)
+	funcMap = make(map[string]*ast.FuncDecl)
+	comment = &ControllerComment{TagName: controllerName}
+
+	for _, f := range astPkg.Files {
+		for _, p := range f.Imports {
+			handleImportSpec(p, imports)
+		}
+		for _, d := range f.Decls {
 			switch specDecl := d.(type) {
 			case *ast.FuncDecl:
 				if specDecl.Recv != nil {
-					if exp, ok := specDecl.Recv.List[0].Type.(*ast.StarExpr); ok { // Check that the type is correct first beforing throwing to parser
-						if strings.Compare(fmt.Sprint(exp.X), objName) == 0 { // is the same struct
-							funMp[specDecl.Name.String()] = specDecl // catch
+					if exp, ok := specDecl.Recv.List[0].Type.(*ast.StarExpr); ok { // Check that the type is correct first before throwing to parser
+						if strings.Compare(fmt.Sprint(exp.X), controllerName) == 0 { // is the same struct
+							funcMap[specDecl.Name.String()] = specDecl // catch
 						}
 					}
 				}
-			}
-		}
-	}
-
-	return funMp
-}
-
-// AnalysisImport 分析整合import相关信息
-func AnalysisImport(astPkg *ast.Package) map[string]string {
-
-	imports := make(map[string]string)
-	for _, f := range astPkg.Files {
-		for _, p := range f.Imports {
-			k := ""
-			if p.Name != nil {
-				k = p.Name.Name
-			}
-			v := strings.Trim(p.Path.Value, `"`)
-			if len(k) == 0 {
-				n := strings.LastIndex(v, "/")
-				if n > 0 {
-					k = v[n+1:]
-				} else {
-					k = v
-				}
-			}
-			imports[k] = v
-		}
-	}
-
-	return imports
-}
-
-func AnalysisControllerComments(astPkg *ast.Package, controllerName string) *ControllerComment {
-	cc := &ControllerComment{TagName: controllerName}
-	if astPkg == nil {
-		return cc
-	}
-	key := astPkg.Name + "_" + controllerName
-	if v, ok := analysisControllerCommentsCache[key]; ok {
-		return v
-	}
-
-	for _, fl := range astPkg.Files {
-		for _, d := range fl.Decls {
-			switch specDecl := d.(type) {
 			case *ast.GenDecl:
 				for _, spec := range specDecl.Specs {
 					switch specDecl.Tok {
@@ -205,20 +206,21 @@ func AnalysisControllerComments(astPkg *ast.Package, controllerName string) *Con
 							if spec.Name.Name == controllerName { // find it
 								if specDecl.Doc != nil { // 如果有注释
 									for _, v := range specDecl.Doc.List { // 结构体注释
-										t := internal.GetCommentAfterPrefix(v.Text, "//")
-										if strings.HasPrefix(t, "@TAG") {
-											cc.TagName = internal.GetCommentAfterPrefix(t, "@TAG")
-										} else if strings.HasPrefix(t, "@ROUTE") {
-											cc.Route = internal.GetCommentAfterPrefix(t, "@ROUTE")
-										} else if strings.HasPrefix(t, "@AUTH") {
-											cc.TokenHeader = internal.GetCommentAfterPrefix(t, "@AUTH")
-											if cc.TokenHeader == "" {
-												cc.TokenHeader = "Authorization"
+										if prefix, commentContent, b := internal.GetCommentAfterPrefixRegex(v.Text, controllerName); b {
+											switch prefix {
+											case "@TAG":
+												comment.TagName = commentContent
+											case "@ROUTE":
+												comment.Route = commentContent
+											case "@AUTH":
+												comment.TokenHeader = commentContent
+											case controllerName:
+												comment.TagName = commentContent
+											default:
 											}
 										}
 									}
-									analysisControllerCommentsCache[key] = cc
-									return cc
+
 								}
 
 							}
@@ -228,8 +230,7 @@ func AnalysisControllerComments(astPkg *ast.Package, controllerName string) *Con
 			}
 		}
 	}
-	return cc
-
+	return
 }
 
 // GetImportPkg 分析得出 pkg

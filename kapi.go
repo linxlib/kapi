@@ -135,9 +135,9 @@ func (b *KApi) handleSwaggerBase() {
 	host := "localhost"
 	basePath := ""
 	info := swagger.Info{
-		Description: "kapi api server",
-		Version:     "1.0.0",
-		Title:       "KAPI",
+		Description: b.option.Server.DocDesc,
+		Version:     b.option.Server.DocVer,
+		Title:       b.option.Server.DocName,
 	}
 	if b.option.Server.NeedDoc {
 		if b.option.Server.DocDomain != "" {
@@ -153,11 +153,6 @@ func (b *KApi) handleSwaggerBase() {
 			schemes = []string{"http"}
 			host = fmt.Sprintf("%s:%d", b.option.intranetIP, b.option.Server.Port)
 		}
-		info = swagger.Info{
-			Description: b.option.Server.DocName,
-			Version:     b.option.Server.DocVer,
-			Title:       b.option.Server.DocDesc,
-		}
 	}
 	b.doc = swagger.NewDoc(host, info, basePath, schemes)
 }
@@ -171,7 +166,7 @@ func (b *KApi) handleStatic() {
 	}
 }
 
-func (b *KApi) handleSwaggerDoc() {
+func (b *KApi) handleDoc() {
 	if b.option.Server.NeedDoc && !b.genFlag {
 		swaggerUrl := fmt.Sprintf("http://%s:%d/swagger/index.html", b.option.intranetIP, b.option.Server.Port)
 		redocUrl := fmt.Sprintf("http://%s:%d/redoc/", b.option.intranetIP, b.option.Server.Port)
@@ -235,14 +230,14 @@ func (b *KApi) handleSwaggerDoc() {
 func (b *KApi) Run() {
 	b.genRouterCode()
 	b.genDoc()
-	b.handleSwaggerDoc()
+	b.handleDoc()
 	if b.genFlag {
 		internal.Log.Infoln("生成模式 完成")
 		return
 	}
 
 	internal.Log.Infof("服务启动 http://%s:%d\n", b.option.intranetIP, b.option.Server.Port)
-	err := b.engine.Run(fmt.Sprintf(":%d", &b.option.Server.Port))
+	err := b.engine.Run(fmt.Sprintf(":%d", b.option.Server.Port))
 	if err != nil {
 		if e, ok := err.(*net.OpError); ok {
 			if e1, ok := e.Err.(*os.SyscallError); ok {
@@ -276,8 +271,9 @@ func (b *KApi) Model(middleware ApiFunc) *KApi {
 // Register 注册多个Controller struct
 func (b *KApi) doRegister(router gin.IRoutes, cList ...interface{}) bool {
 	//开发时 生成路由注册文件 gen.gob
+	//运行时 -g 也可生成但不运行http服务
 	if b.option.Server.Debug {
-		b.tryGenRegister(router, cList...)
+		b.analysisControllers(router, cList...)
 	}
 
 	return b.register(router, cList...)
