@@ -6,12 +6,17 @@ import (
 
 func (m *Model) analysisStructInfo(info *StructInfo) {
 	if info != nil {
-		for _, item := range info.Items {
-			item.execute()
-			if item.TypeRef != nil {
-				m.analysisStructInfo(item.TypeRef)
+		if len(info.Items) > 0 {
+			for _, item := range info.Items {
+				item.execute()
+				if item.TypeRef != nil {
+					m.analysisStructInfo(item.TypeRef)
+				}
 			}
+		} else {
+
 		}
+
 	}
 }
 

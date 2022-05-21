@@ -22,6 +22,7 @@ type ElementInfo struct {
 	IsQuery    bool // 是否是query
 	IsHeader   bool // 是否是header
 	IsFormData bool // 是否是表单参数
+	IsFile     bool
 	IsPath     bool // 是否是路径参数
 }
 
@@ -111,6 +112,9 @@ func (ei *ElementInfo) execute() {
 		} else {
 			ei.Name = tmp[0]
 		}
+		if tmp[0] == "file" {
+			ei.IsFile = true
+		}
 	}
 	//url path
 	v, b = tag.Lookup("path")
@@ -166,6 +170,7 @@ const (
 type StructInfo struct {
 	Items   []*ElementInfo // 结构体元素
 	IsArray bool
+	File    string
 	Note    string // 注释
 	Name    string // 结构体名字
 	Pkg     string // 包名

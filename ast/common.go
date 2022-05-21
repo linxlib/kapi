@@ -213,6 +213,9 @@ func AnalysisControllerFile(astPkg *ast.Package, controllerName string) (imports
 											case "@ROUTE":
 												comment.Route = commentContent
 											case "@AUTH":
+												if commentContent == "" {
+													commentContent = "Authorization"
+												}
 												comment.TokenHeader = commentContent
 											case controllerName:
 												comment.TagName = commentContent

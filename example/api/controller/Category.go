@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"github.com/linxlib/kapi"
+	"mime/multipart"
 	"test_kapi/api/model"
 	"test_kapi/lib"
 )
@@ -34,10 +35,14 @@ func (p *CategoryController) GetCategoryOne(c *kapi.Context, req *GetCategoryOne
 	return nil, nil
 }
 
+type PostCategoryReq struct {
+	File *multipart.File `form:"file"`
+}
+
 //PostCategory
 //@POST /category
 //@RESP lib.User
-func (p *CategoryController) PostCategory(c *kapi.Context, req *model.Category) {
+func (p *CategoryController) PostCategory(c *kapi.Context, req *PostCategoryReq) {
 	var u = lib.User{}
 	c.DataExit(u)
 }

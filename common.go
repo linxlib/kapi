@@ -452,6 +452,7 @@ func (b *KApi) analysisController(controller interface{}, model *doc.Model, modP
 						if sdl.Type.Params.NumFields() > 1 {
 							docReq = b.analysisMethodReqResp(sdl.Type.Params.List[1].Type, imports, controllerPkgPath, controllerAstPkg, modPkg, modFile)
 						}
+
 						if sdl.Type.Results.NumFields() > 1 {
 							docResp = b.analysisMethodReqResp(sdl.Type.Results.List[0].Type, imports, controllerPkgPath, controllerAstPkg, modPkg, modFile)
 						} else {
@@ -558,12 +559,16 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Default:     item.Default,
 						})
 					case doc.ParamTypeForm:
+						t := swagger.GetKvType(item.Type, false, true)
+						if item.IsFile {
+							t = "file"
+						}
 						p.Parameters = append(p.Parameters, swagger.Element{
 							In:          "formData",
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        swagger.GetKvType(item.Type, false, true),
+							Type:        t,
 							Schema:      nil,
 							Default:     item.Default,
 						})
@@ -615,26 +620,36 @@ func (b *KApi) addDocModel(model *doc.Model) {
 			}
 			if tagControllerMethod.Resp != nil {
 				p.Responses = make(map[string]swagger.Resp)
-				for _, item := range tagControllerMethod.Resp.Items {
-					if tagControllerMethod.Resp.IsArray || item.IsArray {
-						p.Responses["200"] = swagger.Resp{
-							Description: "成功返回",
-							Schema: map[string]interface{}{
-								"type": "array",
-								"items": map[string]string{
+				if len(tagControllerMethod.Resp.Items) > 0 {
+					for _, item := range tagControllerMethod.Resp.Items {
+						if tagControllerMethod.Resp.IsArray || item.IsArray {
+							p.Responses["200"] = swagger.Resp{
+								Description: "成功返回",
+								Schema: map[string]interface{}{
+									"type": "array",
+									"items": map[string]string{
+										"$ref": "#/definitions/" + tagControllerMethod.Resp.Name,
+									},
+								},
+							}
+						} else {
+							p.Responses["200"] = swagger.Resp{
+								Description: "成功返回",
+								Schema: map[string]interface{}{
 									"$ref": "#/definitions/" + tagControllerMethod.Resp.Name,
 								},
-							},
-						}
-					} else {
-						p.Responses["200"] = swagger.Resp{
-							Description: "成功返回",
-							Schema: map[string]interface{}{
-								"$ref": "#/definitions/" + tagControllerMethod.Resp.Name,
-							},
+							}
 						}
 					}
+				} else {
+					p.Responses["200"] = swagger.Resp{
+						Description: "成功返回",
+						Schema: map[string]interface{}{
+							"type": tagControllerMethod.Resp.Name,
+						},
+					}
 				}
+
 			}
 
 			for _, s := range tagControllerMethod.Methods {

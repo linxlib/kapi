@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"os"
 	"reflect"
-	"strings"
 	"time"
 )
 
@@ -131,8 +130,8 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 }
 
 func (b *KApi) handleSwaggerBase() {
-	schemes := []string{"http"}
-	host := "localhost"
+	//schemes := []string{"http"}
+	//host := "localhost"
 	basePath := ""
 	info := swagger.Info{
 		Description: b.option.Server.DocDesc,
@@ -142,19 +141,19 @@ func (b *KApi) handleSwaggerBase() {
 	if b.option.Server.NeedDoc {
 		if b.option.Server.DocDomain != "" {
 			internal.Log.Debug("域名:" + b.option.Server.DocDomain)
-			if strings.HasPrefix(b.option.Server.DocDomain, "https") {
-				schemes = []string{"https", "http"}
-			} else {
-				schemes = []string{"http", "https"}
-			}
-			host = strings.TrimPrefix(b.option.Server.DocDomain, "http://")
-			host = strings.TrimPrefix(host, "https://")
+			//if strings.HasPrefix(b.option.Server.DocDomain, "https") {
+			//	schemes = []string{"https", "http"}
+			//} else {
+			//	schemes = []string{"http", "https"}
+			//}
+			//host = strings.TrimPrefix(b.option.Server.DocDomain, "http://")
+			//host = strings.TrimPrefix(host, "https://")
 		} else {
-			schemes = []string{"http"}
-			host = fmt.Sprintf("%s:%d", b.option.intranetIP, b.option.Server.Port)
+			//schemes = []string{"http"}
+			//host = fmt.Sprintf("%s:%d", b.option.intranetIP, b.option.Server.Port)
 		}
 	}
-	b.doc = swagger.NewDoc(host, info, basePath, schemes)
+	b.doc = swagger.NewDoc("", info, basePath, []string{})
 }
 
 func (b *KApi) handleStatic() {
