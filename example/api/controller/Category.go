@@ -5,6 +5,7 @@ import (
 	"test_kapi/api/model"
 )
 
+//@AUTH Authorzation
 type CategoryController struct {
 }
 
@@ -24,8 +25,9 @@ type GetCategoryOneReq struct {
 
 //GetCategoryOne
 //@GET /category
-func (p *CategoryController) GetCategoryOne(c *kapi.Context, req *GetCategoryOneReq) {
+func (p *CategoryController) GetCategoryOne(c *kapi.Context, req *GetCategoryOneReq) (*GetCategoryListReq, error) {
 
+	return nil, nil
 }
 
 //PostCategory
@@ -47,5 +49,13 @@ type DelCategoryReq struct {
 //DelCategory
 //@DELETE /category/:id
 func (p *CategoryController) DelCategory(c *kapi.Context, req *DelCategoryReq) {
+
+}
+
+//TestAnyMethod
+//@GET /TestAnyMethod
+//@POST /TestAnyMethod
+//@PUT /TestAnyMethod
+func (p *CategoryController) TestAnyMethod(c *kapi.Context, req *DelCategoryReq) {
 
 }

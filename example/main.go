@@ -8,7 +8,7 @@ import (
 func main() {
 	k := kapi.New(func(option *kapi.Option) {
 		// 默认读取config.toml 在这可以覆盖配置文件中的设置
-		option.SetPort(8787)
+		option.Server.Port = 8087
 	})
 	//此处解析路由和注册路由
 	k.RegisterRouter(new(controller.Hello),

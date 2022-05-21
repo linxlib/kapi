@@ -1,14 +1,18 @@
+
 [server]
-    debug = true
-    needDoc=true
-    docName="KAPI Example"
-    docDesc="Example Api"
-    port=3939
-    openDocInBrowser=false
-    docDomain=""
-    docVer="v2"
-    redirectToDocWhenAccessRoot=true
-    apiBasePath="/"
-    staticDir=""
-    [server.cors]
-        allowHeaders = ["Origin","Content-Length","Content-Type","Authorization","x-requested-with"]
+debug = true
+needDoc = true
+needReDoc = false
+needSwagger = true
+docName = "K-Api"
+docDesc = "K-Api"
+port = 2022
+openDocInBrowser = true
+docDomain = ""
+docVer = "v1"
+redirectToDocWhenAccessRoot = true
+apiBasePath = ""
+staticDirs = ["static"]
+enablePProf = false
+[server.cors]
+allowHeaders = ["Origin","Content-Length","Content-Type"]
