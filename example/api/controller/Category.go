@@ -3,6 +3,7 @@ package controller
 import (
 	"github.com/linxlib/kapi"
 	"test_kapi/api/model"
+	"test_kapi/lib"
 )
 
 //@AUTH Authorzation
@@ -32,8 +33,10 @@ func (p *CategoryController) GetCategoryOne(c *kapi.Context, req *GetCategoryOne
 
 //PostCategory
 //@POST /category
+//@RESP lib.User
 func (p *CategoryController) PostCategory(c *kapi.Context, req *model.Category) {
-
+	var u = lib.User{}
+	c.DataExit(u)
 }
 
 //PutCategory
