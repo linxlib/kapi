@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
+	"github.com/linxlib/kapi/ast"
 	"github.com/linxlib/kapi/doc/swagger"
 	"github.com/linxlib/kapi/internal"
 	"github.com/linxlib/kapi/internal/cors"
@@ -63,6 +64,7 @@ type KApi struct {
 }
 
 func New(f func(*Option)) *KApi {
+	ast.AddImportFile("mime/multipart", "mime/multipart")
 	if VERSION != "" {
 		internal.Log.Infof(_banner, fmt.Sprintf(_info, VERSION, GOVERSION, OS, ARCH, BUILDTIME))
 	} else {

@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	binding2 "github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -271,10 +272,9 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 				fmt.Println("ShouldBindHeader:", err)
 				return err
 			}
-
 		}
-
 	}
+
 	if err := c.ShouldBindUri(v); err != nil {
 		if err != io.EOF {
 			if _, ok := err.(validator.ValidationErrors); ok {
@@ -310,6 +310,21 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 		}
 
 	}
+	if c.ContentType() == "multipart/form-data" {
+		if err := c.ShouldBindWith(v, binding2.FormMultipart); err != nil {
+			if err != io.EOF {
+				if _, ok := err.(validator.ValidationErrors); ok {
+
+				} else {
+					fmt.Println("ShouldBindWith.FormMultipart:", err)
+					return err
+				}
+
+			}
+
+		}
+	}
+
 	if err := c.ShouldBindJSON(v); err != nil {
 		if err != io.EOF {
 			fmt.Println("body:", err)
