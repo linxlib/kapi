@@ -80,7 +80,7 @@ func (h *HelloController) World1(c *kapi.Context,req *HelloWorld1Req) {
 
 4. 运行 `go run main.go` 或者 `k run`
 
-具体可查看example文件夹
+**具体用法可查看example文件夹** 不断更新中
 
 
 ## 支持一些奇怪的特性 🐶
@@ -93,8 +93,8 @@ func (h *HelloController) World1(c *kapi.Context,req *HelloWorld1Req) {
 - 请求的参数可以使用类似继承的方式来声明参数. 
 ```go
 type PageSize struct {
-    Page int `query:"page" default:"1"`
-    Size int `query:"size" default:"15"`
+    Page int `query:"page,default=1"`
+    Size int `query:"size,default=15"`
 }
 
 func (p *PageSize) GetLimit() (int, int) {
@@ -133,15 +133,16 @@ type GetBannerListReq struct {
 - [x] 优化ast包解析, 减少循环 (目前通过增加map来缓存需要的数据, 重复的对象不会多次遍历ast树)
 - [x] k cli 加入项目判断, 使其可用于其他纯go项目的编译
 - [x] 重构ast解析部分，提升效率
-- [ ] 部分功能提取为单独包
 - [x] 新的参数默认值，废弃旧的 default tag，改为使用gin的 `query:"name,default=hello"`
-- [ ] 拦截器实现多个顺序执行机制（栈）
-- [ ] 加入枚举支持
-- [ ] [RapiDoc](https://github.com/rapi-doc/RapiDoc)
-- [x] 增加一个注解用于注释返回结构类型, 特指只有一个Context的方法
+- [ ] ~~[RapiDoc](https://github.com/rapi-doc/RapiDoc)~~
+- [x] 增加一个注解用于注释返回结构类型, 特指只有一个Context的方法 @RESP
+- [x] 增加multipart.FileHeader的支持
+- [ ] 部分功能提取为单独包
 - [ ] k编译打包时增加进度显示, 优化打包速度
 - [ ] 精简引用包，减小体积
 - [ ] 加入markdown形式的文档
+- [ ] 拦截器实现多个顺序执行机制（栈）
+- [ ] 加入枚举支持
   
 ## 感谢
 
