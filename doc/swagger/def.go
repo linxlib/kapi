@@ -98,8 +98,10 @@ type XML struct {
 
 // Definition 通用结构体定义
 type Definition struct {
-	Type       string              `json:"type"`       // 类型 object
-	Properties map[string]Property `json:"properties"` // 属性列表
+	Type       string              `json:"type"`                 // 类型 object
+	Properties map[string]Property `json:"properties,omitempty"` // 属性列表
+	Items      map[string]Property `json:"items,omitempty"`
+
 	//XML        XML                 `json:"xml"`
 }
 

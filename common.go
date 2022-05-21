@@ -320,13 +320,13 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 	return nil
 }
 
-func (b *KApi) analysisMethodReqRespByString(Import, objName string, p *goast.Package, modulePkg, moduleFile string) (si *doc.StructInfo) {
+func (b *KApi) analysisMethodReqRespByString(Import, objName string, isArray bool, p *goast.Package, modulePkg, moduleFile string) (si *doc.StructInfo) {
 	ant := ast.NewStructAnalysis(modulePkg, moduleFile)
 	if p == nil {
 		bb := ast.EvalSymlinks(modulePkg, moduleFile, Import)
 		p, _ = ast.GetAstPackage(Import, bb) // get ast trees.
 	}
-	si = ant.ParseStruct(p, objName)
+	si = ant.ParseStruct(p, objName, isArray)
 
 	return
 }
@@ -377,7 +377,7 @@ func (b *KApi) analysisMethodReqResp(req goast.Expr, imports map[string]string, 
 		objFile := ast.EvalSymlinks(modPkg, modFile, param.Import)
 		tmp, _ = ast.GetAstPackage(param.Pkg, objFile) // get ast trees.
 	}
-	si = ant.ParseStruct(tmp, param.Type)
+	si = ant.ParseStruct(tmp, param.Type, false)
 
 	return
 }
@@ -456,14 +456,21 @@ func (b *KApi) analysisController(controller interface{}, model *doc.Model, modP
 							docResp = b.analysisMethodReqResp(sdl.Type.Results.List[0].Type, imports, controllerPkgPath, controllerAstPkg, modPkg, modFile)
 						} else {
 							if gc.ResultType != "" {
-								fmt.Println("@RESP")
+								fmt.Println(gc.ResultType)
 								aa := strings.Split(gc.ResultType, ".")
+								xx := aa[0]
+								isArray := strings.HasPrefix(aa[0], "[]")
+								if isArray {
+									internal.Log.Infof("func:%s result type is array", gc.RouterPath)
+									xx = strings.TrimPrefix(aa[0], "[]")
+								}
+
 								if len(aa) > 1 {
-									if importPath, ok := imports[aa[0]]; ok {
-										docResp = b.analysisMethodReqRespByString(importPath, aa[1], nil, modPkg, modFile)
+									if importPath, ok := imports[xx]; ok {
+										docResp = b.analysisMethodReqRespByString(importPath, aa[1], isArray, nil, modPkg, modFile)
 									}
 								} else {
-									docResp = b.analysisMethodReqRespByString(controllerPkgPath, gc.ResultType, controllerAstPkg, modPkg, modFile)
+									docResp = b.analysisMethodReqRespByString(controllerPkgPath, gc.ResultType, isArray, controllerAstPkg, modPkg, modFile)
 								}
 
 							}
@@ -609,7 +616,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 			if tagControllerMethod.Resp != nil {
 				p.Responses = make(map[string]swagger.Resp)
 				for _, item := range tagControllerMethod.Resp.Items {
-					if item.IsArray {
+					if tagControllerMethod.Resp.IsArray || item.IsArray {
 						p.Responses["200"] = swagger.Resp{
 							Description: "成功返回",
 							Schema: map[string]interface{}{

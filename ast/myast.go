@@ -21,18 +21,19 @@ func NewStructAnalysis(modPkg, modFile string) *structAnalysis {
 }
 
 // ParseStruct 解析结构体定义及相关信息
-func (a *structAnalysis) ParseStruct(astPkg *ast.Package, structName string) *doc.StructInfo {
+func (a *structAnalysis) ParseStruct(astPkg *ast.Package, structName string, isarray bool) *doc.StructInfo {
 	if astPkg == nil {
 		return nil
 	}
 	//internal.Log.Debugf("ParseStruct:%s from:%s",structName,astPkg.Name)
 	if internal.IsInternalType(structName) { // 内部类型
 		return &doc.StructInfo{
-			Name: structName,
+			Name:    structName,
+			IsArray: isarray,
 		}
 	}
 
-	key := astPkg.Name + "_" + structName
+	key := fmt.Sprintf("%s_%s_%t", astPkg.Name, structName, isarray)
 	if v, ok := parseStructCache[key]; ok {
 		return v
 	} else {
@@ -48,10 +49,11 @@ func (a *structAnalysis) ParseStruct(astPkg *ast.Package, structName string) *do
 							case *ast.StructType:
 								if spec.Name.Name == structName { // find it
 									info := &doc.StructInfo{
-										Items: a.structFieldInfo(astPkg, st),
-										Note:  "",
-										Name:  structName,
-										Pkg:   astPkg.Name,
+										Items:   a.structFieldInfo(astPkg, st),
+										Note:    "",
+										Name:    structName,
+										Pkg:     astPkg.Name,
+										IsArray: isarray,
 									}
 									if specDecl.Doc != nil { // 如果有注释
 										for _, v := range specDecl.Doc.List { // 结构体注释
@@ -229,7 +231,7 @@ func (a *structAnalysis) dealSelectorExpr(exp *ast.SelectorExpr, info *doc.Eleme
 				objPkg := GetImportPkg(v)
 				astFile, _b := GetAstPackage(objPkg, objFile)
 				if _b {
-					info.TypeRef = a.ParseStruct(astFile, info.Type)
+					info.TypeRef = a.ParseStruct(astFile, info.Type, false)
 				}
 			}
 		}
@@ -240,6 +242,6 @@ func (a *structAnalysis) dealSelectorExpr(exp *ast.SelectorExpr, info *doc.Eleme
 func (a *structAnalysis) dealIdent(astPkg *ast.Package, exp *ast.Ident, info *doc.ElementInfo) { // 本文件
 	info.Type = exp.Name
 	if !internal.IsInternalType(info.Type) { // 非基础类型
-		info.TypeRef = a.ParseStruct(astPkg, info.Type)
+		info.TypeRef = a.ParseStruct(astPkg, info.Type, false)
 	}
 }

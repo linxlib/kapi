@@ -189,7 +189,8 @@ func (b *KApi) handleDoc() {
 			//	c.Redirect(301, fmt.Sprintf("%s/swagger/", b.option.docDomain))
 			//})
 			b.engine.Any("", func(c *gin.Context) {
-				c.Redirect(301, fmt.Sprintf("%s/swagger/", b.option.Server.DocDomain))
+
+				c.Redirect(301, "/swagger/")
 			})
 		}
 

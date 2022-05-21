@@ -20,6 +20,7 @@ func (m *Model) SetDefinition(doc *swagger.DocSwagger, tmp *StructInfo) string {
 		var def swagger.Definition
 		def.Type = "object"
 		def.Properties = make(map[string]swagger.Property)
+
 		for _, v2 := range tmp.Items {
 			if v2.TypeRef != nil {
 				if v2.IsArray {
@@ -46,8 +47,8 @@ func (m *Model) SetDefinition(doc *swagger.DocSwagger, tmp *StructInfo) string {
 							},
 						}
 					}
-
 					def.Properties[v2.Name] = p
+
 				} else {
 					def.Properties[v2.Name] = swagger.Property{
 						Type:   swagger.GetKvType(v2.Type, v2.IsArray, true),
@@ -95,6 +96,7 @@ func (m *Model) SetDefinition(doc *swagger.DocSwagger, tmp *StructInfo) string {
 							Description: v2.Note,
 							Items:       nil,
 						}
+
 					}
 				}
 
