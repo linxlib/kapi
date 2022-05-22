@@ -25,10 +25,15 @@ func (p *CategoryController) GetCategoryList(c *kapi.Context, req *GetCategoryLi
 }
 
 type GetCategoryOneReq struct {
-	ID int64 `query:"id"`
-	//State State `query:"state"`
-
+	ID    int64 `query:"id"`
+	State State `query:"state"`
 }
+type State int
+
+const (
+	State1 State = iota
+	State2
+)
 
 //GetCategoryOne k
 //@GET /category

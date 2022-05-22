@@ -67,6 +67,7 @@ func (a *structAnalysis) ParseStruct(astPkg *ast.Package, structName string, isa
 									parseStructCache[key] = info
 									return info
 								}
+
 							}
 						}
 					}

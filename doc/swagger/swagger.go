@@ -17,11 +17,11 @@ func NewDoc(host string, info Info, basePath string, schemes []string) *DocSwagg
 		Head: Head{Swagger: version},
 		Info: info,
 		Host: host,
-		SecurityDefinitions: &SecurityDefinitions{
-			Type: "apiKey",
-			Name: "Authorization",
-			In:   "header",
-		},
+		//SecurityDefinitions: &SecurityDefinitions{
+		//	Type: "apiKey",
+		//	Name: "Authorization",
+		//	In:   "header",
+		//},
 		BasePath:     basePath,
 		Schemes:      schemes,
 		ExternalDocs: nil,
