@@ -48,13 +48,18 @@ func (m *Model) AddOne(group string, routerPath string, methods []string, note s
 	// 解析一个路由方法 并存为文档所需
 	m.analysisStructInfo(req)
 	m.analysisStructInfo(resp)
-	m.TagControllers[group][methods[0]+" "+myRouterPath] = DocModel{
-		RouterPath:   myRouterPath,
-		Methods:      methods,
-		Note:         note,
-		Req:          req,
-		Resp:         resp,
-		TokenHeader:  tokenHeader,
-		IsDeprecated: isDeprecated,
+	if len(methods) > 0 {
+		m.TagControllers[group][methods[0]+" "+myRouterPath] = DocModel{
+			RouterPath:   myRouterPath,
+			Methods:      methods,
+			Note:         note,
+			Req:          req,
+			Resp:         resp,
+			TokenHeader:  tokenHeader,
+			IsDeprecated: isDeprecated,
+		}
+	} else {
+		fmt.Println(routerPath)
 	}
+
 }

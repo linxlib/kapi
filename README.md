@@ -23,19 +23,8 @@
 2. 安装后执行`go mod init {module_name}` 然后 `k init`, 自动创建 config.toml build.toml main.go 等
 3. 
 ```go
-   k := kapi.New(func(option *kapi.Option) {
-	   // 这里也可以为空 已经从配置文件中进行读取
-	   // 也可以在config.toml中进行修改, 这里写的话将覆盖配置文件中的设置
-        option.SetNeedDoc(true) //是否需要生成swagger文档
-        option.SetDocName("系统")
-        option.SetDocDescription("系统api")
-        option.SetIsDebug(true)
-        option.SetPort(3080)
-        option.SetDocVersion("")
-        //option.SetApiBasePath("/")
-       //option.SetDocDomain("http://example.com") // 使可以支持在线上用域名访问文档, 本地开发时默认为http://局域网ip+端口/swagger/
-        option.SetRedirectToDocWhenAccessRoot(true) //访问 / 时跳转到文档
-        option.SetStaticDirs("html", "h5")  //可以设置多个static目录
+    k := kapi.New(func(option *kapi.Option) {
+	   
     })
     // 注册路由
     k.RegisterRouter(new(controller.BannerController),
@@ -47,8 +36,8 @@
 ```
 3. 创建 controller.HelloController , 并实现一个路由方法
 ```go
-//HelloController ...
-//@TAG HelloController
+//HelloController <here will be tag name>
+//@TAG <here will be tag name>
 //@AUTH Authorization
 //@ROUTE /api
 type HelloController struct {
@@ -56,8 +45,8 @@ type HelloController struct {
 }
 
 type PageSize struct {
-	Page int `query:"page" default:"1"`
-	Size int `query:"size" default:"15"`
+	Page int `query:"page,default=1" binding:"required"`
+	Size int `query:"size,default=15"`
 }
 
 func (ps *PageSize) GetLimit() (int,int) {
@@ -68,6 +57,7 @@ type HelloWorld1Req struct {
 	PageSize
 	Name string `query:"name" binding:"required"`
 	Authorization string `header:"Authorization"`
+	File *multipart.FileHeader
 	
 }
 // World1 World1

@@ -18,7 +18,7 @@ type GetCategoryListReq struct {
 	PageSize
 }
 
-//GetCategoryList
+//GetCategoryList k
 //@GET /category/list
 func (p *CategoryController) GetCategoryList(c *kapi.Context, req *GetCategoryListReq) {
 	fmt.Println(req.PageSize)
@@ -26,9 +26,11 @@ func (p *CategoryController) GetCategoryList(c *kapi.Context, req *GetCategoryLi
 
 type GetCategoryOneReq struct {
 	ID int64 `query:"id"`
+	//State State `query:"state"`
+
 }
 
-//GetCategoryOne
+//GetCategoryOne k
 //@GET /category
 func (p *CategoryController) GetCategoryOne(c *kapi.Context, req *GetCategoryOneReq) (*GetCategoryListReq, error) {
 
@@ -36,10 +38,10 @@ func (p *CategoryController) GetCategoryOne(c *kapi.Context, req *GetCategoryOne
 }
 
 type PostCategoryReq struct {
-	File *multipart.File `form:"file"`
+	File *multipart.FileHeader `form:"file"`
 }
 
-//PostCategory
+//PostCategory k
 //@POST /category
 //@RESP lib.User
 func (p *CategoryController) PostCategory(c *kapi.Context, req *PostCategoryReq) {
@@ -64,9 +66,9 @@ func (p *CategoryController) DelCategory(c *kapi.Context, req *DelCategoryReq) {
 }
 
 //TestAnyMethod
-//@GET /TestAnyMethod1
+//@GET /TestAnyMethod2
 //@POST /TestAnyMethod1 但是上面的不能不写 ^_^
-//@PUT /TestAnyMethod2 只会以最下面这个为准 以后会更新 让每个都不一样
+//@PUT /TestAnyMethode 只会以最下面这个为准 以后会更新 让每个都不一样
 func (p *CategoryController) TestAnyMethod(c *kapi.Context, req *DelCategoryReq) {
 
 }
