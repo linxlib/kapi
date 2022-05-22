@@ -10,18 +10,20 @@ import (
 
 //CategoryController hhh
 //@TAG hudhushd和上面这行同时存在时，这个优先 对了 注解后有空格的话，空格后的内容会被无视
-//@AUTH Authorization 表示下面的每个方法都会需要Authorization这个Header Authorization是默认 所以也可以不写
 type CategoryController struct {
 }
 
 type GetCategoryListReq struct {
 	PageSize
+	Strs []string `query:"strs"`
 }
 
 //GetCategoryList k
 //@GET /category/list
 func (p *CategoryController) GetCategoryList(c *kapi.Context, req *GetCategoryListReq) {
-	fmt.Println(req.PageSize)
+	aa, _ := c.GetQueryArray("strs")
+	fmt.Println(aa)
+	fmt.Println(req.Strs)
 }
 
 type GetCategoryOneReq struct {
