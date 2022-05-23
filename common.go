@@ -486,7 +486,7 @@ func (b *KApi) analysisController(controller interface{}, model *doc.Model, modP
 										docResp = b.analysisMethodReqRespByString(importPath, aa[1], isArray, nil, modPkg, modFile)
 									}
 								} else {
-									docResp = b.analysisMethodReqRespByString(controllerPkgPath, gc.ResultType, isArray, controllerAstPkg, modPkg, modFile)
+									docResp = b.analysisMethodReqRespByString(controllerPkgPath, xx, isArray, controllerAstPkg, modPkg, modFile)
 								}
 
 							}
