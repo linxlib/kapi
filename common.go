@@ -411,6 +411,8 @@ func (b *KApi) analysisMethodComment(f *goast.FuncDecl, controllerRoute, objFunc
 				case "@RESP":
 					gc.ResultType = comment
 					break
+				case "@DESC":
+					gc.Description += comment + "\n"
 				case "@GET", "@POST", "@PUT", "@DELETE", "@PATCH", "@OPTION", "@HEAD":
 					gc.RouterPath = comment
 					if controllerRoute != "" {
@@ -424,7 +426,7 @@ func (b *KApi) analysisMethodComment(f *goast.FuncDecl, controllerRoute, objFunc
 					}
 					break
 				case objFunc:
-					gc.Note += comment // 方法注释可以有多个 只要都以方法名开头即可
+					gc.Summary = comment // 方法注释可以有多个 只要都以方法名开头即可
 					break
 				}
 			}
@@ -492,7 +494,7 @@ func (b *KApi) analysisController(controller interface{}, model *doc.Model, modP
 							}
 						}
 						if gc != nil {
-							model.AddOne(cc.TagName, gc.RouterPath, gc.Methods, gc.Note, docReq, docResp, cc.TokenHeader, gc.IsDeprecated)
+							model.AddOne(cc.TagName, gc.RouterPath, gc.Methods, gc.Summary, gc.Description, docReq, docResp, cc.TokenHeader, gc.IsDeprecated)
 						}
 					}
 
@@ -542,8 +544,8 @@ func (b *KApi) addDocModel(model *doc.Model) {
 		for _, tagControllerMethod := range tagControllers {
 			var p swagger.Param
 			p.Tags = []string{theTag}
-			p.Summary = tagControllerMethod.Note
-			p.Description = tagControllerMethod.Note
+			p.Summary = tagControllerMethod.Summary
+			p.Description = tagControllerMethod.Description
 			url := buildRelativePath(model.Group, tagControllerMethod.RouterPath)
 
 			myreqRef := ""

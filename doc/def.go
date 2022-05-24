@@ -180,7 +180,8 @@ type StructInfo struct {
 type DocModel struct {
 	RouterPath   string
 	Methods      []string
-	Note         string
+	Summary      string
+	Description  string
 	Req, Resp    *StructInfo
 	TokenHeader  string
 	IsDeprecated bool

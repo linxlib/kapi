@@ -24,7 +24,8 @@ type genComment struct {
 	RouterPath   string
 	IsDeprecated bool
 	ResultType   string
-	Note         string // 注释
+	Summary      string //方法说明
+	Description  string // 方法注释
 	Methods      []string
 	TokenHeader  string
 }

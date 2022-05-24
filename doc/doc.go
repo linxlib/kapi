@@ -40,7 +40,7 @@ func replacePathTo(origin string) string {
 }
 
 // AddOne 添加一个方法
-func (m *Model) AddOne(group string, routerPath string, methods []string, note string, req, resp *StructInfo, tokenHeader string, isDeprecated bool) {
+func (m *Model) AddOne(group string, routerPath string, methods []string, summary string, description string, req, resp *StructInfo, tokenHeader string, isDeprecated bool) {
 	if m.TagControllers[group] == nil {
 		m.TagControllers[group] = make(map[string]DocModel)
 	}
@@ -52,7 +52,8 @@ func (m *Model) AddOne(group string, routerPath string, methods []string, note s
 		m.TagControllers[group][methods[0]+" "+myRouterPath] = DocModel{
 			RouterPath:   myRouterPath,
 			Methods:      methods,
-			Note:         note,
+			Summary:      summary,
+			Description:  description,
 			Req:          req,
 			Resp:         resp,
 			TokenHeader:  tokenHeader,
