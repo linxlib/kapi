@@ -23,9 +23,9 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// checkHandlerFunc 检查路由方法是否符合 返回参数个数
+// checkMethodParamCount 检查路由方法是否符合 第一个参数是正确的Context 同时s返回参数个数
 // isObj表示方法是否是struct下的方法 如果是则 typ.In(0) 是struct本身
-func (b *KApi) checkHandlerFunc(typ reflect.Type, isObj bool) (int, bool) {
+func (b *KApi) checkMethodParamCount(typ reflect.Type, isObj bool) (int, bool) {
 	offset := 0
 	if isObj {
 		offset = 1
@@ -56,7 +56,7 @@ func (b *KApi) checkHandlerFunc(typ reflect.Type, isObj bool) (int, bool) {
 // handlerFuncObj Get and filter the parameters to be bound (object call type)
 func (b *KApi) handlerFuncObj(tvl, obj reflect.Value, methodName string) gin.HandlerFunc { // 获取并过滤要绑定的参数(obj 对象类型)
 	typ := tvl.Type()
-	if typ.NumIn() == 2 { //1个参数的方法
+	if typ.NumIn() == 2 { //1个参数的方法 *kapi.Context
 		ctxType := typ.In(1)
 
 		apiFun := func(c *gin.Context) interface{} { return c }
@@ -335,15 +335,13 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 	return nil
 }
 
-func (b *KApi) analysisMethodReqRespByString(Import, objName string, isArray bool, p *goast.Package, modulePkg, moduleFile string) (si *doc.StructInfo) {
+func (b *KApi) analysisMethodReqRespByString(Import, objName string, isArray bool, p *goast.Package, modulePkg, moduleFile string) *doc.StructInfo {
 	ant := ast.NewStructAnalysis(modulePkg, moduleFile)
 	if p == nil {
 		bb := ast.EvalSymlinks(modulePkg, moduleFile, Import)
 		p, _ = ast.GetAstPackage(Import, bb) // get ast trees.
 	}
-	si = ant.ParseStruct(p, objName, isArray)
-
-	return
+	return ant.ParseStruct(p, objName, isArray)
 }
 
 // analysisMethodReqResp 解析方法的请求参数或返回参数
@@ -412,7 +410,7 @@ func (b *KApi) analysisMethodComment(f *goast.FuncDecl, controllerRoute, objFunc
 					gc.ResultType = comment
 					break
 				case "@DESC":
-					gc.Description += comment + "\n"
+					gc.Description += comment + "\n" //description可以多个，并换行
 				case "@GET", "@POST", "@PUT", "@DELETE", "@PATCH", "@OPTION", "@HEAD":
 					gc.RouterPath = comment
 					if controllerRoute != "" {
@@ -426,7 +424,7 @@ func (b *KApi) analysisMethodComment(f *goast.FuncDecl, controllerRoute, objFunc
 					}
 					break
 				case objFunc:
-					gc.Summary = comment // 方法注释可以有多个 只要都以方法名开头即可
+					gc.Summary = comment // summary 仅一条
 					break
 				}
 			}
@@ -457,7 +455,7 @@ func (b *KApi) analysisController(controller interface{}, model *doc.Model, modP
 		// 遍历controller方法
 		for m := 0; m < refTyp.NumMethod(); m++ {
 			method := refTyp.Method(m)
-			_, _b := b.checkHandlerFunc(method.Type, true)
+			_, _b := b.checkMethodParamCount(method.Type, true)
 			if _b && method.IsExported() {
 				if sdl, ok := funMp[method.Name]; ok {
 					gc := b.analysisMethodComment(sdl, cc.Route, method.Name)
@@ -506,7 +504,6 @@ func (b *KApi) analysisController(controller interface{}, model *doc.Model, modP
 
 // analysisControllers gen out the Registered config info  by struct object,[prepath + objname.]
 func (b *KApi) analysisControllers(router gin.IRoutes, controllers ...interface{}) bool {
-	//TODO: 需要解析controller的注释，然后解析controller下方法的注释， 然后解析每个方法的参数, 优化解析性能
 	//TODO: groupPath也要加入到文档的路由中
 	modPkg, modFile, isFind := ast.GetModuleInfo(2)
 	if !isFind {
@@ -546,11 +543,22 @@ func (b *KApi) addDocModel(model *doc.Model) {
 			p.Tags = []string{theTag}
 			p.Summary = tagControllerMethod.Summary
 			p.Description = tagControllerMethod.Description
-			url := buildRelativePath(model.Group, tagControllerMethod.RouterPath)
 
 			myreqRef := ""
 			p.Parameters = make([]swagger.Element, 0)
 			p.Deprecated = tagControllerMethod.IsDeprecated
+
+			if tagControllerMethod.TokenHeader != "" {
+				p.Parameters = append(p.Parameters, swagger.Element{
+					In:          "header",
+					Name:        tagControllerMethod.TokenHeader,
+					Description: tagControllerMethod.TokenHeader,
+					Required:    true,
+					Type:        "string",
+					Schema:      nil,
+					Default:     "",
+				})
+			}
 
 			if tagControllerMethod.Req != nil {
 				for _, item := range tagControllerMethod.Req.Items {
@@ -624,17 +632,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 				}
 
 			}
-			if tagControllerMethod.TokenHeader != "" {
-				p.Parameters = append(p.Parameters, swagger.Element{
-					In:          "header",
-					Name:        tagControllerMethod.TokenHeader,
-					Description: tagControllerMethod.TokenHeader,
-					Required:    true,
-					Type:        "string",
-					Schema:      nil,
-					Default:     "",
-				})
-			}
+
 			if tagControllerMethod.Resp != nil {
 				p.Responses = make(map[string]swagger.Resp)
 				if len(tagControllerMethod.Resp.Items) > 0 {
@@ -669,6 +667,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 
 			}
 
+			url := buildRelativePath(model.Group, tagControllerMethod.RouterPath)
 			for _, s := range tagControllerMethod.Methods {
 				p.OperationID = s + "_" + strings.ReplaceAll(tagControllerMethod.RouterPath, "/", "_")
 				b.doc.AddPatch2(url, p, s)
@@ -703,7 +702,7 @@ func (b *KApi) register(router gin.IRoutes, cList ...interface{}) bool {
 		// Install the methods
 		for m := 0; m < refTyp.NumMethod(); m++ {
 			method := refTyp.Method(m)
-			_, _b := b.checkHandlerFunc(method.Type, true)
+			_, _b := b.checkMethodParamCount(method.Type, true)
 			if _b {
 				if v, ok := mp[objName+"/"+method.Name]; ok {
 					for _, v1 := range v {

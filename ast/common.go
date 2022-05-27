@@ -58,7 +58,7 @@ func GetModuleInfo(n int) (string, string, bool) {
 		n := strings.LastIndex(filename, "/")
 		if n > 0 {
 			filename = filename[0:n]
-			if internal.CheckFileIsExist(filename + "/go.mod") {
+			if internal.FileIsExist(filename + "/go.mod") {
 				return internal.GetMod(filename + "/go.mod"), filename, true
 			}
 		} else {

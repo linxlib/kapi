@@ -14,7 +14,7 @@ var _once sync.Once
 var _genInfo genInfo
 
 func init() {
-	if internal.CheckFileIsExist("gen.gob") {
+	if internal.FileIsExist("gen.gob") {
 		data := internal.ReadFile("gen.gob")
 		var buf = bytes.NewBuffer(data)
 		dec := gob.NewDecoder(buf)

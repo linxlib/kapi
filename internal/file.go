@@ -9,8 +9,8 @@ import (
 	"strings"
 )
 
-// CheckFileIsExist 检查目录是否存在
-func CheckFileIsExist(filename string) bool {
+// FileIsExist 检查目录是否存在
+func FileIsExist(filename string) bool {
 	var exist = true
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		exist = false
@@ -25,7 +25,7 @@ func BuildDir(absDir string) error {
 
 // GetPathDirs 获取目录所有文件夹
 func GetPathDirs(absDir string) (re []string) {
-	if CheckFileIsExist(absDir) {
+	if FileIsExist(absDir) {
 		files, _ := ioutil.ReadDir(absDir)
 		for _, f := range files {
 			if f.IsDir() {
@@ -64,7 +64,7 @@ func WriteFile(fname string, src []byte, isClear bool) bool {
 
 // ReadFile 读取文件
 func ReadFile(fname string) []byte {
-	src,_:=ioutil.ReadFile(fname)
+	src, _ := ioutil.ReadFile(fname)
 	return src
 }
 
@@ -76,10 +76,10 @@ func GetMod(fileName string) string {
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		m :=strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(m,"module") {
-			m = strings.TrimPrefix(m,"module")
-			m =strings.TrimSpace(m)
+		m := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(m, "module") {
+			m = strings.TrimPrefix(m, "module")
+			m = strings.TrimSpace(m)
 			return m
 		}
 	}

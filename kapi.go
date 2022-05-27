@@ -63,6 +63,10 @@ type KApi struct {
 	serverDown  bool
 }
 
+func Default() *KApi {
+	return New(nil)
+}
+
 func New(f func(*Option)) *KApi {
 	ast.AddImportFile("mime/multipart", "mime/multipart")
 	if VERSION != "" {
@@ -81,7 +85,9 @@ func New(f func(*Option)) *KApi {
 		b.genFlag = true
 	}
 	b.option = defaultOption()
-	f(b.option)
+	if f != nil {
+		f(b.option)
+	}
 	b.Model(NewAPIFunc)
 	gin.SetMode(gin.ReleaseMode) //we don't need gin's debug output
 	b.engine = gin.New()
@@ -106,7 +112,7 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 
 	b.handleSwaggerBase()
 	b.baseGroup = b.engine.Group(b.option.Server.APIBasePath)
-	if internal.CheckFileIsExist("./.serverdown") {
+	if internal.FileIsExist("./.serverdown") {
 		b.serverDown = true
 	}
 	b.baseGroup.PATCH("/serverDown", func(context *gin.Context) {
@@ -119,7 +125,7 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 	})
 	b.baseGroup.Use(func(context *gin.Context) {
 		if b.serverDown {
-			context.String(200, "服务器故障，请检查！")
+			context.String(200, "server fault！")
 			context.Abort()
 		}
 	})
@@ -197,7 +203,7 @@ func (b *KApi) handleDoc() {
 		}
 
 		b.engine.GET("/swagger.json", func(c *gin.Context) {
-			if !internal.CheckFileIsExist("swagger.json") {
+			if !internal.FileIsExist("swagger.json") {
 				internal.Log.Warningln("swagger.json未找到, 请放置到程序目录下")
 				c.JSON(404, "swagger.json not found")
 				return
