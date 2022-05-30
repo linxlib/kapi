@@ -7,26 +7,6 @@ import (
 	"github.com/linxlib/kapi/internal/cors"
 )
 
-var defaultConf = `
-[server]
-debug = true
-needDoc = true
-needReDoc = false
-needSwagger = true
-docName = "K-Api"
-docDesc = "K-Api"
-port = 2022
-openDocInBrowser = true
-docDomain = ""
-docVer = "v1"
-redirectToDocWhenAccessRoot = true
-apiBasePath = ""
-staticDirs = ["static"]
-enablePProf = false
-[server.cors]
-allowHeaders = ["Origin","Content-Length","Content-Type"]
-`
-
 type Option struct {
 	ginLoggerFormatter gin.LogFormatter
 	corsConfig         cors.Config
@@ -52,10 +32,6 @@ type Option struct {
 			AllowHeaders []string `conf:"allowHeaders" default:"[Origin,Content-Length,Content-Type,Authorization,x-requested-with]"`
 		} `conf:"cors"`
 	} `conf:"server"`
-}
-
-func GetEmptyConfig() []byte {
-	return []byte(defaultConf)
 }
 
 func readConfig(o *Option) *Option {

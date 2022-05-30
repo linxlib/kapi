@@ -59,8 +59,6 @@ func (m *Model) AddOne(group string, routerPath string, methods []string, summar
 			TokenHeader:  tokenHeader,
 			IsDeprecated: isDeprecated,
 		}
-	} else {
-		fmt.Println(routerPath)
 	}
 
 }

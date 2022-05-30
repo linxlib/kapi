@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"fmt"
 	"net"
 	"os"
 )
@@ -9,7 +8,7 @@ import (
 func GetIntranetIp() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		fmt.Println(err)
+		Log.Errorln(err)
 		os.Exit(1)
 	}
 	for _, address := range addrs {

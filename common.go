@@ -269,7 +269,7 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 			if _, ok := err.(validator.ValidationErrors); ok {
 
 			} else {
-				fmt.Println("ShouldBindHeader:", err)
+				internal.Log.Errorln("ShouldBindHeader:", err)
 				return err
 			}
 		}
@@ -280,7 +280,7 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 			if _, ok := err.(validator.ValidationErrors); ok {
 
 			} else {
-				fmt.Println("ShouldBindUri:", err)
+				internal.Log.Errorln("ShouldBindUri:", err)
 				return err
 			}
 
@@ -291,7 +291,7 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 			if _, ok := err.(validator.ValidationErrors); ok {
 
 			} else {
-				fmt.Println("Path.Bind:", err)
+				internal.Log.Errorln("Path.Bind:", err)
 				return err
 			}
 
@@ -303,7 +303,7 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 			if _, ok := err.(validator.ValidationErrors); ok {
 
 			} else {
-				fmt.Println("ShouldBindWith.Query:", err)
+				internal.Log.Errorln("ShouldBindWith.Query:", err)
 				return err
 			}
 
@@ -316,7 +316,7 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 				if _, ok := err.(validator.ValidationErrors); ok {
 
 				} else {
-					fmt.Println("ShouldBindWith.FormMultipart:", err)
+					internal.Log.Errorln("ShouldBindWith.FormMultipart:", err)
 					return err
 				}
 
@@ -327,7 +327,7 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 
 	if err := c.ShouldBindJSON(v); err != nil {
 		if err != io.EOF {
-			fmt.Println("body:", err)
+			internal.Log.Errorln("body EOF:", err)
 			return err
 		}
 
@@ -472,12 +472,12 @@ func (b *KApi) analysisController(controller interface{}, model *doc.Model, modP
 							docResp = b.analysisMethodReqResp(sdl.Type.Results.List[0].Type, imports, controllerPkgPath, controllerAstPkg, modPkg, modFile)
 						} else {
 							if gc.ResultType != "" {
-								fmt.Println(gc.ResultType)
+								//fmt.Println(gc.ResultType)
 								aa := strings.Split(gc.ResultType, ".")
 								xx := aa[0]
 								isArray := strings.HasPrefix(aa[0], "[]")
 								if isArray {
-									internal.Log.Infof("func:%s result type is array", gc.RouterPath)
+									//internal.Log.Infof("func:%s result type is array", gc.RouterPath)
 									xx = strings.TrimPrefix(aa[0], "[]")
 								}
 
