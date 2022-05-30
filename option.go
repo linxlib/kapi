@@ -5,6 +5,7 @@ import (
 	"github.com/linxlib/conf"
 	"github.com/linxlib/kapi/internal"
 	"github.com/linxlib/kapi/internal/cors"
+	"time"
 )
 
 type Option struct {
@@ -29,7 +30,14 @@ type Option struct {
 		StaticDirs                  []string `conf:"staticDirs" default:"[static]"`
 		EnablePProf                 bool     `conf:"enablePProf" default:"false"`
 		Cors                        struct {
-			AllowHeaders []string `conf:"allowHeaders" default:"[Origin,Content-Length,Content-Type,Authorization,x-requested-with]"`
+			AllowAllOrigins     bool          `conf:"allowAllOrigins" default:"true"`
+			AllowCredentials    bool          `conf:"allowCredentials" default:"false"`
+			MaxAge              time.Duration `conf:"maxAge" default:"12h"`
+			AllowWebSockets     bool          `conf:"allowWebSockets" default:"true"`
+			AllowWildcard       bool          `conf:"allowWildcard" default:"true"`
+			AllowPrivateNetwork bool          `conf:"allowPrivateNetwork" default:"true"`
+			AllowMethods        []string      `conf:"allowMethods" default:"[GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS]"`
+			AllowHeaders        []string      `conf:"allowHeaders" default:"[Origin,Content-Length,Content-Type,Authorization,x-requested-with]"`
 		} `conf:"cors"`
 	} `conf:"server"`
 }
@@ -37,12 +45,16 @@ type Option struct {
 func readConfig(o *Option) *Option {
 	//配置cors
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowAllOrigins = true
-	corsConfig.AllowPrivateNetwork = true
 
 	conf.Load(o, conf.File("config.toml"),
 		conf.Dirs("./", "./config"))
-
+	corsConfig.AllowAllOrigins = o.corsConfig.AllowAllOrigins
+	corsConfig.AllowPrivateNetwork = o.corsConfig.AllowPrivateNetwork
+	corsConfig.AllowCredentials = o.corsConfig.AllowCredentials
+	corsConfig.MaxAge = o.corsConfig.MaxAge
+	corsConfig.AllowWebSockets = o.corsConfig.AllowWebSockets
+	corsConfig.AllowWildcard = o.corsConfig.AllowWildcard
+	corsConfig.AllowMethods = o.corsConfig.AllowMethods
 	corsConfig.AllowHeaders = o.Server.Cors.AllowHeaders
 	o.corsConfig = corsConfig
 	return o
