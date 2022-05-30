@@ -12,3 +12,9 @@
 *.out
 .idea
 .DS_Store
+example/bin
+example/.idea
+example/swagger.json
+example/gen.gob
+example/main*
+
