@@ -46,15 +46,16 @@ func readConfig(o *Option) *Option {
 	//配置cors
 	corsConfig := cors.DefaultConfig()
 
-	conf.Load(o, conf.File("config.toml"),
+	_ = conf.Load(o, conf.File("config.toml"),
 		conf.Dirs("./", "./config"))
-	corsConfig.AllowAllOrigins = o.corsConfig.AllowAllOrigins
-	corsConfig.AllowPrivateNetwork = o.corsConfig.AllowPrivateNetwork
-	corsConfig.AllowCredentials = o.corsConfig.AllowCredentials
-	corsConfig.MaxAge = o.corsConfig.MaxAge
-	corsConfig.AllowWebSockets = o.corsConfig.AllowWebSockets
-	corsConfig.AllowWildcard = o.corsConfig.AllowWildcard
-	corsConfig.AllowMethods = o.corsConfig.AllowMethods
+
+	corsConfig.AllowAllOrigins = o.Server.Cors.AllowAllOrigins
+	corsConfig.AllowPrivateNetwork = o.Server.Cors.AllowPrivateNetwork
+	corsConfig.AllowCredentials = o.Server.Cors.AllowCredentials
+	corsConfig.MaxAge = o.Server.Cors.MaxAge
+	corsConfig.AllowWebSockets = o.Server.Cors.AllowWebSockets
+	corsConfig.AllowWildcard = o.Server.Cors.AllowWildcard
+	corsConfig.AllowMethods = o.Server.Cors.AllowMethods
 	corsConfig.AllowHeaders = o.Server.Cors.AllowHeaders
 	o.corsConfig = corsConfig
 	return o

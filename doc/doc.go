@@ -18,12 +18,12 @@ func NewDoc(group string) *Model {
 	return doc
 }
 
-var pathRouterRegex = regexp.MustCompile(":\\w+(?:/)?")
+var pathRouterRegex = regexp.MustCompile(":\\w+")
 
 // replacePathTo 将:id转为{id}这样的格式
 func replacePathTo(origin string) string {
 	var myorigin = origin
-	matches := pathRouterRegex.FindStringSubmatch(origin)
+	matches := pathRouterRegex.FindAllString(origin, -1)
 
 	if len(matches) > 0 {
 		for _, match := range matches {
