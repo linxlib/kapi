@@ -63,11 +63,7 @@ type KApi struct {
 	serverDown  bool
 }
 
-func Default() *KApi {
-	return New(nil)
-}
-
-func New(f func(*Option)) *KApi {
+func New(f ...func(*Option)) *KApi {
 	ast.AddImportFile("mime/multipart", "mime/multipart")
 	if VERSION != "" {
 		internal.Log.Infof(_banner, fmt.Sprintf(_info, VERSION, GOVERSION, OS, ARCH, BUILDTIME))
@@ -85,8 +81,8 @@ func New(f func(*Option)) *KApi {
 		b.genFlag = true
 	}
 	b.option = defaultOption()
-	if f != nil {
-		f(b.option)
+	if len(f) > 0 {
+		f[0](b.option)
 	}
 	b.Model(NewAPIFunc)
 	gin.SetMode(gin.ReleaseMode) //we don't need gin's debug output

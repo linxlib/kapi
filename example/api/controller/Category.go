@@ -5,7 +5,7 @@ import (
 	"github.com/linxlib/kapi"
 	"mime/multipart"
 	"test_kapi/api/model"
-	"test_kapi/lib"
+	"test_kapi/pkg/pkg1"
 )
 
 //CategoryController hhh
@@ -52,7 +52,7 @@ type PostCategoryReq struct {
 //@POST /category
 //@RESP lib.User
 func (p *CategoryController) PostCategory(c *kapi.Context, req *PostCategoryReq) {
-	var u = lib.User{}
+	var u = pkg1.User{}
 	c.DataExit(u)
 }
 

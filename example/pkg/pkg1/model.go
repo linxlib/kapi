@@ -1,4 +1,4 @@
-package lib
+package pkg1
 
 type User struct {
 	ID       int64  `json:"-"`
