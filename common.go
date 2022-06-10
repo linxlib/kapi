@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/linxlib/kapi/ast"
 	"github.com/linxlib/kapi/binding"
 	"github.com/linxlib/kapi/doc"
+	ast_doc2 "github.com/linxlib/kapi/doc/ast_doc"
 	"github.com/linxlib/kapi/doc/swagger"
 	"github.com/linxlib/kapi/internal"
-	goast "go/ast"
 	"io"
 	"net/http"
 	"reflect"
@@ -244,6 +243,7 @@ func (b *KApi) handleErrorString(c *gin.Context, req reflect.Value, err error) {
 	var fields []string
 	if _, ok := err.(validator.ValidationErrors); ok {
 		for _, err := range err.(validator.ValidationErrors) {
+			//TODO: 增加翻译选项
 			tmp := fmt.Sprintf("%v:%v", internal.FindTag(req.Interface(), err.Field(), "json"), err.Tag())
 			if len(err.Param()) > 0 {
 				tmp += fmt.Sprintf("[%v](but[%v])", err.Param(), err.Value())
@@ -335,168 +335,33 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 	return nil
 }
 
-func (b *KApi) analysisMethodReqRespByString(Import, objName string, isArray bool, p *goast.Package, modulePkg, moduleFile string) *doc.StructInfo {
-	ant := ast.NewStructAnalysis(modulePkg, moduleFile)
-	if p == nil {
-		bb := ast.EvalSymlinks(modulePkg, moduleFile, Import)
-		p, _ = ast.GetAstPackage(Import, bb) // get ast trees.
-	}
-	return ant.ParseStruct(p, objName, isArray)
-}
-
-// analysisMethodReqResp 解析方法的请求参数或返回参数
-func (b *KApi) analysisMethodReqResp(req goast.Expr, imports map[string]string, objPkg string, astPkg *goast.Package, modPkg, modFile string) (si *doc.StructInfo) {
-	param := &paramInfo{}
-	switch exp := req.(type) {
-	case *goast.SelectorExpr: // 非本文件包
-		param.Type = exp.Sel.Name
-		if x, ok := exp.X.(*goast.Ident); ok {
-			param.Import = imports[x.Name]
-			param.Pkg = ast.GetImportPkg(param.Import)
-		}
-	case *goast.StarExpr: // 本文件
-		switch expx := exp.X.(type) {
-		case *goast.SelectorExpr: // 非本地包
-			param.Type = expx.Sel.Name
-			if x, ok := expx.X.(*goast.Ident); ok {
-				param.Pkg = x.Name
-				param.Import = imports[param.Pkg]
-			}
-		case *goast.Ident: // 本文件
-			param.Type = expx.Name
-			param.Import = objPkg // 本包
-		default:
-			//log.ErrorString(fmt.Sprintf("not find any expx.(%v) [%v]", reflect.TypeOf(expx), objPkg))
-		}
-	case *goast.Ident: // 本文件
-		param.Type = exp.Name
-		param.Import = objPkg // 本包
-	default:
-		//log.ErrorString(fmt.Sprintf("not find any exp.(%v) [%v]", reflect.TypeOf(d), objPkg))
-	}
-	if len(param.Pkg) > 0 {
-		var pkg string
-		n := strings.LastIndex(param.Import, "/")
-		if n > 0 {
-			pkg = param.Import[n+1:]
-		}
-		if len(pkg) > 0 {
-			param.Pkg = pkg
-		}
-	}
-	ant := ast.NewStructAnalysis(modPkg, modFile)
-	tmp := astPkg
-	if len(param.Pkg) > 0 {
-		objFile := ast.EvalSymlinks(modPkg, modFile, param.Import)
-		tmp, _ = ast.GetAstPackage(param.Pkg, objFile) // get ast trees.
-	}
-	si = ant.ParseStruct(tmp, param.Type, false)
-
-	return
-}
-
-// analysisMethodComment 解析方法注解
-func (b *KApi) analysisMethodComment(f *goast.FuncDecl, controllerRoute, objFunc string) (gc *genComment) {
-	gc = &genComment{}
-
-	if f.Doc != nil {
-		for _, c := range f.Doc.List { // 读取方法的注释
-			if prefix, comment, success := internal.GetCommentAfterPrefixRegex(c.Text, objFunc); success {
-				switch prefix {
-				case "@DEPRECATED":
-					gc.IsDeprecated = true
-					break
-				case "@RESP":
-					gc.ResultType = comment
-					break
-				case "@DESC":
-					gc.Description += comment + "\n" //description可以多个，并换行
-				case "@GET", "@POST", "@PUT", "@DELETE", "@PATCH", "@OPTION", "@HEAD":
-					gc.RouterPath = comment
-					if controllerRoute != "" {
-						gc.RouterPath = controllerRoute + gc.RouterPath
-					}
-
-					if len(gc.Methods) > 0 { // 一个方法可以有多个 @HTTPMETHOD 注解
-						gc.Methods = append(gc.Methods, strings.ToUpper(strings.TrimPrefix(prefix, "@")))
-					} else {
-						gc.Methods = []string{strings.ToUpper(strings.TrimPrefix(prefix, "@"))}
-					}
-					break
-				case objFunc:
-					gc.Summary = comment // summary 仅一条
-					break
-				}
-			}
-
-		}
-
-	}
-	return
-}
-
 func (b *KApi) analysisController(controller interface{}, model *doc.Model, modPkg string, modFile string) {
 	controllerRefVal := reflect.ValueOf(controller)
 	internal.Log.Debugf("解析 --> %s", controllerRefVal.Type().String())
 	controllerType := reflect.Indirect(controllerRefVal).Type()
-
 	controllerPkgPath := controllerType.PkgPath()
-
 	controllerName := controllerType.Name()
-
-	// find path
-	controllerFile := ast.EvalSymlinks(modPkg, modFile, controllerPkgPath)
-
-	controllerAstPkg, _b := ast.GetAstPackage(controllerPkgPath, controllerFile) // get ast trees.
-	if _b {
-		imports, funMp, cc := ast.AnalysisControllerFile(controllerAstPkg, controllerName)
-
+	astDoc := ast_doc2.NewAstDoc(modPkg, modFile)
+	if astDoc.FillPackage(controllerPkgPath) == nil {
+		controllerScheme := astDoc.ResolveController(controllerName)
 		refTyp := reflect.TypeOf(controller)
 		// 遍历controller方法
 		for m := 0; m < refTyp.NumMethod(); m++ {
 			method := refTyp.Method(m)
 			_, _b := b.checkMethodParamCount(method.Type, true)
 			if _b && method.IsExported() {
-				if sdl, ok := funMp[method.Name]; ok {
-					gc := b.analysisMethodComment(sdl, cc.Route, method.Name)
-					if gc != nil {
-						checkOnceAdd(controllerName+"/"+method.Name, gc.RouterPath, gc.Methods)
-					}
-					if b.option.Server.NeedDoc { // output newDoc
-						var docReq, docResp *doc.StructInfo
-						if sdl.Type.Params.NumFields() > 1 {
-							docReq = b.analysisMethodReqResp(sdl.Type.Params.List[1].Type, imports, controllerPkgPath, controllerAstPkg, modPkg, modFile)
-						}
-
-						if sdl.Type.Results.NumFields() > 1 {
-							docResp = b.analysisMethodReqResp(sdl.Type.Results.List[0].Type, imports, controllerPkgPath, controllerAstPkg, modPkg, modFile)
-						} else {
-							if gc.ResultType != "" {
-								//fmt.Println(gc.ResultType)
-								aa := strings.Split(gc.ResultType, ".")
-								xx := aa[0]
-								isArray := strings.HasPrefix(aa[0], "[]")
-								if isArray {
-									//internal.Log.Infof("func:%s result type is array", gc.RouterPath)
-									xx = strings.TrimPrefix(aa[0], "[]")
-								}
-
-								if len(aa) > 1 {
-									if importPath, ok := imports[xx]; ok {
-										docResp = b.analysisMethodReqRespByString(importPath, aa[1], isArray, nil, modPkg, modFile)
-									}
-								} else {
-									docResp = b.analysisMethodReqRespByString(controllerPkgPath, xx, isArray, controllerAstPkg, modPkg, modFile)
-								}
-
-							}
-						}
-						if gc != nil {
-							model.AddOne(cc.TagName, gc.RouterPath, gc.Methods, gc.Summary, gc.Description, docReq, docResp, cc.TokenHeader, gc.IsDeprecated)
-						}
+				mc, siReq, siResp := astDoc.ResolveMethod(method.Name)
+				if mc != nil {
+					checkOnceAdd(controllerName+"/"+method.Name, mc.RouterPath, mc.Methods)
+					if b.option.Server.NeedDoc {
+						model.AddOne(controllerScheme.TagName, mc.RouterPath,
+							mc.Methods, mc.Summary, mc.Description,
+							siReq, siResp,
+							controllerScheme.TokenHeader, mc.IsDeprecated)
 					}
 
 				}
+
 			}
 		}
 	}
@@ -505,7 +370,7 @@ func (b *KApi) analysisController(controller interface{}, model *doc.Model, modP
 // analysisControllers gen out the Registered config info  by struct object,[prepath + objname.]
 func (b *KApi) analysisControllers(router gin.IRoutes, controllers ...interface{}) bool {
 	//TODO: groupPath也要加入到文档的路由中
-	modPkg, modFile, isFind := ast.GetModuleInfo(2)
+	modPkg, modFile, isFind := ast_doc2.GetModuleInfo(2)
 	if !isFind {
 		return false
 	}
@@ -526,8 +391,8 @@ func (b *KApi) addDocModel(model *doc.Model) {
 	var tags []string
 	for k, v := range model.TagControllers {
 		for _, v1 := range v {
-			model.SetDefinition(b.doc, v1.Req)
-			model.SetDefinition(b.doc, v1.Resp)
+			b.doc.SetDefinition(model, v1.Req)
+			b.doc.SetDefinition(model, v1.Resp)
 		}
 		tags = append(tags, k)
 	}

@@ -156,33 +156,3 @@ func (ei *ElementInfo) execute() {
 		}
 	}
 }
-
-type ParamType int
-
-const (
-	ParamTypeQuery ParamType = iota
-	ParamTypeHeader
-	ParamTypeForm
-	ParamTypePath
-)
-
-// StructInfo struct define
-type StructInfo struct {
-	Items   []*ElementInfo // 结构体元素
-	IsArray bool
-	File    string
-	Note    string // 注释
-	Name    string // 结构体名字
-	Pkg     string // 包名
-}
-
-// DocModel Model
-type DocModel struct {
-	RouterPath   string
-	Methods      []string
-	Summary      string
-	Description  string
-	Req, Resp    *StructInfo
-	TokenHeader  string
-	IsDeprecated bool
-}

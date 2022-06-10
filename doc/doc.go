@@ -18,27 +18,6 @@ func NewDoc(group string) *Model {
 	return doc
 }
 
-var pathRouterRegex = regexp.MustCompile(":\\w+")
-
-// replacePathTo 将:id转为{id}这样的格式
-func replacePathTo(origin string) string {
-	var myorigin = origin
-	matches := pathRouterRegex.FindAllString(origin, -1)
-
-	if len(matches) > 0 {
-		for _, match := range matches {
-			if strings.HasPrefix(match, ":") {
-				pathName := strings.TrimPrefix(match, ":")
-				pathName = strings.TrimSuffix(pathName, "/")
-				pathName = fmt.Sprintf("{%s}", pathName)
-				myorigin = strings.ReplaceAll(myorigin, match, pathName)
-			}
-		}
-		return myorigin
-	}
-	return myorigin
-}
-
 // AddOne 添加一个方法
 func (m *Model) AddOne(group string, routerPath string, methods []string, summary string, description string, req, resp *StructInfo, tokenHeader string, isDeprecated bool) {
 	if m.TagControllers[group] == nil {
@@ -61,4 +40,41 @@ func (m *Model) AddOne(group string, routerPath string, methods []string, summar
 		}
 	}
 
+}
+
+func (m *Model) analysisStructInfo(info *StructInfo) {
+	if info != nil {
+		if len(info.Items) > 0 {
+			for _, item := range info.Items {
+				item.execute()
+				if item.TypeRef != nil {
+					m.analysisStructInfo(item.TypeRef)
+				}
+			}
+		} else {
+
+		}
+
+	}
+}
+
+var pathRouterRegex = regexp.MustCompile(":\\w+")
+
+// replacePathTo 将:id转为{id}这样的格式
+func replacePathTo(origin string) string {
+	var myorigin = origin
+	matches := pathRouterRegex.FindAllString(origin, -1)
+
+	if len(matches) > 0 {
+		for _, match := range matches {
+			if strings.HasPrefix(match, ":") {
+				pathName := strings.TrimPrefix(match, ":")
+				pathName = strings.TrimSuffix(pathName, "/")
+				pathName = fmt.Sprintf("{%s}", pathName)
+				myorigin = strings.ReplaceAll(myorigin, match, pathName)
+			}
+		}
+		return myorigin
+	}
+	return myorigin
 }

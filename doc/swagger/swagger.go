@@ -1,6 +1,7 @@
 package swagger
 
 import (
+	"github.com/linxlib/kapi/doc"
 	"github.com/linxlib/kapi/internal"
 	"strings"
 )
@@ -83,6 +84,100 @@ func (doc *DocSwagger) AddPatch2(url string, p Param, method string) {
 // GetAPIString 获取返回数据
 func (doc *DocSwagger) GetAPIString() string {
 	return internal.MarshalToJson(doc.Client, true)
+}
+
+func (doc *DocSwagger) SetDefinition(m *doc.Model, si *doc.StructInfo) string {
+	if si == nil {
+		return ""
+	}
+	var def = Definition{
+		Type:       "object",
+		Properties: make(map[string]Property),
+	}
+
+	for _, v2 := range si.Items {
+		if v2.TypeRef != nil {
+			if v2.IsArray {
+				p := Property{}
+				if v2.IsTDArray {
+					p = Property{
+						Type:        "array",
+						Description: v2.Note,
+						Items: &PropertyItems{
+							Type: "array",
+							Items: map[string]string{
+								"type": GetKvType(v2.Type, false, true),
+							},
+						},
+					}
+				} else {
+					p = Property{
+						Type:        "array",
+						Description: v2.Note,
+						Items: &PropertyItems{
+							Type:   GetKvType(v2.Type, v2.IsArray, true),
+							Format: GetKvType(v2.Type, v2.IsArray, false),
+							Ref:    doc.SetDefinition(m, v2.TypeRef),
+						},
+					}
+				}
+				def.Properties[v2.Name] = p
+
+			} else {
+				def.Properties[v2.Name] = Property{
+					Type:   GetKvType(v2.Type, v2.IsArray, true),
+					Format: GetKvType(v2.Type, v2.IsArray, false),
+					Ref:    doc.SetDefinition(m, v2.TypeRef),
+					Items:  nil,
+				}
+			}
+
+		} else {
+			if v2.IsArray {
+				p := Property{}
+				if v2.IsTDArray {
+					p = Property{
+						Type:        "array",
+						Description: v2.Note,
+						Items: &PropertyItems{
+							Type: "array",
+							Items: map[string]string{
+								"type":   GetKvType(v2.Type, false, true),
+								"format": v2.Type,
+							},
+						},
+					}
+				} else {
+					p = Property{
+						Type:        "array",
+						Description: v2.Note,
+						Items: &PropertyItems{
+							Type:   GetKvType(v2.Type, v2.IsArray, true),
+							Format: GetKvType(v2.Type, v2.IsArray, false),
+							Ref:    doc.SetDefinition(m, v2.TypeRef),
+						},
+					}
+				}
+
+				def.Properties[v2.Name] = p
+			} else {
+				if v2.IsQuery || v2.IsHeader || v2.IsPath || v2.IsFormData {
+
+				} else {
+					def.Properties[v2.Name] = Property{
+						Type:        GetKvType(v2.Type, v2.IsArray, true),
+						Format:      GetKvType(v2.Type, v2.IsArray, false),
+						Description: v2.Note,
+						Items:       nil,
+					}
+
+				}
+			}
+
+		}
+	}
+	doc.AddDefinitions(si.Name, def)
+	return "#/definitions/" + si.Name
 }
 
 var kvType = map[string]string{ // array, boolean, integer, number, object, string
