@@ -182,6 +182,7 @@ func (a *AstDoc) resolveMethodComment(methodName string) (*ast.FuncDecl, *method
 						gc.RouterPath = comment
 						if a.controllerScheme.Route != "" {
 							gc.RouterPath = a.controllerScheme.Route + gc.RouterPath
+							gc.RouterPath = strings.TrimSuffix(gc.RouterPath, "/")
 						}
 
 						if len(gc.Methods) > 0 { //we can also have multiple @HTTPMETHOD

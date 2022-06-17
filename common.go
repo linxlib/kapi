@@ -22,6 +22,21 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+func buildRelativePath(prepath, routerPath string) string {
+	if strings.HasSuffix(prepath, "/") {
+		if strings.HasPrefix(routerPath, "/") {
+			return prepath + strings.TrimPrefix(routerPath, "/")
+		}
+		return prepath + routerPath
+	}
+
+	if strings.HasPrefix(routerPath, "/") {
+		return prepath + routerPath
+	}
+
+	return prepath + "/" + routerPath
+}
+
 // checkMethodParamCount 检查路由方法是否符合 第一个参数是正确的Context 同时s返回参数个数
 // isObj表示方法是否是struct下的方法 如果是则 typ.In(0) 是struct本身
 func (b *KApi) checkMethodParamCount(typ reflect.Type, isObj bool) (int, bool) {
@@ -352,7 +367,7 @@ func (b *KApi) analysisController(controller interface{}, model *doc.Model, modP
 			if _b && method.IsExported() {
 				mc, siReq, siResp := astDoc.ResolveMethod(method.Name)
 				if mc != nil {
-					checkOnceAdd(controllerName+"/"+method.Name, mc.RouterPath, mc.Methods)
+					routeInfo.AddFunc(controllerName+"/"+method.Name, mc.RouterPath, mc.Methods)
 					if b.option.Server.NeedDoc {
 						model.AddOne(controllerScheme.TagName, mc.RouterPath,
 							mc.Methods, mc.Summary, mc.Description,
@@ -557,7 +572,7 @@ func (b *KApi) register(router gin.IRoutes, cList ...interface{}) bool {
 	if b.genFlag {
 		return true
 	}
-	mp := getInfo()
+	mp := routeInfo.getInfo()
 	for _, c := range cList {
 		refTyp := reflect.TypeOf(c)
 		refVal := reflect.ValueOf(c)

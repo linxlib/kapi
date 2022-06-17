@@ -289,7 +289,7 @@ func (b *KApi) genRouterCode() {
 	if !b.option.Server.Debug {
 		return
 	}
-	genOutPut()
+	routeInfo.genOutPut()
 }
 
 // genDoc 生成swagger.json
