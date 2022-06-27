@@ -12,13 +12,6 @@ type ApiFunc func(*gin.Context) interface{}
 // RecoverErrorFunc recover 错误设置
 type RecoverErrorFunc func(interface{})
 
-// paramInfo 参数类型描述
-type paramInfo struct {
-	Pkg    string // 包名
-	Type   string // 类型
-	Import string // import 包
-}
-
 // store the comment for the controller method. 生成注解路由
 type genComment struct {
 	RouterPath   string

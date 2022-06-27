@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/linxlib/kapi/doc/ast_doc"
 	"github.com/linxlib/kapi/doc/swagger"
+	"github.com/linxlib/kapi/inject"
 	"github.com/linxlib/kapi/internal"
 	"github.com/linxlib/kapi/internal/cors"
 	"io/ioutil"
@@ -51,6 +52,7 @@ var redocFS embed.FS
 
 // KApi base struct
 type KApi struct {
+	inject.Injector
 	apiFun            ApiFunc
 	customContextType reflect.Type
 
@@ -76,7 +78,9 @@ func New(f ...func(*Option)) *KApi {
 		internal.Log.Info("初始化..")
 	}
 
-	b := new(KApi)
+	b := &KApi{
+		Injector: inject.New(),
+	}
 	if len(os.Args) > 1 && os.Args[1] == "-g" {
 		b.genFlag = true
 	}
@@ -125,7 +129,7 @@ func (b *KApi) RegisterRouter(cList ...interface{}) {
 			context.Abort()
 		}
 	})
-	b.doRegister(b.baseGroup, cList...)
+	b.doRegisterController(b.baseGroup, cList...)
 	b.handleStatic()
 	if b.option.Server.EnablePProf {
 		pprof.Register(b.engine, "/kapi")
@@ -274,7 +278,7 @@ func (b *KApi) Model(middleware ApiFunc) *KApi {
 }
 
 // Register 注册多个Controller struct
-func (b *KApi) doRegister(router gin.IRoutes, cList ...interface{}) bool {
+func (b *KApi) doRegisterController(router gin.IRoutes, cList ...interface{}) bool {
 	//开发时 生成路由注册文件 gen.gob
 	//运行时 -g 也可生成但不运行http服务
 	if b.option.Server.Debug {

@@ -1,9 +1,7 @@
 package kapi
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/linxlib/kapi/binding"
 	"github.com/linxlib/kapi/doc"
@@ -13,7 +11,6 @@ import (
 	"io"
 	"net/http"
 	"reflect"
-	"runtime"
 	"sort"
 	"strings"
 
@@ -37,224 +34,77 @@ func buildRelativePath(prepath, routerPath string) string {
 	return prepath + "/" + routerPath
 }
 
-// checkMethodParamCount 检查路由方法是否符合 第一个参数是正确的Context 同时s返回参数个数
-// isObj表示方法是否是struct下的方法 如果是则 typ.In(0) 是struct本身
-func (b *KApi) checkMethodParamCount(typ reflect.Type, isObj bool) (int, bool) {
-	offset := 0
-	if isObj {
-		offset = 1
-	}
-	paramCount := typ.NumIn() - offset
-	if paramCount == 1 || paramCount == 2 { // 参数检查
-		ctxType := typ.In(0 + offset)
-
-		// go-gin 框架的默认方法
-		if ctxType == reflect.TypeOf(&gin.Context{}) {
-			return paramCount, true
-		}
-
-		// Customized context . 自定义的context
-		if ctxType == b.customContextType {
-			return paramCount, true
-		}
-
-		// maybe interface
-		if b.customContextType.ConvertibleTo(ctxType) {
-			return paramCount, true
-		}
-
-	}
-	return paramCount, false
-}
-
-// handlerFuncObj Get and filter the parameters to be bound (object call type)
-func (b *KApi) handlerFuncObj(tvl, obj reflect.Value, methodName string) gin.HandlerFunc { // 获取并过滤要绑定的参数(obj 对象类型)
-	typ := tvl.Type()
-	if typ.NumIn() == 2 { //1个参数的方法 *kapi.Context
-		ctxType := typ.In(1)
-
-		apiFun := func(c *gin.Context) interface{} { return c }
-		if ctxType == b.customContextType { // Customized context . 自定义的context
-			apiFun = b.apiFun
-		} else if !(ctxType == reflect.TypeOf(&gin.Context{})) {
-			internal.Log.Errorln("方法不受支持 " + runtime.FuncForPC(tvl.Pointer()).Name() + " !")
-		}
-
-		return func(c *gin.Context) {
-			//加入recover处理
-			defer func() {
-				if err := recover(); err != nil {
-					b.option.recoverErrorFunc(err)
-				}
-			}()
-
-			bainfo, is := b.preCall(c, obj, nil, methodName)
-			if !is {
-				c.JSON(bainfo.RespCode, bainfo.Resp)
-				return
-			}
-
-			var returnValues []reflect.Value
-			returnValues = tvl.Call([]reflect.Value{obj, reflect.ValueOf(apiFun(c))})
-
-			if returnValues != nil {
-				bainfo.Resp = returnValues[0].Interface()
-				rerr := returnValues[1].Interface()
-				if rerr != nil {
-					bainfo.Error = rerr.(error)
-				}
-
-				is = b.afterCall(bainfo, obj)
-				if is {
-					if bainfo.Error != nil {
-						c.JSON(GetResultFunc(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
-					} else {
-						c.JSON(GetResultFunc(RESULT_CODE_SUCCESS, "", 0, bainfo.Resp))
-					}
-				} else {
-					if bainfo.Error != nil {
-						c.JSON(GetResultFunc(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
-					} else {
-						c.JSON(GetResultFunc(RESULT_CODE_ERROR, "", 0, bainfo.Resp))
-					}
-				}
-			}
-
-		}
-	}
-
-	// 自定义的context类型,带request 请求参数
-	call, err := b.changeToGinHandlerFunc(tvl, obj, methodName)
-	if err != nil { // Direct reporting error.
-		panic(err)
-	}
-
-	return call
-}
-
-//preCall 调用前处理
-func (b *KApi) preCall(c *gin.Context, obj reflect.Value, req interface{}, methodName string) (*InterceptorContext, bool) {
-	info := &InterceptorContext{
-		C:        &Context{c},
-		FuncName: fmt.Sprintf("%v.%v", reflect.Indirect(obj).Type().Name(), methodName), // 函数名
-		Req:      req,                                                                   // 调用前的请求参数
-		Context:  context.Background(),                                                  // 占位参数，可用于存储其他参数，前后连接可用
-	}
-	//处理控制器的拦截器
-	is := true
-
-	if preObj, ok := obj.Interface().(Interceptor); ok { // 本类型
-		is = preObj.Before(info)
-	}
-	//处理全局的拦截器
-	if is && b.beforeAfter != nil {
-		is = b.beforeAfter.Before(info)
-	}
-	return info, is
-}
-
-//afterCall 调用后处理
-func (b *KApi) afterCall(info *InterceptorContext, obj reflect.Value) bool {
-	is := true
-	if bfobj, ok := obj.Interface().(Interceptor); ok { // 本类型
-		is = bfobj.After(info)
-	}
-	if is && b.beforeAfter != nil {
-		is = b.beforeAfter.After(info)
-	}
-	return is
-}
-
-// Custom context type with request parameters
-func (b *KApi) changeToGinHandlerFunc(tvl, obj reflect.Value, methodName string) (func(*gin.Context), error) {
-	typ := tvl.Type()
-
-	if typ.NumOut() != 0 {
-		if typ.NumOut() == 2 {
-			if returnType := typ.Out(1); returnType != typeOfError {
-				return nil, fmt.Errorf("方法 : %v , 第二返回值 %v 不是 error",
-					runtime.FuncForPC(tvl.Pointer()).Name(), returnType.String())
-			}
-		} else {
-			return nil, fmt.Errorf("方法 : %v 不受支持, 只支持两个返回值 (obj, error) 的方法", runtime.FuncForPC(tvl.Pointer()).Name())
-		}
-	}
-
-	ctxType, reqType := typ.In(1), typ.In(2)
-
-	reqIsGinCtx := false
-	if ctxType == reflect.TypeOf(&gin.Context{}) {
-		reqIsGinCtx = true
-	}
-
-	if !reqIsGinCtx && ctxType != b.customContextType && !b.customContextType.ConvertibleTo(ctxType) {
-		return nil, errors.New("方法 " + runtime.FuncForPC(tvl.Pointer()).Name() + " 第一个参数不受支持!")
-	}
-
+func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
+	typ := reflect.TypeOf(method)
+	hasReq := typ.NumIn() >= 2
 	reqIsValue := true
-	if reqType.Kind() == reflect.Ptr {
-		reqIsValue = false
+	var req reflect.Value
+	if hasReq {
+		reqType := typ.In(1)
+		req = reflect.New(reqType)
+		if reqType.Kind() == reflect.Ptr {
+			reqIsValue = false
+			req = reflect.New(reqType.Elem())
+		}
 	}
-	apiFun := func(c *gin.Context) interface{} { return c }
-	if !reqIsGinCtx {
-		apiFun = b.apiFun
+	switch vt := method.(type) {
+	case func(*Context):
+		method = ContextInvoker(vt)
 	}
+	return func(context *gin.Context) {
+		c := newContext(context)
+		c.SetParent(b)
+		c.Map(c)
 
-	return func(c *gin.Context) {
+		c.handler = method
 		defer func() {
 			if err := recover(); err != nil {
 				b.option.recoverErrorFunc(err)
 			}
 		}()
 
-		req := reflect.New(reqType)
-		if !reqIsValue {
-			req = reflect.New(reqType.Elem())
+		if i, ok := controller.(Interceptor); ok {
+			i.Before(c)
 		}
-		if err := b.unmarshal(c, req.Interface()); err != nil { // Return error message.返回错误信息
-			b.handleErrorString(c, req, err)
+		if c.ctx.IsAborted() {
 			return
 		}
-
-		if reqIsValue {
-			req = req.Elem()
+		if hasReq {
+			if err := b.doBindReq(c, req.Interface()); err != nil {
+				b.handleUnmarshalError(c, req, err)
+				return
+			}
+			if reqIsValue {
+				req = req.Elem()
+			}
+			c.Map(req.Interface())
 		}
-
-		bainfo, is := b.preCall(c, obj, req.Interface(), methodName)
-		if !is {
-			c.JSON(bainfo.RespCode, bainfo.Resp)
+		returnValues, err := c.run()
+		if err != nil {
+			panic(fmt.Sprintf("unable to invoke the handler [%T]: %controller", method, err))
+		}
+		if c.ctx.IsAborted() {
 			return
 		}
-
-		var returnValues []reflect.Value
-		returnValues = tvl.Call([]reflect.Value{obj, reflect.ValueOf(apiFun(c)), req})
-
-		if returnValues != nil {
-			bainfo.Resp = returnValues[0].Interface()
-			rerr := returnValues[1].Interface()
+		if len(returnValues) == 2 {
+			resp := returnValues[0].Interface()
+			rerr := returnValues[1].Interface().(error)
+			if i, ok := controller.(Interceptor); ok {
+				i.After(c)
+			}
+			if c.ctx.IsAborted() {
+				return
+			}
 			if rerr != nil {
-				bainfo.Error = rerr.(error)
-			}
-
-			is = b.afterCall(bainfo, obj)
-			if is {
-				if bainfo.Error != nil {
-					c.JSON(GetResultFunc(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
-				} else {
-					c.JSON(GetResultFunc(RESULT_CODE_SUCCESS, "", 0, bainfo.Resp))
-				}
+				c.ctx.PureJSON(GetResultFunc(RESULT_CODE_ERROR, rerr.Error(), 0, resp))
 			} else {
-				if bainfo.Error != nil {
-					c.JSON(GetResultFunc(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
-				} else {
-					c.JSON(GetResultFunc(RESULT_CODE_ERROR, "", 0, bainfo.Resp))
-				}
+				c.ctx.PureJSON(GetResultFunc(RESULT_CODE_SUCCESS, "", 0, resp))
 			}
 		}
-	}, nil
+	}
 }
 
-func (b *KApi) handleErrorString(c *gin.Context, req reflect.Value, err error) {
+func (b *KApi) handleUnmarshalError(c *Context, req reflect.Value, err error) {
 	var fields []string
 	if _, ok := err.(validator.ValidationErrors); ok {
 		for _, err := range err.(validator.ValidationErrors) {
@@ -274,12 +124,12 @@ func (b *KApi) handleErrorString(c *gin.Context, req reflect.Value, err error) {
 		fields = append(fields, err.Error())
 	}
 
-	c.JSON(GetResultFunc(RESULT_CODE_FAIL, fmt.Sprintf("req param : %v", strings.Join(fields, ";")), 0, nil))
+	c.ctx.PureJSON(GetResultFunc(RESULT_CODE_FAIL, fmt.Sprintf("req param : %v", strings.Join(fields, ";")), 0, nil))
 	return
 }
 
-func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
-	if err := c.ShouldBindHeader(v); err != nil {
+func (b *KApi) doBindReq(c *Context, v interface{}) error {
+	if err := c.ctx.ShouldBindHeader(v); err != nil {
 		if err != io.EOF {
 			if _, ok := err.(validator.ValidationErrors); ok {
 
@@ -290,7 +140,7 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 		}
 	}
 
-	if err := c.ShouldBindUri(v); err != nil {
+	if err := c.ctx.ShouldBindUri(v); err != nil {
 		if err != io.EOF {
 			if _, ok := err.(validator.ValidationErrors); ok {
 
@@ -301,7 +151,7 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 
 		}
 	}
-	if err := binding.Path.Bind(c, v); err != nil {
+	if err := binding.Path.Bind(c.ctx, v); err != nil {
 		if err != io.EOF {
 			if _, ok := err.(validator.ValidationErrors); ok {
 
@@ -313,7 +163,7 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 		}
 	}
 
-	if err := c.ShouldBindWith(v, binding.Query); err != nil {
+	if err := c.ctx.ShouldBindWith(v, binding.Query); err != nil {
 		if err != io.EOF {
 			if _, ok := err.(validator.ValidationErrors); ok {
 
@@ -325,8 +175,8 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 		}
 
 	}
-	if c.ContentType() == "multipart/form-data" {
-		if err := c.ShouldBindWith(v, binding2.FormMultipart); err != nil {
+	if c.ctx.ContentType() == "multipart/form-data" {
+		if err := c.ctx.ShouldBindWith(v, binding2.FormMultipart); err != nil {
 			if err != io.EOF {
 				if _, ok := err.(validator.ValidationErrors); ok {
 
@@ -340,7 +190,7 @@ func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
 		}
 	}
 
-	if err := c.ShouldBindJSON(v); err != nil {
+	if err := c.ctx.ShouldBindJSON(v); err != nil {
 		if err != io.EOF {
 			internal.Log.Errorln("body EOF:", err)
 			return err
@@ -363,8 +213,8 @@ func (b *KApi) analysisController(controller interface{}, model *doc.Model, modP
 		// 遍历controller方法
 		for m := 0; m < refTyp.NumMethod(); m++ {
 			method := refTyp.Method(m)
-			_, _b := b.checkMethodParamCount(method.Type, true)
-			if _b && method.IsExported() {
+			//_, _b := b.checkMethodParamCount(method.Type, true)
+			if method.IsExported() {
 				mc, siReq, siResp := astDoc.ResolveMethod(method.Name)
 				if mc != nil {
 					routeInfo.AddFunc(controllerName+"/"+method.Name, mc.RouterPath, mc.Methods)
@@ -581,15 +431,18 @@ func (b *KApi) register(router gin.IRoutes, cList ...interface{}) bool {
 
 		// Install the methods
 		for m := 0; m < refTyp.NumMethod(); m++ {
+
 			method := refTyp.Method(m)
-			_, _b := b.checkMethodParamCount(method.Type, true)
-			if _b {
-				if v, ok := mp[objName+"/"+method.Name]; ok {
-					for _, v1 := range v {
-						methods := strings.Join(v1.GenComment.Methods, ",")
-						internal.Log.Debugf("%6s  %-20s --> %s", methods, v1.GenComment.RouterPath, t.PkgPath()+".(*"+objName+")."+method.Name)
-						_ = b.registerHandlerObj(router, v1.GenComment.Methods, v1.GenComment.RouterPath, method.Name, method.Func, refVal)
-					}
+			//_, _b := b.checkMethodParamCount(method.Type, true)
+			if v, ok := mp[objName+"/"+method.Name]; ok {
+				for _, v1 := range v {
+					methods := strings.Join(v1.GenComment.Methods, ",")
+					internal.Log.Debugf("%6s  %-20s --> %s", methods, v1.GenComment.RouterPath, t.PkgPath()+".(*"+objName+")."+method.Name)
+					_ = b.registerMethodToRouter(router,
+						v1.GenComment.Methods,
+						v1.GenComment.RouterPath,
+						refVal.Interface(),
+						refVal.Method(m).Interface())
 				}
 			}
 		}
@@ -597,10 +450,8 @@ func (b *KApi) register(router gin.IRoutes, cList ...interface{}) bool {
 	return true
 }
 
-// registerHandlerObj 注册路由方法
-func (b *KApi) registerHandlerObj(router gin.IRoutes, httpMethod []string, relativePath, methodName string, tvl, obj reflect.Value) error {
-	call := b.handlerFuncObj(tvl, obj, methodName)
-
+func (b *KApi) registerMethodToRouter(router gin.IRoutes, httpMethod []string, relativePath string, controller, method interface{}) error {
+	call := b.handle(controller, method)
 	for _, v := range httpMethod {
 		switch strings.ToUpper(v) {
 		case http.MethodPost:
@@ -620,9 +471,38 @@ func (b *KApi) registerHandlerObj(router gin.IRoutes, httpMethod []string, relat
 		case "ANY":
 			router.Any(relativePath, call)
 		default:
-			return fmt.Errorf("请求方式:[%v] 不支持", httpMethod)
+			return fmt.Errorf("请求方式:[%controller] 不支持", httpMethod)
 		}
 	}
 
 	return nil
 }
+
+// registerHandlerObj 注册路由方法
+//func (b *KApi) registerHandlerObj(router gin.IRoutes, httpMethod []string, relativePath, methodName string, tvl, obj reflect.Value) error {
+//	call := b.handlerFuncObj(tvl, obj, methodName)
+//	for _, v := range httpMethod {
+//		switch strings.ToUpper(v) {
+//		case http.MethodPost:
+//			router.POST(relativePath, call)
+//		case http.MethodGet:
+//			router.GET(relativePath, call)
+//		case http.MethodDelete:
+//			router.DELETE(relativePath, call)
+//		case http.MethodPatch:
+//			router.PATCH(relativePath, call)
+//		case http.MethodPut:
+//			router.PUT(relativePath, call)
+//		case http.MethodOptions:
+//			router.OPTIONS(relativePath, call)
+//		case http.MethodHead:
+//			router.HEAD(relativePath, call)
+//		case "ANY":
+//			router.Any(relativePath, call)
+//		default:
+//			return fmt.Errorf("请求方式:[%v] 不支持", httpMethod)
+//		}
+//	}
+//
+//	return nil
+//}

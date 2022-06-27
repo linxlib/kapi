@@ -76,29 +76,29 @@ func _defaultGetResult(code RESULT_CODE, msg string, count int64, data interface
 
 //WriteJSON 写入json对象
 func (c *Context) WriteJSON(obj interface{}) {
-	c.JSON(200, obj)
+	c.ctx.JSON(200, obj)
 }
 
 func (c *Context) writeMessage(msg string) {
-	c.JSON(GetResultFunc(RESULT_CODE_SUCCESS, msg, 0, nil))
+	c.ctx.JSON(GetResultFunc(RESULT_CODE_SUCCESS, msg, 0, nil))
 }
 func (c *Context) writeError(err error) {
-	c.JSON(GetResultFunc(RESULT_CODE_ERROR, err.Error(), 0, nil))
+	c.ctx.JSON(GetResultFunc(RESULT_CODE_ERROR, err.Error(), 0, nil))
 }
 func (c *Context) writeErrorDetail(err interface{}) {
-	c.JSON(GetResultFunc(RESULT_CODE_ERROR, "", 0, err))
+	c.ctx.JSON(GetResultFunc(RESULT_CODE_ERROR, "", 0, err))
 }
 func (c *Context) writeFailMsg(msg string) {
-	c.JSON(GetResultFunc(RESULT_CODE_FAIL, msg, 0, nil))
+	c.ctx.JSON(GetResultFunc(RESULT_CODE_FAIL, msg, 0, nil))
 }
 func (c *Context) writeList(count int64, list interface{}) {
-	c.JSON(GetResultFunc(RESULT_CODE_SUCCESS, "", count, list))
+	c.ctx.JSON(GetResultFunc(RESULT_CODE_SUCCESS, "", count, list))
 }
 func (c *Context) writeNoPermissionMsg(msg string) {
-	c.JSON(GetResultFunc(RESULT_CODE_NOPERMISSION, msg, 0, nil))
+	c.ctx.JSON(GetResultFunc(RESULT_CODE_NOPERMISSION, msg, 0, nil))
 }
 func (c *Context) writeNotFoundMsg(msg string) {
-	c.JSON(GetResultFunc(RESULT_CODE_NOTFOUND, msg, 0, nil))
+	c.ctx.JSON(GetResultFunc(RESULT_CODE_NOTFOUND, msg, 0, nil))
 }
 
 func (c *Context) ListExit(count int64, list interface{}) {

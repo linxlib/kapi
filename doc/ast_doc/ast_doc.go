@@ -149,13 +149,13 @@ func (a *AstDoc) ResolveController(controllerName string) *ctlScheme {
 func (a *AstDoc) ResolveMethod(methodName string) (*methodComment, *doc.StructInfo, *doc.StructInfo) {
 	sdl, gc := a.resolveMethodComment(methodName)
 	var docReq, docResp *doc.StructInfo
-	if sdl.Type.Params.NumFields() > 1 {
+	if sdl != nil && sdl.Type != nil && sdl.Type.Params != nil && sdl.Type.Params.NumFields() > 1 {
 		docReq = a.resolveMethodReqResp(sdl.Type.Params.List[1].Type)
 	}
-	if sdl.Type.Results.NumFields() > 1 {
+	if sdl != nil && sdl.Type != nil && sdl.Type.Results != nil && sdl.Type.Results.NumFields() > 1 {
 		docResp = a.resolveMethodReqResp(sdl.Type.Results.List[0].Type)
 	} else {
-		if gc.ResultType != "" {
+		if gc != nil && gc.ResultType != "" {
 			docResp = a.resolveMethodRespByString(gc.ResultType)
 		}
 	}
