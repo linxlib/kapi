@@ -1,6 +1,6 @@
 <!-- HTML for static distribution bundle build -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns="http://www.w3.org/1999/html">
   <head>
     <meta charset="UTF-8">
     <title>Swagger UI</title>
@@ -38,6 +38,7 @@
 
     <script src="swagger/swagger-ui-bundle.js" charset="UTF-8"> </script>
     <script src="swagger/swagger-ui-standalone-preset.js" charset="UTF-8"> </script>
+    <script src="swagger/swagger_inject.js" charset="UTF-8"></script>
 
     <script>
     window.onload = function() {
@@ -53,6 +54,8 @@
         defaultModelsExpandDepth: -1,
         validatorUrl:null,
         deepLinking: true,
+        tryItOutEnabled: true,
+        displayRequestDuration:true,
         presets: [
           SwaggerUIBundle.presets.apis,
           SwaggerUIStandalonePreset
