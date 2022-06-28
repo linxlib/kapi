@@ -16,3 +16,4 @@ staticDirs = ["static"]
 enablePProf = false
 [server.cors]
 allowHeaders = ["Origin","Content-Length","Content-Type"]
+allowAllOrigins = true

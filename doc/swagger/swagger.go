@@ -13,24 +13,19 @@ type DocSwagger struct {
 
 // NewDoc 新建一个swagger doc
 func NewDoc(host string, info Info, basePath string, schemes []string) *DocSwagger {
-	doc := &DocSwagger{}
-	doc.Client = &APIBody{
-		Head: Head{Swagger: version},
-		Info: info,
-		Host: host,
-		//SecurityDefinitions: &SecurityDefinitions{
-		//	Type: "apiKey",
-		//	Name: "Authorization",
-		//	In:   "header",
-		//},
+	ds := &DocSwagger{}
+	ds.Client = &APIBody{
+		Head:         Head{Swagger: version},
+		Info:         info,
+		Host:         host,
 		BasePath:     basePath,
 		Schemes:      schemes,
 		ExternalDocs: nil,
 		Definitions:  map[string]Definition{},
 		Tags:         []Tag{},
 	}
-	doc.Client.Paths = make(map[string]map[string]Param)
-	return doc
+	ds.Client.Paths = make(map[string]map[string]Param)
+	return ds
 }
 
 // AddTag add tag (排他)

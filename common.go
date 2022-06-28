@@ -53,7 +53,7 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 	}
 	return func(context *gin.Context) {
 		c := newContext(context)
-		c.SetParent(b)
+		c.inj.SetParent(b)
 		c.Map(c)
 
 		c.handler = method
@@ -66,7 +66,7 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 		if i, ok := controller.(Interceptor); ok {
 			i.Before(c)
 		}
-		if c.ctx.IsAborted() {
+		if c.IsAborted() {
 			return
 		}
 		if hasReq {
@@ -83,22 +83,23 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 		if err != nil {
 			panic(fmt.Sprintf("unable to invoke the handler [%T]: %controller", method, err))
 		}
-		if c.ctx.IsAborted() {
+		if c.IsAborted() {
+			return
+		}
+		if i, ok := controller.(Interceptor); ok {
+			i.After(c)
+		}
+		if c.IsAborted() {
 			return
 		}
 		if len(returnValues) == 2 {
 			resp := returnValues[0].Interface()
 			rerr := returnValues[1].Interface().(error)
-			if i, ok := controller.(Interceptor); ok {
-				i.After(c)
-			}
-			if c.ctx.IsAborted() {
-				return
-			}
+
 			if rerr != nil {
-				c.ctx.PureJSON(GetResultFunc(RESULT_CODE_ERROR, rerr.Error(), 0, resp))
+				c.PureJSON(GetResultFunc(RESULT_CODE_ERROR, rerr.Error(), 0, resp))
 			} else {
-				c.ctx.PureJSON(GetResultFunc(RESULT_CODE_SUCCESS, "", 0, resp))
+				c.PureJSON(GetResultFunc(RESULT_CODE_SUCCESS, "", 0, resp))
 			}
 		}
 	}
@@ -124,12 +125,12 @@ func (b *KApi) handleUnmarshalError(c *Context, req reflect.Value, err error) {
 		fields = append(fields, err.Error())
 	}
 
-	c.ctx.PureJSON(GetResultFunc(RESULT_CODE_FAIL, fmt.Sprintf("req param : %v", strings.Join(fields, ";")), 0, nil))
+	c.PureJSON(GetResultFunc(RESULT_CODE_FAIL, fmt.Sprintf("req param : %v", strings.Join(fields, ";")), 0, nil))
 	return
 }
 
 func (b *KApi) doBindReq(c *Context, v interface{}) error {
-	if err := c.ctx.ShouldBindHeader(v); err != nil {
+	if err := c.ShouldBindHeader(v); err != nil {
 		if err != io.EOF {
 			if _, ok := err.(validator.ValidationErrors); ok {
 
@@ -140,7 +141,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 		}
 	}
 
-	if err := c.ctx.ShouldBindUri(v); err != nil {
+	if err := c.ShouldBindUri(v); err != nil {
 		if err != io.EOF {
 			if _, ok := err.(validator.ValidationErrors); ok {
 
@@ -151,7 +152,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 
 		}
 	}
-	if err := binding.Path.Bind(c.ctx, v); err != nil {
+	if err := binding.Path.Bind(c.Context, v); err != nil {
 		if err != io.EOF {
 			if _, ok := err.(validator.ValidationErrors); ok {
 
@@ -163,7 +164,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 		}
 	}
 
-	if err := c.ctx.ShouldBindWith(v, binding.Query); err != nil {
+	if err := c.ShouldBindWith(v, binding.Query); err != nil {
 		if err != io.EOF {
 			if _, ok := err.(validator.ValidationErrors); ok {
 
@@ -175,8 +176,8 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 		}
 
 	}
-	if c.ctx.ContentType() == "multipart/form-data" {
-		if err := c.ctx.ShouldBindWith(v, binding2.FormMultipart); err != nil {
+	if c.ContentType() == "multipart/form-data" {
+		if err := c.ShouldBindWith(v, binding2.FormMultipart); err != nil {
 			if err != io.EOF {
 				if _, ok := err.(validator.ValidationErrors); ok {
 
@@ -190,7 +191,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 		}
 	}
 
-	if err := c.ctx.ShouldBindJSON(v); err != nil {
+	if err := c.ShouldBindJSON(v); err != nil {
 		if err != io.EOF {
 			internal.Log.Errorln("body EOF:", err)
 			return err
