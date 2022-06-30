@@ -4,17 +4,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/linxlib/conv"
 	"github.com/linxlib/kapi/inject"
-	"reflect"
 	"strings"
 )
 
-type Handler interface{}
-
 // Context Wrapping gin context to custom context
 type Context struct { // 包装gin的上下文到自定义context
-	inj inject.Injector
 	*gin.Context
-	handler Handler
+	inj inject.Injector
 }
 
 // newContext Create a new custom context
@@ -23,17 +19,6 @@ func newContext(c *gin.Context) *Context { // 新建一个自定义context
 		inj:     inject.New(),
 		Context: c,
 	}
-}
-
-// NewAPIFunc default of custom handlefunc
-func NewAPIFunc(c *gin.Context) interface{} {
-	return newContext(c)
-}
-
-var KAPIEXIT = "kapiexit"
-
-func (c *Context) Exit() {
-	panic(KAPIEXIT)
 }
 
 func (c *Context) Method() string {
@@ -128,10 +113,6 @@ func (c *Context) RemoteAddr() string {
 		}
 	}
 	return addr
-}
-
-func (c *Context) run() ([]reflect.Value, error) {
-	return c.inj.Invoke(c.handler)
 }
 
 func (c *Context) Map(i ...interface{}) inject.TypeMapper {

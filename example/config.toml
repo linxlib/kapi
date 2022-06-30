@@ -1,6 +1,6 @@
 
 [server]
-debug = true
+debug = false
 needDoc = true
 needReDoc = false
 needSwagger = true

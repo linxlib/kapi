@@ -29,42 +29,43 @@ type FuncGetResult = func(code RESULT_CODE, msg string, count int64, data interf
 var GetResultFunc = _defaultGetResult
 
 func _defaultGetResult(code RESULT_CODE, msg string, count int64, data interface{}) (int, interface{}) {
-	if code == RESULT_CODE_SUCCESS {
+	switch code {
+	case RESULT_CODE_SUCCESS:
 		return 200, messageBody{
 			Code:  "SUCCESS",
 			Msg:   msg,
 			Count: count,
 			Data:  data,
 		}
-	} else if code == RESULT_CODE_ERROR {
+	case RESULT_CODE_ERROR:
 		return 500, messageBody{
 			Code:  "FAIL",
 			Msg:   msg,
 			Count: count,
 			Data:  data,
 		}
-	} else if code == RESULT_CODE_UNAUTHED {
+	case RESULT_CODE_UNAUTHED:
 		return 401, messageBody{
 			Code:  "FAIL",
 			Msg:   msg,
 			Count: count,
 			Data:  data,
 		}
-	} else if code == RESULT_CODE_NOPERMISSION {
+	case RESULT_CODE_NOPERMISSION:
 		return 403, messageBody{
 			Code:  "FAIL",
 			Msg:   msg,
 			Count: count,
 			Data:  data,
 		}
-	} else if code == RESULT_CODE_NOTFOUND {
+	case RESULT_CODE_NOTFOUND:
 		return 404, messageBody{
 			Code:  "FAIL",
 			Msg:   msg,
 			Count: count,
 			Data:  data,
 		}
-	} else {
+	default:
 		return 400, messageBody{
 			Code:  "FAIL",
 			Msg:   msg,
@@ -100,6 +101,15 @@ func (c *Context) writeNoPermissionMsg(msg string) {
 func (c *Context) writeNotFoundMsg(msg string) {
 	c.PureJSON(GetResultFunc(RESULT_CODE_NOTFOUND, msg, 0, nil))
 }
+func (c *Context) writeUnAuthedMsg(msg string) {
+	c.PureJSON(GetResultFunc(RESULT_CODE_UNAUTHED, msg, 0, nil))
+}
+
+var KAPIEXIT = "kapiexit"
+
+func (c *Context) Exit() {
+	panic(KAPIEXIT)
+}
 
 func (c *Context) ListExit(count int64, list interface{}) {
 	c.writeList(count, list)
@@ -128,10 +138,8 @@ func (c *Context) SuccessExit(data ...interface{}) {
 	if len(data) > 0 {
 		switch data[0].(type) {
 		case string:
-			{
-				c.writeMessage(data[0].(string))
-				c.Exit()
-			}
+			c.writeMessage(data[0].(string))
+			c.Exit()
 		default:
 			c.writeList(0, data[0])
 			c.Exit()
@@ -161,20 +169,33 @@ func (c *Context) NotFoundExit(msg ...string) {
 	}
 }
 
+func (c *Context) UnAuthed(msg ...string) {
+	if len(msg) > 0 {
+		c.writeUnAuthedMsg(msg[0])
+	} else {
+		c.writeUnAuthedMsg("un authed")
+	}
+	c.Exit()
+}
+
+func (c *Context) NoPerm(msg ...string) {
+	if len(msg) > 0 {
+		c.writeNoPermissionMsg(msg[0])
+	} else {
+		c.writeNoPermissionMsg("no permission")
+	}
+	c.Exit()
+}
+
 func (c *Context) FailAndExit(data ...interface{}) {
 	if len(data) > 0 {
 		switch data[0].(type) {
 		case string:
-			{
-				c.writeFailMsg(data[0].(string))
-				c.Exit()
-			}
+			c.writeFailMsg(data[0].(string))
+			c.Exit()
 		case error:
-			{
-				c.writeError(data[0].(error))
-				c.Exit()
-			}
-
+			c.writeError(data[0].(error))
+			c.Exit()
 		default:
 			c.writeErrorDetail(data[0])
 			c.Exit()

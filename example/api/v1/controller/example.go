@@ -16,20 +16,25 @@ func (m *MyServiceImpl) Test() string {
 	return "MyServiceImpl"
 }
 
-//Example 例子
-//@ROUTE /api/v1/example
-type Example struct {
+type Base struct {
 }
 
-func (e *Example) Before(context *kapi.Context) {
+func (b *Base) Before(context *kapi.Context) {
 	context.Set("start", time.Now())
+	context.Context.Set("123456", "4444")
 }
 
-func (e *Example) After(context *kapi.Context) {
+func (b *Base) After(context *kapi.Context) {
 	i, _ := context.Get("start")
 	t := i.(time.Time)
 	fmt.Println(time.Now().Sub(t).Microseconds(), "us")
 	context.Abort()
+}
+
+//Example 例子
+//@ROUTE /api/v1/example
+type Example struct {
+	Base
 }
 
 type MyReq struct {
@@ -51,5 +56,6 @@ func (e *Example) GetList(
 
 //@GET /test
 func (e *Example) TestPure(c *kapi.Context) {
-	c.SuccessExit()
+	a, _ := c.Get("123456")
+	c.SuccessExit(a)
 }

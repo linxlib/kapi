@@ -8,6 +8,9 @@ import (
 	"time"
 )
 
+// RecoverErrorFunc recover 错误设置
+type RecoverErrorFunc func(interface{})
+
 type Option struct {
 	ginLoggerFormatter gin.LogFormatter
 	corsConfig         cors.Config

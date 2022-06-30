@@ -3,13 +3,15 @@ package kapi
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/go-playground/locales/zh"
+	ut "github.com/go-playground/universal-translator"
+	zh_translations "github.com/go-playground/validator/v10/translations/zh"
 	"github.com/linxlib/kapi/binding"
 	"github.com/linxlib/kapi/doc"
 	ast_doc2 "github.com/linxlib/kapi/doc/ast_doc"
 	"github.com/linxlib/kapi/doc/swagger"
 	"github.com/linxlib/kapi/internal"
 	"io"
-	"net/http"
 	"reflect"
 	"sort"
 	"strings"
@@ -19,19 +21,16 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func buildRelativePath(prepath, routerPath string) string {
-	if strings.HasSuffix(prepath, "/") {
-		if strings.HasPrefix(routerPath, "/") {
-			return prepath + strings.TrimPrefix(routerPath, "/")
-		}
-		return prepath + routerPath
-	}
+// Interceptor 对象调用前后执行中间件(支持总的跟对象单独添加)
+type Interceptor interface {
+	Before(*Context)
+	After(*Context)
+}
+type ContextInvoker func(ctx *Context)
 
-	if strings.HasPrefix(routerPath, "/") {
-		return prepath + routerPath
-	}
-
-	return prepath + "/" + routerPath
+func (invoke ContextInvoker) Invoke(params []interface{}) ([]reflect.Value, error) {
+	invoke(params[0].(*Context))
+	return nil, nil
 }
 
 func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
@@ -55,8 +54,6 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 		c := newContext(context)
 		c.inj.SetParent(b)
 		c.Map(c)
-
-		c.handler = method
 		defer func() {
 			if err := recover(); err != nil {
 				b.option.recoverErrorFunc(err)
@@ -71,7 +68,7 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 		}
 		if hasReq {
 			if err := b.doBindReq(c, req.Interface()); err != nil {
-				b.handleUnmarshalError(c, req, err)
+				b.handleUnmarshalError(c, err)
 				return
 			}
 			if reqIsValue {
@@ -79,7 +76,7 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 			}
 			c.Map(req.Interface())
 		}
-		returnValues, err := c.run()
+		returnValues, err := c.inj.Invoke(method)
 		if err != nil {
 			panic(fmt.Sprintf("unable to invoke the handler [%T]: %controller", method, err))
 		}
@@ -105,30 +102,25 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 	}
 }
 
-func (b *KApi) handleUnmarshalError(c *Context, req reflect.Value, err error) {
+func (b *KApi) handleUnmarshalError(c *Context, err error) {
 	var fields []string
-	if _, ok := err.(validator.ValidationErrors); ok {
-		for _, err := range err.(validator.ValidationErrors) {
-			//TODO: 增加翻译选项
-			tmp := fmt.Sprintf("%v:%v", internal.FindTag(req.Interface(), err.Field(), "json"), err.Tag())
-			if len(err.Param()) > 0 {
-				tmp += fmt.Sprintf("[%v](but[%v])", err.Param(), err.Value())
-			}
+	if v, ok := err.(validator.ValidationErrors); ok {
+		for _, err := range v {
+			tmp := err.Translate(trans)
 			fields = append(fields, tmp)
 		}
 	} else if _, ok := err.(*json.UnmarshalTypeError); ok {
 		err := err.(*json.UnmarshalTypeError)
 		tmp := fmt.Sprintf("%v:%v(but[%v])", err.Field, err.Type.String(), err.Value)
 		fields = append(fields, tmp)
-
 	} else {
 		fields = append(fields, err.Error())
 	}
-
-	c.PureJSON(GetResultFunc(RESULT_CODE_FAIL, fmt.Sprintf("req param : %v", strings.Join(fields, ";")), 0, nil))
+	c.PureJSON(GetResultFunc(RESULT_CODE_FAIL, strings.Join(fields, ";"), 0, nil))
 	return
 }
 
+//TODO: 可以优化
 func (b *KApi) doBindReq(c *Context, v interface{}) error {
 	if err := c.ShouldBindHeader(v); err != nil {
 		if err != io.EOF {
@@ -398,7 +390,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 
 			}
 
-			url := buildRelativePath(model.Group, tagControllerMethod.RouterPath)
+			url := internal.BuildRelativePath(model.Group, tagControllerMethod.RouterPath)
 			for _, s := range tagControllerMethod.Methods {
 				p.OperationID = s + "_" + strings.ReplaceAll(tagControllerMethod.RouterPath, "/", "_")
 				b.doc.AddPatch2(url, p, s)
@@ -430,18 +422,18 @@ func (b *KApi) register(router gin.IRoutes, cList ...interface{}) bool {
 		t := reflect.Indirect(refVal).Type()
 		objName := t.Name()
 
-		// Install the methods
+		// Install the Methods
 		for m := 0; m < refTyp.NumMethod(); m++ {
 
 			method := refTyp.Method(m)
 			//_, _b := b.checkMethodParamCount(method.Type, true)
 			if v, ok := mp[objName+"/"+method.Name]; ok {
 				for _, v1 := range v {
-					methods := strings.Join(v1.GenComment.Methods, ",")
-					internal.Log.Debugf("%6s  %-20s --> %s", methods, v1.GenComment.RouterPath, t.PkgPath()+".(*"+objName+")."+method.Name)
+					methods := strings.Join(v1.Methods, ",")
+					internal.Log.Debugf("%6s  %-20s --> %s", methods, v1.RouterPath, t.PkgPath()+".(*"+objName+")."+method.Name)
 					_ = b.registerMethodToRouter(router,
-						v1.GenComment.Methods,
-						v1.GenComment.RouterPath,
+						v1.Methods,
+						v1.RouterPath,
 						refVal.Interface(),
 						refVal.Method(m).Interface())
 				}
@@ -455,19 +447,19 @@ func (b *KApi) registerMethodToRouter(router gin.IRoutes, httpMethod []string, r
 	call := b.handle(controller, method)
 	for _, v := range httpMethod {
 		switch strings.ToUpper(v) {
-		case http.MethodPost:
+		case "POST":
 			router.POST(relativePath, call)
-		case http.MethodGet:
+		case "GET":
 			router.GET(relativePath, call)
-		case http.MethodDelete:
+		case "DELETE":
 			router.DELETE(relativePath, call)
-		case http.MethodPatch:
+		case "PATCH":
 			router.PATCH(relativePath, call)
-		case http.MethodPut:
+		case "PUT":
 			router.PUT(relativePath, call)
-		case http.MethodOptions:
+		case "OPTIONS":
 			router.OPTIONS(relativePath, call)
-		case http.MethodHead:
+		case "HEAD":
 			router.HEAD(relativePath, call)
 		case "ANY":
 			router.Any(relativePath, call)
@@ -475,35 +467,18 @@ func (b *KApi) registerMethodToRouter(router gin.IRoutes, httpMethod []string, r
 			return fmt.Errorf("请求方式:[%controller] 不支持", httpMethod)
 		}
 	}
-
 	return nil
 }
 
-// registerHandlerObj 注册路由方法
-//func (b *KApi) registerHandlerObj(router gin.IRoutes, httpMethod []string, relativePath, methodName string, tvl, obj reflect.Value) error {
-//	call := b.handlerFuncObj(tvl, obj, methodName)
-//	for _, v := range httpMethod {
-//		switch strings.ToUpper(v) {
-//		case http.MethodPost:
-//			router.POST(relativePath, call)
-//		case http.MethodGet:
-//			router.GET(relativePath, call)
-//		case http.MethodDelete:
-//			router.DELETE(relativePath, call)
-//		case http.MethodPatch:
-//			router.PATCH(relativePath, call)
-//		case http.MethodPut:
-//			router.PUT(relativePath, call)
-//		case http.MethodOptions:
-//			router.OPTIONS(relativePath, call)
-//		case http.MethodHead:
-//			router.HEAD(relativePath, call)
-//		case "ANY":
-//			router.Any(relativePath, call)
-//		default:
-//			return fmt.Errorf("请求方式:[%v] 不支持", httpMethod)
-//		}
-//	}
-//
-//	return nil
-//}
+var (
+	uni   *ut.UniversalTranslator
+	trans ut.Translator
+)
+
+func init() {
+	zh := zh.New()
+	uni = ut.New(zh, zh)
+	trans, _ = uni.GetTranslator("zh")
+	validate := binding.Validator.Engine().(*validator.Validate)
+	zh_translations.RegisterDefaultTranslations(validate, trans)
+}

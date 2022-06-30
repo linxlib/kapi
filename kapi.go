@@ -2,7 +2,6 @@ package kapi
 
 import (
 	"embed"
-	"encoding/json"
 	"fmt"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
@@ -53,7 +52,6 @@ var redocFS embed.FS
 // KApi base struct
 type KApi struct {
 	inject.Injector
-	apiFun            ApiFunc
 	customContextType reflect.Type
 
 	beforeAfter Interceptor //拦截器
@@ -88,8 +86,7 @@ func New(f ...func(*Option)) *KApi {
 	if len(f) > 0 {
 		f[0](b.option)
 	}
-	b.Model(NewAPIFunc)
-	gin.SetMode(gin.ReleaseMode) //we don't need gin's debug output
+	gin.SetMode(gin.ReleaseMode) //we don'Tm need gin's debug output
 	b.engine = gin.New()
 	b.engine.Use(gin.LoggerWithFormatter(b.option.ginLoggerFormatter))
 	b.engine.Use(cors.New(b.option.corsConfig))
@@ -203,13 +200,17 @@ func (b *KApi) handleDoc() {
 		}
 
 		b.engine.GET("/swagger.json", func(c *gin.Context) {
-			if !internal.FileIsExist("swagger.json") {
-				internal.Log.Warningln("swagger.json未找到, 请放置到程序目录下")
-				c.JSON(404, "swagger.json not found")
-				return
-			}
-			bs, _ := ioutil.ReadFile("swagger.json")
-			c.String(200, string(bs))
+			//routeInfo.genInfo.ApiBody
+			//if !internal.FileIsExist("swagger.json") {
+			//	internal.Log.Warningln("swagger.json未找到, 请放置到程序目录下")
+			//	c.JSON(404, "swagger.json not found")
+			//	return
+			//}
+			//bs, _ := ioutil.ReadFile("swagger.json")
+			//nBody := new(swagger.APIBody)
+			//json.Unmarshal(bs, nBody)
+			//nBody.Host = c.Request.Host
+			c.PureJSON(200, routeInfo.genInfo.ApiBody)
 		})
 		if b.option.Server.NeedSwagger {
 			b.engine.GET("/swagger/*any", func(c *gin.Context) {
@@ -237,8 +238,8 @@ func (b *KApi) handleDoc() {
 }
 
 func (b *KApi) Run() {
-	b.genRouterCode()
 	b.genDoc()
+	b.genRouterCode()
 	b.handleDoc()
 	if b.genFlag {
 		internal.Log.Infoln("生成模式 完成")
@@ -258,23 +259,6 @@ func (b *KApi) Run() {
 		}
 		b.option.recoverErrorFunc(err)
 	}
-}
-
-// Model use custom context
-func (b *KApi) Model(middleware ApiFunc) *KApi {
-	if middleware == nil { // default middleware
-		middleware = NewAPIFunc
-	}
-
-	b.apiFun = middleware // save callback
-
-	rt := reflect.TypeOf(middleware(&gin.Context{}))
-	if rt == nil || rt.Kind() != reflect.Ptr {
-		panic("需要指针")
-	}
-	b.customContextType = rt
-
-	return b
 }
 
 // Register 注册多个Controller struct
@@ -301,10 +285,11 @@ func (b *KApi) genDoc() {
 	if !b.option.Server.Debug || !b.option.Server.NeedDoc {
 		return
 	}
-	bs, _ := json.Marshal(b.doc.Client)
-	err := ioutil.WriteFile("swagger.json", bs, os.ModePerm)
-	if err != nil {
-		internal.Log.Errorln("写出 swagger.json 失败:", err.Error())
-		return
-	}
+	routeInfo.SetApiBody(*b.doc.Client)
+	//bs, _ := json.Marshal(b.doc.Client)
+	//err := ioutil.WriteFile("swagger.json", bs, os.ModePerm)
+	//if err != nil {
+	//	internal.Log.Errorln("写出 swagger.json 失败:", err.Error())
+	//	return
+	//}
 }
