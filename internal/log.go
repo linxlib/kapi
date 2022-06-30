@@ -13,7 +13,7 @@ var Log logs.FieldLogger = &logs.Logger{
 		FullTimestamp:    true,
 		TimestampFormat:  "01-02 15:04:05.9999",
 		QuoteEmptyFields: false,
-		CallerPrettyfier: nil,
+		CallerPrettifier: nil,
 		HideLevelText:    true,
 	},
 	ReportCaller: false,
