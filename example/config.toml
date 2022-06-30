@@ -1,8 +1,8 @@
 
 [server]
-debug = false
+debug = true
 needDoc = true
-needReDoc = false
+needReDoc = true
 needSwagger = true
 docName = "K-Api"
 docDesc = "K-Api"
@@ -16,4 +16,4 @@ staticDirs = ["static"]
 enablePProf = false
 [server.cors]
 allowHeaders = ["Origin","Content-Length","Content-Type"]
-allowAllOrigins = true
+#allowAllOrigins = true

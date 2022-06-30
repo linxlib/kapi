@@ -10,8 +10,8 @@ import (
 )
 
 // store the comment for the controller method. 生成注解路由
-type methodComment struct {
-	key          string
+type MethodComment struct {
+	Key          string
 	RouterPath   string
 	IsDeprecated bool
 	ResultType   string
@@ -22,7 +22,7 @@ type methodComment struct {
 }
 
 type genInfo struct {
-	Methods []methodComment
+	Methods []MethodComment
 	ApiBody swagger.APIBody
 	Tm      int64
 }
@@ -36,9 +36,10 @@ type RouteInfo struct {
 }
 
 func init() {
+	gob.Register(map[string]string{})
 	routeInfo = new(RouteInfo)
 	routeInfo.genInfo = &genInfo{
-		Methods: []methodComment{},
+		Methods: []MethodComment{},
 		ApiBody: swagger.APIBody{},
 		Tm:      time.Now().Unix(),
 	}
@@ -56,11 +57,11 @@ func (ri *RouteInfo) AddFunc(handFunName, routerPath string, methods []string) {
 	defer ri.mu.Unlock()
 	ri.once.Do(func() {
 		ri.genInfo.Tm = time.Now().Unix()
-		ri.genInfo.Methods = []methodComment{}
+		ri.genInfo.Methods = []MethodComment{}
 		ri.genInfo.ApiBody = swagger.APIBody{}
 	})
-	ri.genInfo.Methods = append(ri.genInfo.Methods, methodComment{
-		key:        handFunName,
+	ri.genInfo.Methods = append(ri.genInfo.Methods, MethodComment{
+		Key:        handFunName,
 		RouterPath: routerPath,
 		Methods:    methods,
 	})
@@ -88,16 +89,22 @@ func (ri *RouteInfo) genOutPut() {
 	internal.WriteFile("gen.gob", buf.Bytes(), true)
 }
 
+func (ri *RouteInfo) getApiBody() swagger.APIBody {
+	ri.mu.Lock()
+	defer ri.mu.Unlock()
+	return ri.genInfo.ApiBody
+}
+
 // 获取路由注册信息
-func (ri *RouteInfo) getInfo() map[string][]methodComment {
+func (ri *RouteInfo) getInfo() map[string][]MethodComment {
 	ri.mu.Lock()
 	defer ri.mu.Unlock()
 
-	mp := make(map[string][]methodComment, len(ri.genInfo.Methods))
+	mp := make(map[string][]MethodComment, len(ri.genInfo.Methods))
 	for _, v := range ri.genInfo.Methods {
 		tmp := v
 
-		mp[tmp.key] = append(mp[tmp.key], tmp)
+		mp[tmp.Key] = append(mp[tmp.Key], tmp)
 	}
 	return mp
 }

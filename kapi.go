@@ -94,6 +94,7 @@ func New(f ...func(*Option)) *KApi {
 		internal.Log.Infof("localIP:%s docName:%s port:%d", b.option.intranetIP, b.option.Server.DocName, b.option.Server.Port)
 	} else {
 		internal.Log.Infoln("生成模式")
+		b.option.Server.Debug = true
 	}
 
 	return b
@@ -209,7 +210,7 @@ func (b *KApi) handleDoc() {
 			//bs, _ := ioutil.ReadFile("swagger.json")
 			//nBody := new(swagger.APIBody)
 			//json.Unmarshal(bs, nBody)
-			//nBody.Host = c.Request.Host
+			routeInfo.genInfo.ApiBody.Host = c.Request.Host
 			c.PureJSON(200, routeInfo.genInfo.ApiBody)
 		})
 		if b.option.Server.NeedSwagger {

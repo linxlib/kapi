@@ -48,12 +48,14 @@
       }
       // Begin Swagger UI call region
       const ui = SwaggerUIBundle({
-        url: href+"../swagger.json",
+        urls: [{url: href+"../swagger.json",name:"swagger.json"}],
         dom_id: '#swagger-ui',
         docExpansion:false,
         defaultModelsExpandDepth: -1,
         validatorUrl:null,
         deepLinking: true,
+        filter: true,
+        showCommonExtensions: true,
         tryItOutEnabled: true,
         displayRequestDuration:true,
         presets: [
@@ -61,7 +63,7 @@
           SwaggerUIStandalonePreset
         ],
         plugins: [
-          SwaggerUIBundle.plugins.DownloadUrl
+          //SwaggerUIBundle.plugins.DownloadUrl
         ],
         layout: "StandaloneLayout"
       });
