@@ -37,15 +37,7 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 	typ := reflect.TypeOf(method)
 	hasReq := typ.NumIn() >= 2
 	reqIsValue := true
-	var req reflect.Value
-	if hasReq {
-		reqType := typ.In(1)
-		req = reflect.New(reqType)
-		if reqType.Kind() == reflect.Ptr {
-			reqIsValue = false
-			req = reflect.New(reqType.Elem())
-		}
-	}
+
 	switch vt := method.(type) {
 	case func(*Context):
 		method = ContextInvoker(vt)
@@ -67,6 +59,14 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 			return
 		}
 		if hasReq {
+			var req reflect.Value
+			reqType := typ.In(1)
+			req = reflect.New(reqType)
+			if reqType.Kind() == reflect.Ptr {
+				reqIsValue = false
+				req = reflect.New(reqType.Elem())
+			}
+
 			if err := b.doBindReq(c, req.Interface()); err != nil {
 				b.handleUnmarshalError(c, err)
 				return
@@ -416,6 +416,7 @@ func (b *KApi) register(router gin.IRoutes, cList ...interface{}) bool {
 		return true
 	}
 	mp := routeInfo.getInfo()
+	fmt.Println(mp)
 	for _, c := range cList {
 		refTyp := reflect.TypeOf(c)
 		refVal := reflect.ValueOf(c)
