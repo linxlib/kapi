@@ -15,17 +15,20 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	binding2 "github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 )
 
-// Interceptor 对象调用前后执行中间件(支持总的跟对象单独添加)
+//Interceptor implement this to intercept controller method
 type Interceptor interface {
 	Before(*Context)
 	After(*Context)
 }
+
+// ContextInvoker method like this will be FastInvoke by inject package(not use reflect)
 type ContextInvoker func(ctx *Context)
 
 func (invoke ContextInvoker) Invoke(params []interface{}) ([]reflect.Value, error) {
@@ -33,8 +36,10 @@ func (invoke ContextInvoker) Invoke(params []interface{}) ([]reflect.Value, erro
 	return nil, nil
 }
 
+//handle get gin.HandlerFunc of a controller method
 func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 	typ := reflect.TypeOf(method)
+	//TODO:
 	hasReq := typ.NumIn() >= 2
 	reqIsValue := true
 
@@ -45,7 +50,7 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 	return func(context *gin.Context) {
 		c := newContext(context)
 		c.inj.SetParent(b)
-		c.Map(c)
+		c.Map(c) //inject Context
 		defer func() {
 			if err := recover(); err != nil {
 				b.option.recoverErrorFunc(err)
@@ -120,7 +125,11 @@ func (b *KApi) handleUnmarshalError(c *Context, err error) {
 	return
 }
 
-//TODO: 可以优化
+//doBindReq bind request to multi tag field
+//  @param c
+//  @param v request param
+//
+//  @return error
 func (b *KApi) doBindReq(c *Context, v interface{}) error {
 	if err := c.ShouldBindHeader(v); err != nil {
 		if err != io.EOF {
@@ -195,7 +204,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 
 func (b *KApi) analysisController(controller interface{}, model *doc.Model, modPkg string, modFile string) {
 	controllerRefVal := reflect.ValueOf(controller)
-	internal.Log.Debugf("解析 --> %s", controllerRefVal.Type().String())
+	internal.Log.Debugf("%6s %s", ">", controllerRefVal.Type().String())
 	controllerType := reflect.Indirect(controllerRefVal).Type()
 	controllerPkgPath := controllerType.PkgPath()
 	controllerName := controllerType.Name()
@@ -225,15 +234,17 @@ func (b *KApi) analysisController(controller interface{}, model *doc.Model, modP
 	}
 }
 
-// analysisControllers gen out the Registered config info  by struct object,[prepath + objname.]
-func (b *KApi) analysisControllers(router gin.IRoutes, controllers ...interface{}) bool {
+// analysisControllers
+func (b *KApi) analysisControllers(controllers ...interface{}) bool {
+	start := time.Now()
+	internal.Log.Debugf("analysis controllers...")
 	//TODO: groupPath也要加入到文档的路由中
 	modPkg, modFile, isFind := ast_doc2.GetModuleInfo(2)
 	if !isFind {
 		return false
 	}
 
-	groupPath := b.BasePath(router)
+	groupPath := b.engine.BasePath()
 	newDoc := doc.NewDoc(groupPath)
 	for _, c := range controllers {
 		b.analysisController(c, newDoc, modPkg, modFile)
@@ -242,6 +253,7 @@ func (b *KApi) analysisControllers(router gin.IRoutes, controllers ...interface{
 	if b.option.Server.NeedDoc {
 		b.addDocModel(newDoc)
 	}
+	internal.Log.Debugf("elapsed time:%s", time.Now().Sub(start).String())
 	return true
 }
 
@@ -411,12 +423,13 @@ func (b *KApi) BasePath(router gin.IRoutes) string {
 }
 
 // register 注册路由到gin
-func (b *KApi) register(router gin.IRoutes, cList ...interface{}) bool {
+func (b *KApi) register(router *gin.Engine, cList ...interface{}) bool {
 	if b.genFlag {
 		return true
 	}
+	start := time.Now()
+	internal.Log.Debug("register controllers..")
 	mp := routeInfo.getInfo()
-	fmt.Println(mp)
 	for _, c := range cList {
 		refTyp := reflect.TypeOf(c)
 		refVal := reflect.ValueOf(c)
@@ -425,26 +438,38 @@ func (b *KApi) register(router gin.IRoutes, cList ...interface{}) bool {
 
 		// Install the Methods
 		for m := 0; m < refTyp.NumMethod(); m++ {
-
 			method := refTyp.Method(m)
 			//_, _b := b.checkMethodParamCount(method.Type, true)
 			if v, ok := mp[objName+"/"+method.Name]; ok {
 				for _, v1 := range v {
 					methods := strings.Join(v1.Methods, ",")
-					internal.Log.Debugf("%6s  %-20s --> %s", methods, v1.RouterPath, t.PkgPath()+".(*"+objName+")."+method.Name)
-					_ = b.registerMethodToRouter(router,
+
+					internal.Log.Debugf("%6s  %-20s --> %s", methods, v1.RouterPath, t.PkgPath()+">"+objName+">"+method.Name)
+					err := b.registerMethodToRouter(router,
 						v1.Methods,
 						v1.RouterPath,
 						refVal.Interface(),
 						refVal.Method(m).Interface())
+					if err != nil {
+						internal.Log.Errorln(err)
+					}
 				}
 			}
 		}
 	}
+	internal.Log.Debugf("elapsed time:%s", time.Now().Sub(start).String())
 	return true
 }
 
-func (b *KApi) registerMethodToRouter(router gin.IRoutes, httpMethod []string, relativePath string, controller, method interface{}) error {
+//registerMethodToRouter register to gin router
+//  @param router
+//  @param httpMethod
+//  @param relativePath route path
+//  @param controller
+//  @param method
+//
+//  @return error
+func (b *KApi) registerMethodToRouter(router *gin.Engine, httpMethod []string, relativePath string, controller, method interface{}) error {
 	call := b.handle(controller, method)
 	for _, v := range httpMethod {
 		switch strings.ToUpper(v) {
@@ -465,7 +490,7 @@ func (b *KApi) registerMethodToRouter(router gin.IRoutes, httpMethod []string, r
 		case "ANY":
 			router.Any(relativePath, call)
 		default:
-			return fmt.Errorf("请求方式:[%controller] 不支持", httpMethod)
+			return fmt.Errorf("http method:[%v --> %s] 不支持", httpMethod, relativePath)
 		}
 	}
 	return nil

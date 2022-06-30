@@ -282,3 +282,6 @@ func (a *AstDoc) resolveMethodRespByString(resultType string) *doc.StructInfo {
 	}
 
 }
+func init() {
+	AddImportFile("mime/multipart", "mime/multipart")
+}

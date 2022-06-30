@@ -11,7 +11,7 @@ var Log logs.FieldLogger = &logs.Logger{
 	Formatter: &logs.TextFormatter{
 		ForceColors:      true,
 		FullTimestamp:    true,
-		TimestampFormat:  "01-02 15:04:05.999",
+		TimestampFormat:  "01-02 15:04:05.9999",
 		QuoteEmptyFields: false,
 		CallerPrettyfier: nil,
 		HideLevelText:    true,

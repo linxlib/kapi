@@ -7,24 +7,31 @@ import (
 	"strings"
 )
 
-// Context Wrapping gin context to custom context
-type Context struct { // 包装gin的上下文到自定义context
+// Context KApi Context
+type Context struct {
 	*gin.Context
 	inj inject.Injector
 }
 
-// newContext Create a new custom context
-func newContext(c *gin.Context) *Context { // 新建一个自定义context
+// newContext create a new custom context
+func newContext(c *gin.Context) *Context {
 	return &Context{
-		inj:     inject.New(),
 		Context: c,
+		inj:     inject.New(),
 	}
 }
 
+//Method get HTTP method
+//
+//  @return string
 func (c *Context) Method() string {
 	return c.Request.Method
 }
 
+//GetQueryString get query param of string
+//  @param key
+//
+//  @return string
 func (c *Context) GetQueryString(key string) string {
 	tmp, b := c.GetQuery(key)
 	if b {
@@ -34,6 +41,11 @@ func (c *Context) GetQueryString(key string) string {
 	}
 }
 
+//GetQueryInt get query param of integer
+//  @param key
+//  @param def default value
+//
+//  @return int
 func (c *Context) GetQueryInt(key string, def ...int) int {
 	tmp, b := c.GetQuery(key)
 	if b {
@@ -46,6 +58,11 @@ func (c *Context) GetQueryInt(key string, def ...int) int {
 	}
 }
 
+//GetQueryInt64 get query param of long
+//  @param key
+//  @param def default value
+//
+//  @return int64
 func (c *Context) GetQueryInt64(key string) int64 {
 	tmp, b := c.GetQuery(key)
 	if b {
@@ -55,6 +72,11 @@ func (c *Context) GetQueryInt64(key string) int64 {
 	}
 }
 
+//GetQueryUInt64 get query param of uint64
+//  @param key
+//  @param def default value
+//
+//  @return uint64
 func (c *Context) GetQueryUInt64(key string) uint64 {
 	tmp, b := c.GetQuery(key)
 	if b {
@@ -64,6 +86,11 @@ func (c *Context) GetQueryUInt64(key string) uint64 {
 	}
 }
 
+//GetQueryUInt get query param of uint
+//  @param key
+//  @param def default value
+//
+//  @return uint
 func (c *Context) GetQueryUInt(key string) uint {
 	tmp, b := c.GetQuery(key)
 	if b {
@@ -73,6 +100,11 @@ func (c *Context) GetQueryUInt(key string) uint {
 	}
 }
 
+//GetQueryBool get query param of boolean
+//  @param key
+//  @param def default value
+//
+//  @return bool
 func (c *Context) GetQueryBool(key string) bool {
 	tmp, b := c.GetQuery(key)
 	if b {
@@ -82,12 +114,21 @@ func (c *Context) GetQueryBool(key string) bool {
 	}
 }
 
+//GetPageSize get query page and size
+//
+//  @return int page
+//  @return int size
 func (c *Context) GetPageSize() (int, int) {
 	page := c.GetQueryInt("page", 1)
 	size := c.GetQueryInt("size", 10)
 	return conv.Int(page) - 1, conv.Int(size)
 }
 
+//SaveFile save form file to destination
+//  @param form name of form file
+//  @param dst destination file name
+//
+//  @return error
 func (c *Context) SaveFile(form string, dst string) error {
 	f, err := c.FormFile(form)
 	if err != nil {

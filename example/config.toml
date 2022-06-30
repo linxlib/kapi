@@ -13,7 +13,7 @@ docVer = "v1"
 redirectToDocWhenAccessRoot = true
 apiBasePath = ""
 staticDirs = ["static"]
-enablePProf = false
+enablePProf = true
 [server.cors]
 allowHeaders = ["Origin","Content-Length","Content-Type"]
 #allowAllOrigins = true
