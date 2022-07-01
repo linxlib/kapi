@@ -1,8 +1,8 @@
 package swagger
 
 import (
-	"github.com/linxlib/kapi/doc"
 	"github.com/linxlib/kapi/internal"
+	doc2 "github.com/linxlib/kapi/internal/doc"
 	"strings"
 )
 
@@ -11,15 +11,18 @@ type DocSwagger struct {
 	Client *APIBody
 }
 
-// NewDoc 新建一个swagger doc
-func NewDoc(host string, info Info, basePath string, schemes []string) *DocSwagger {
+func New(docName string, docVer string, docDesc string) *DocSwagger {
 	ds := &DocSwagger{}
 	ds.Client = &APIBody{
-		Head:         Head{Swagger: version},
-		Info:         info,
-		Host:         host,
-		BasePath:     basePath,
-		Schemes:      schemes,
+		Head: Head{Swagger: version},
+		Info: Info{
+			Description: docDesc,
+			Version:     docVer,
+			Title:       docName,
+		},
+		Host:         "",
+		BasePath:     "",
+		Schemes:      []string{},
 		ExternalDocs: nil,
 		Definitions:  map[string]Definition{},
 		Tags:         []Tag{},
@@ -39,7 +42,6 @@ func (doc *DocSwagger) AddTag(tag Tag) {
 	doc.Client.Tags = append(doc.Client.Tags, tag)
 }
 
-// AddDefinitions 添加 结构体定义
 func (doc *DocSwagger) AddDefinitions(key string, def Definition) {
 	doc.Client.Definitions[key] = def
 }
@@ -81,7 +83,7 @@ func (doc *DocSwagger) GetAPIString() string {
 	return internal.MarshalToJson(doc.Client, true)
 }
 
-func (doc *DocSwagger) SetDefinition(m *doc.Model, si *doc.StructInfo) string {
+func (doc *DocSwagger) SetDefinition(m *doc2.Model, si *doc2.StructInfo) string {
 	if si == nil {
 		return ""
 	}
@@ -194,7 +196,8 @@ var kvType = map[string]string{ // array, boolean, integer, number, object, stri
 	"bool":    "boolean",
 	"map":     "object",
 	"string":  "string",
-	"Time":    "string"}
+	"Time":    "string",
+}
 
 var kvFormat = map[string]string{}
 

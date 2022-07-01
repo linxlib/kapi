@@ -2,8 +2,6 @@
 [server]
 debug = true
 needDoc = true
-needReDoc = true
-needSwagger = true
 docName = "K-Api"
 docDesc = "K-Api"
 port = 2022

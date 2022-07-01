@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
-	"github.com/linxlib/kapi/doc/swagger"
 	"github.com/linxlib/kapi/inject"
 	"github.com/linxlib/kapi/internal"
 	"github.com/linxlib/kapi/internal/cors"
+	"github.com/linxlib/kapi/internal/swagger"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
+	"time"
 )
 
 //编译时植入变量
@@ -42,9 +43,6 @@ var _info = `
 
 //go:embed swagger/*
 var swaggerFS embed.FS
-
-//go:embed redoc/*
-var redocFS embed.FS
 
 type KApi struct {
 	inject.Injector
@@ -92,6 +90,7 @@ func New(f ...func(*Option)) *KApi {
 
 	return b
 }
+
 func (b *KApi) serverdown() {
 	if internal.FileIsExist("./.serverdown") {
 		b.serverDown = true
@@ -113,22 +112,11 @@ func (b *KApi) serverdown() {
 }
 
 func (b *KApi) RegisterRouter(cList ...interface{}) {
-	b.handleSwaggerBase()
-	b.serverdown()
-
-	b.doRegisterController(b.engine, cList...)
-
-	b.handleStatic()
-	b.handlePProf()
-}
-
-func (b *KApi) handleSwaggerBase() {
-	info := swagger.Info{
-		Description: b.option.Server.DocDesc,
-		Version:     b.option.Server.DocVer,
-		Title:       b.option.Server.DocName,
+	if b.option.Server.Debug {
+		b.doc = swagger.New(b.option.Server.DocName, b.option.Server.DocVer, b.option.Server.DocDesc)
+		b.analysisControllers(cList...)
 	}
-	b.doc = swagger.NewDoc("", info, "", []string{})
+	b.register(b.engine, cList...)
 }
 
 func (b *KApi) handlePProf() {
@@ -150,14 +138,7 @@ func (b *KApi) handleStatic() {
 
 func (b *KApi) handleDoc() {
 	if b.option.Server.NeedDoc && !b.genFlag {
-		swaggerUrl := fmt.Sprintf("http://%s:%d/swagger/index.html", b.option.intranetIP, b.option.Server.Port)
-		redocUrl := fmt.Sprintf("http://%s:%d/redoc/", b.option.intranetIP, b.option.Server.Port)
-		if b.option.Server.NeedSwagger {
-			internal.Log.Infoln("swagger:", swaggerUrl)
-		}
-		if b.option.Server.NeedReDoc {
-			internal.Log.Infoln("reDoc:", redocUrl)
-		}
+		internal.Log.Infof("swagger:http://%s:%d/swagger/index.html", b.option.intranetIP, b.option.Server.Port)
 
 		if b.option.Server.RedirectToDocWhenAccessRoot {
 			b.engine.Any("", func(c *gin.Context) {
@@ -168,19 +149,18 @@ func (b *KApi) handleDoc() {
 
 		b.engine.GET("/swagger.json", func(c *gin.Context) {
 			routeInfo.genInfo.ApiBody.Host = c.Request.Host
+			//TODO:
+			routeInfo.genInfo.ApiBody.Info.Description += "\n" + time.Unix(routeInfo.genInfo.Tm, 0).String()
+			routeInfo.genInfo.ApiBody.Info.Description += "\n" + BUILDTIME
+			routeInfo.genInfo.ApiBody.Info.Description += "\n" + VERSION
+			routeInfo.genInfo.ApiBody.Info.Description += "\n" + GOVERSION
 			c.PureJSON(200, routeInfo.genInfo.ApiBody)
 		})
-		if b.option.Server.NeedSwagger {
-			b.engine.GET("/swagger/*any", func(c *gin.Context) {
-				c.FileFromFS(c.Request.URL.Path, http.FS(swaggerFS))
-			})
-		}
 
-		if b.option.Server.NeedReDoc {
-			b.engine.GET("/redoc/*any", func(c *gin.Context) {
-				c.FileFromFS(c.Request.URL.Path, http.FS(redocFS))
-			})
-		}
+		b.engine.GET("/swagger/*any", func(c *gin.Context) {
+			c.FileFromFS(c.Request.URL.Path, http.FS(swaggerFS))
+		})
+
 	}
 }
 
@@ -191,6 +171,9 @@ func (b *KApi) Run() {
 		internal.Log.Infoln("generate mode complete!")
 		return
 	}
+	b.serverdown()
+	b.handleStatic()
+	b.handlePProf()
 
 	internal.Log.Infof("sever running http://%s:%d\n", b.option.intranetIP, b.option.Server.Port)
 	err := b.engine.Run(fmt.Sprintf(":%d", b.option.Server.Port))
@@ -205,23 +188,4 @@ func (b *KApi) Run() {
 		}
 		b.option.recoverErrorFunc(err)
 	}
-}
-
-// Register 注册多个Controller struct
-func (b *KApi) doRegisterController(router *gin.Engine, cList ...interface{}) bool {
-	if b.option.Server.Debug {
-		b.analysisControllers(cList...)
-	}
-
-	return b.register(router, cList...)
-}
-
-// genRouterCode 生成gen.gob
-func (b *KApi) genRouterCode() {
-	if !b.option.Server.Debug {
-		return
-	}
-	internal.Log.Infoln("write out gen.gob")
-	routeInfo.SetApiBody(*b.doc.Client)
-	routeInfo.writeOut()
 }

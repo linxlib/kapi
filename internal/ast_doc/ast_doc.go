@@ -2,8 +2,8 @@ package ast_doc
 
 import (
 	"fmt"
-	"github.com/linxlib/kapi/doc"
 	"github.com/linxlib/kapi/internal"
+	"github.com/linxlib/kapi/internal/doc"
 	"go/ast"
 	"go/token"
 	"strings"
@@ -58,8 +58,7 @@ func (a *AstDoc) FillPackage(objPkg string) error {
 	a.controllerPkgPath = objPkg
 	f := a.getFileByPkgPath(objPkg)
 	var b bool
-	a.astPkg, b = GetAstPackage(objPkg, f)
-	if !b {
+	if a.astPkg, b = GetAstPackage(objPkg, f); !b {
 		return fmt.Errorf("cannot get ast package of %s", objPkg)
 	}
 	return nil
@@ -84,6 +83,10 @@ func (a *AstDoc) getFileByPkgPath(objPkg string) string {
 	panic(fmt.Errorf("can not eval pkg:[%v] must include [%v]", objPkg, a.modPkg))
 }
 
+//ResolveController analysis controller
+//  @param controllerName
+//
+//  @return *ctlScheme
 func (a *AstDoc) ResolveController(controllerName string) *ctlScheme {
 	comment := &ctlScheme{
 		Imports: make(map[string]string),
@@ -146,6 +149,12 @@ func (a *AstDoc) ResolveController(controllerName string) *ctlScheme {
 	return comment
 }
 
+//ResolveMethod analysis method by name
+//  @param methodName
+//
+//  @return *methodComment
+//  @return *doc.StructInfo
+//  @return *doc.StructInfo
 func (a *AstDoc) ResolveMethod(methodName string) (*methodComment, *doc.StructInfo, *doc.StructInfo) {
 	sdl, gc := a.resolveMethodComment(methodName)
 	var docReq, docResp *doc.StructInfo
@@ -162,6 +171,11 @@ func (a *AstDoc) ResolveMethod(methodName string) (*methodComment, *doc.StructIn
 	return gc, docReq, docResp
 }
 
+//resolveMethodComment analysis method comments
+//  @param methodName
+//
+//  @return *ast.FuncDecl
+//  @return *methodComment
 func (a *AstDoc) resolveMethodComment(methodName string) (*ast.FuncDecl, *methodComment) {
 	if f, ok := a.controllerScheme.FuncMap[methodName]; ok {
 		gc := &methodComment{}
@@ -206,6 +220,10 @@ func (a *AstDoc) resolveMethodComment(methodName string) (*ast.FuncDecl, *method
 
 }
 
+//resolveMethodReqResp analysis result struct of method
+//  @param req
+//
+//  @return *doc.StructInfo
 func (a *AstDoc) resolveMethodReqResp(req ast.Expr) *doc.StructInfo {
 	// paramInfo 参数类型描述
 	type paramInfo struct {
@@ -251,7 +269,7 @@ func (a *AstDoc) resolveMethodReqResp(req ast.Expr) *doc.StructInfo {
 			param.Pkg = pkg
 		}
 	}
-	ant := NewStructAnalysis(a.modPkg, a.modFile)
+	ant := NewStructParser(a.modPkg, a.modFile)
 	tmp := a.astPkg
 	if len(param.Pkg) > 0 {
 		objFile := a.getFileByPkgPath(param.Import)
@@ -260,6 +278,10 @@ func (a *AstDoc) resolveMethodReqResp(req ast.Expr) *doc.StructInfo {
 	return ant.ParseStruct(tmp, param.Type, false)
 }
 
+//resolveMethodRespByString analysis the result struct of method from method comments
+//  @param resultType eg. model.Type []model.Type
+//
+//  @return *doc.StructInfo
 func (a *AstDoc) resolveMethodRespByString(resultType string) *doc.StructInfo {
 	aa := strings.Split(resultType, ".")
 	xx := aa[0]
@@ -269,7 +291,7 @@ func (a *AstDoc) resolveMethodRespByString(resultType string) *doc.StructInfo {
 	}
 	if len(aa) > 1 {
 		if importPath, ok := a.controllerScheme.Imports[xx]; ok {
-			ant := NewStructAnalysis(a.modPkg, a.modFile)
+			ant := NewStructParser(a.modPkg, a.modFile)
 			bb := a.getFileByPkgPath(importPath)
 			p, _ := GetAstPackage(importPath, bb) // get ast trees.
 			return ant.ParseStruct(p, aa[1], isArray)
@@ -277,7 +299,7 @@ func (a *AstDoc) resolveMethodRespByString(resultType string) *doc.StructInfo {
 			return nil
 		}
 	} else {
-		ant := NewStructAnalysis(a.modPkg, a.modFile)
+		ant := NewStructParser(a.modPkg, a.modFile)
 		return ant.ParseStruct(a.astPkg, xx, isArray)
 	}
 

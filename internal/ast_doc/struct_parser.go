@@ -2,8 +2,8 @@ package ast_doc
 
 import (
 	"fmt"
-	"github.com/linxlib/kapi/doc"
 	"github.com/linxlib/kapi/internal"
+	"github.com/linxlib/kapi/internal/doc"
 	"go/ast"
 	"go/token"
 	"reflect"
@@ -14,8 +14,8 @@ type structParser struct {
 	ModPkg, ModFile string
 }
 
-// NewStructAnalysis 新建一个导出结构体类
-func NewStructAnalysis(modPkg, modFile string) *structParser {
+// NewStructParser 新建一个导出结构体类
+func NewStructParser(modPkg, modFile string) *structParser {
 	result := &structParser{ModPkg: modPkg, ModFile: modFile}
 	return result
 }
@@ -215,7 +215,7 @@ func (a *structParser) structFieldInfo(astPkg *ast.Package, structType *ast.Stru
 		}
 
 		if len(info.Type) == 0 {
-			panic(fmt.Sprintf("不支持的类型 : %v", field.Type))
+			panic(fmt.Sprintf("not supported type: %v", field.Type))
 		}
 
 		items = append(items, info)

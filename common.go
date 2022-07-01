@@ -6,11 +6,11 @@ import (
 	"github.com/go-playground/locales/zh"
 	ut "github.com/go-playground/universal-translator"
 	zh_translations "github.com/go-playground/validator/v10/translations/zh"
-	"github.com/linxlib/kapi/binding"
-	"github.com/linxlib/kapi/doc"
-	ast_doc2 "github.com/linxlib/kapi/doc/ast_doc"
-	"github.com/linxlib/kapi/doc/swagger"
 	"github.com/linxlib/kapi/internal"
+	"github.com/linxlib/kapi/internal/ast_doc"
+	binding3 "github.com/linxlib/kapi/internal/binding"
+	doc2 "github.com/linxlib/kapi/internal/doc"
+	swagger2 "github.com/linxlib/kapi/internal/swagger"
 	"io"
 	"reflect"
 	"sort"
@@ -153,7 +153,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 
 		}
 	}
-	if err := binding.Path.Bind(c.Context, v); err != nil {
+	if err := binding3.Path.Bind(c.Context, v); err != nil {
 		if err != io.EOF {
 			if _, ok := err.(validator.ValidationErrors); ok {
 
@@ -165,7 +165,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 		}
 	}
 
-	if err := c.ShouldBindWith(v, binding.Query); err != nil {
+	if err := c.ShouldBindWith(v, binding3.Query); err != nil {
 		if err != io.EOF {
 			if _, ok := err.(validator.ValidationErrors); ok {
 
@@ -202,13 +202,13 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 	return nil
 }
 
-func (b *KApi) analysisController(controller interface{}, model *doc.Model, modPkg string, modFile string) {
+func (b *KApi) analysisController(controller interface{}, model *doc2.Model, modPkg string, modFile string) {
 	controllerRefVal := reflect.ValueOf(controller)
 	internal.Log.Debugf("%6s %s", ">", controllerRefVal.Type().String())
 	controllerType := reflect.Indirect(controllerRefVal).Type()
 	controllerPkgPath := controllerType.PkgPath()
 	controllerName := controllerType.Name()
-	astDoc := ast_doc2.NewAstDoc(modPkg, modFile)
+	astDoc := ast_doc.NewAstDoc(modPkg, modFile)
 	if astDoc.FillPackage(controllerPkgPath) == nil {
 		controllerScheme := astDoc.ResolveController(controllerName)
 		refTyp := reflect.TypeOf(controller)
@@ -239,13 +239,13 @@ func (b *KApi) analysisControllers(controllers ...interface{}) bool {
 	start := time.Now()
 	internal.Log.Debugf("analysis controllers...")
 	//TODO: groupPath也要加入到文档的路由中
-	modPkg, modFile, isFind := ast_doc2.GetModuleInfo(2)
+	modPkg, modFile, isFind := ast_doc.GetModuleInfo(2)
 	if !isFind {
 		return false
 	}
 
 	groupPath := b.engine.BasePath()
-	newDoc := doc.NewDoc(groupPath)
+	newDoc := doc2.NewDoc(groupPath)
 	for _, c := range controllers {
 		b.analysisController(c, newDoc, modPkg, modFile)
 	}
@@ -257,7 +257,7 @@ func (b *KApi) analysisControllers(controllers ...interface{}) bool {
 	return true
 }
 
-func (b *KApi) addDocModel(model *doc.Model) {
+func (b *KApi) addDocModel(model *doc2.Model) {
 	var tags []string
 	for k, v := range model.TagControllers {
 		for _, v1 := range v {
@@ -270,21 +270,21 @@ func (b *KApi) addDocModel(model *doc.Model) {
 
 	for _, theTag := range tags {
 		tagControllers := model.TagControllers[theTag]
-		tag := swagger.Tag{Name: theTag}
+		tag := swagger2.Tag{Name: theTag}
 		b.doc.AddTag(tag)
 		//TODO: 重名方法 但是 METHOD不一样的情况
 		for _, tagControllerMethod := range tagControllers {
-			var p swagger.Param
+			var p swagger2.Param
 			p.Tags = []string{theTag}
 			p.Summary = tagControllerMethod.Summary
 			p.Description = tagControllerMethod.Description
 
 			myreqRef := ""
-			p.Parameters = make([]swagger.Element, 0)
+			p.Parameters = make([]swagger2.Element, 0)
 			p.Deprecated = tagControllerMethod.IsDeprecated
 
 			if tagControllerMethod.TokenHeader != "" {
-				p.Parameters = append(p.Parameters, swagger.Element{
+				p.Parameters = append(p.Parameters, swagger2.Element{
 					In:          "header",
 					Name:        tagControllerMethod.TokenHeader,
 					Description: tagControllerMethod.TokenHeader,
@@ -298,32 +298,32 @@ func (b *KApi) addDocModel(model *doc.Model) {
 			if tagControllerMethod.Req != nil {
 				for _, item := range tagControllerMethod.Req.Items {
 					switch item.ParamType {
-					case doc.ParamTypeHeader:
-						p.Parameters = append(p.Parameters, swagger.Element{
+					case doc2.ParamTypeHeader:
+						p.Parameters = append(p.Parameters, swagger2.Element{
 							In:          "header",
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        swagger.GetKvType(item.Type, false, true),
+							Type:        swagger2.GetKvType(item.Type, false, true),
 							Schema:      nil,
 							Default:     item.Default,
 						})
-					case doc.ParamTypeQuery:
-						p.Parameters = append(p.Parameters, swagger.Element{
+					case doc2.ParamTypeQuery:
+						p.Parameters = append(p.Parameters, swagger2.Element{
 							In:          "query",
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        swagger.GetKvType(item.Type, false, true),
+							Type:        swagger2.GetKvType(item.Type, false, true),
 							Schema:      nil,
 							Default:     item.Default,
 						})
-					case doc.ParamTypeForm:
-						t := swagger.GetKvType(item.Type, false, true)
+					case doc2.ParamTypeForm:
+						t := swagger2.GetKvType(item.Type, false, true)
 						if item.IsFile {
 							t = "file"
 						}
-						p.Parameters = append(p.Parameters, swagger.Element{
+						p.Parameters = append(p.Parameters, swagger2.Element{
 							In:          "formData",
 							Name:        item.Name,
 							Description: item.Note,
@@ -332,13 +332,13 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							Schema:      nil,
 							Default:     item.Default,
 						})
-					case doc.ParamTypePath:
-						p.Parameters = append(p.Parameters, swagger.Element{
+					case doc2.ParamTypePath:
+						p.Parameters = append(p.Parameters, swagger2.Element{
 							In:          "path",
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        swagger.GetKvType(item.Type, false, true),
+							Type:        swagger2.GetKvType(item.Type, false, true),
 							Schema:      nil,
 							Default:     item.Default,
 						})
@@ -351,12 +351,12 @@ func (b *KApi) addDocModel(model *doc.Model) {
 							}
 						}
 						if !exist {
-							p.Parameters = append(p.Parameters, swagger.Element{
+							p.Parameters = append(p.Parameters, swagger2.Element{
 								In:          "body",
 								Name:        tagControllerMethod.Req.Name,
 								Description: item.Note,
 								Required:    true,
-								Schema: &swagger.Schema{
+								Schema: &swagger2.Schema{
 									Ref: myreqRef,
 								},
 							})
@@ -369,11 +369,11 @@ func (b *KApi) addDocModel(model *doc.Model) {
 			}
 
 			if tagControllerMethod.Resp != nil {
-				p.Responses = make(map[string]swagger.Resp)
+				p.Responses = make(map[string]swagger2.Resp)
 				if len(tagControllerMethod.Resp.Items) > 0 {
 					for _, item := range tagControllerMethod.Resp.Items {
 						if tagControllerMethod.Resp.IsArray || item.IsArray {
-							p.Responses["200"] = swagger.Resp{
+							p.Responses["200"] = swagger2.Resp{
 								Description: "成功返回",
 								Schema: map[string]interface{}{
 									"type": "array",
@@ -383,7 +383,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 								},
 							}
 						} else {
-							p.Responses["200"] = swagger.Resp{
+							p.Responses["200"] = swagger2.Resp{
 								Description: "成功返回",
 								Schema: map[string]interface{}{
 									"$ref": "#/definitions/" + tagControllerMethod.Resp.Name,
@@ -392,7 +392,7 @@ func (b *KApi) addDocModel(model *doc.Model) {
 						}
 					}
 				} else {
-					p.Responses["200"] = swagger.Resp{
+					p.Responses["200"] = swagger2.Resp{
 						Description: "成功返回",
 						Schema: map[string]interface{}{
 							"type": tagControllerMethod.Resp.Name,
@@ -412,20 +412,10 @@ func (b *KApi) addDocModel(model *doc.Model) {
 	}
 }
 
-func (b *KApi) BasePath(router gin.IRoutes) string {
-	switch r := router.(type) {
-	case *gin.RouterGroup:
-		return r.BasePath()
-	case *gin.Engine:
-		return r.BasePath()
-	}
-	return ""
-}
-
 // register 注册路由到gin
-func (b *KApi) register(router *gin.Engine, cList ...interface{}) bool {
+func (b *KApi) register(router *gin.Engine, cList ...interface{}) {
 	if b.genFlag {
-		return true
+		return
 	}
 	start := time.Now()
 	internal.Log.Debug("register controllers..")
@@ -458,7 +448,6 @@ func (b *KApi) register(router *gin.Engine, cList ...interface{}) bool {
 		}
 	}
 	internal.Log.Debugf("elapsed time:%s", time.Now().Sub(start).String())
-	return true
 }
 
 //registerMethodToRouter register to gin router
@@ -496,15 +485,25 @@ func (b *KApi) registerMethodToRouter(router *gin.Engine, httpMethod []string, r
 	return nil
 }
 
+// genRouterCode 生成gen.gob
+func (b *KApi) genRouterCode() {
+	if !b.option.Server.Debug {
+		return
+	}
+	internal.Log.Infoln("write out gen.gob")
+	routeInfo.SetApiBody(*b.doc.Client)
+	routeInfo.writeOut()
+}
+
 var (
 	uni   *ut.UniversalTranslator
 	trans ut.Translator
 )
 
 func init() {
-	zh := zh.New()
-	uni = ut.New(zh, zh)
+	chinese := zh.New()
+	uni = ut.New(chinese, chinese)
 	trans, _ = uni.GetTranslator("zh")
-	validate := binding.Validator.Engine().(*validator.Validate)
-	zh_translations.RegisterDefaultTranslations(validate, trans)
+	validate := binding3.Validator.Engine().(*validator.Validate)
+	_ = zh_translations.RegisterDefaultTranslations(validate, trans)
 }

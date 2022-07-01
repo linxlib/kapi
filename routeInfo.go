@@ -3,8 +3,8 @@ package kapi
 import (
 	"bytes"
 	"encoding/gob"
-	"github.com/linxlib/kapi/doc/swagger"
 	"github.com/linxlib/kapi/internal"
+	"github.com/linxlib/kapi/internal/swagger"
 	"sync"
 	"time"
 )
@@ -51,7 +51,7 @@ func init() {
 		data := internal.ReadFile("gen.gob")
 		var buf = bytes.NewBuffer(data)
 		dec := gob.NewDecoder(buf)
-		dec.Decode(routeInfo.genInfo)
+		_ = dec.Decode(routeInfo.genInfo)
 	}
 }
 

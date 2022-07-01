@@ -45,7 +45,6 @@ type Element struct {
 	Default     string  `json:"default,omitempty"` // 默认值
 }
 
-// Param API 路径 paths 和操作在 API 规范的全局部分定义
 type Param struct {
 	Tags        []string        `json:"tags"`                  // 分组标记
 	Summary     string          `json:"summary"`               // 摘要
@@ -64,7 +63,6 @@ type Resp struct {
 	Schema      map[string]interface{} `json:"schema,omitempty"`
 }
 
-// SecurityDefinitions 安全验证
 type SecurityDefinitions struct {
 	Type string `json:"type"`
 	Name string `json:"name"`
@@ -80,7 +78,6 @@ type PropertyItems struct {
 	Ref         string            `json:"$ref,omitempty"` // 主体模式和响应主体模式中引用
 }
 
-// Property 属性
 type Property struct {
 	Type        string         `json:"type,omitempty"` // 类型
 	Items       *PropertyItems `json:"items,omitempty"`

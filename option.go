@@ -21,8 +21,6 @@ type Option struct {
 	Server struct {
 		Debug                       bool     `conf:"debug"`
 		NeedDoc                     bool     `conf:"needDoc"`
-		NeedReDoc                   bool     `conf:"needReDoc"`
-		NeedSwagger                 bool     `conf:"needSwagger"`
 		DocName                     string   `conf:"docName" default:"K-Api"`
 		DocDesc                     string   `conf:"docDesc" default:"K-Api"`
 		Port                        int      `conf:"port" default:"2022"`
@@ -49,8 +47,6 @@ func readConfig(o *Option) *Option {
 	o.Server.Cors.AllowAllOrigins = true
 	o.Server.Debug = true
 	o.Server.NeedDoc = true
-	o.Server.NeedSwagger = true
-	o.Server.NeedReDoc = false
 	o.Server.Cors.AllowPrivateNetwork = true
 	o.Server.Cors.AllowWebSockets = true
 	o.Server.EnablePProf = false
