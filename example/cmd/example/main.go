@@ -2,11 +2,10 @@ package main
 
 import (
 	"github.com/linxlib/kapi"
-	"test_kapi/api/v1/controller"
+	"test_kapi/core/api/v1/controller"
 )
 
 func main() {
-
 	k := kapi.New(func(option *kapi.Option) {
 		// 默认读取config.toml 在这可以覆盖配置文件中的设置
 		option.Server.Port = 8087
@@ -17,5 +16,4 @@ func main() {
 	k.RegisterRouter(new(controller.Example))
 	k.MapTo(&controller.MyServiceImpl{}, (*controller.MyService)(nil))
 	k.Run()
-
 }

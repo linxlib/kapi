@@ -5,11 +5,9 @@ needDoc = true
 docName = "K-Api"
 docDesc = "K-Api"
 port = 2022
-openDocInBrowser = true
 docDomain = ""
 docVer = "v1"
 redirectToDocWhenAccessRoot = true
-apiBasePath = ""
 staticDirs = ["static"]
 enablePProf = true
 [server.cors]

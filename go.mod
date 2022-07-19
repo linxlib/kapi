@@ -12,4 +12,7 @@ require (
 	github.com/linxlib/conf v0.0.3
 	github.com/linxlib/conv v0.0.0-20200419055849-46faf16ac98f
 	github.com/linxlib/logs v0.1.5
+	github.com/radovskyb/watcher v1.0.7
+	github.com/spf13/cobra v1.5.0
+	github.com/spf13/viper v1.12.0
 )
