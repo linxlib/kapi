@@ -12,6 +12,11 @@ import (
 // RecoverErrorFunc recover 错误设置
 type RecoverErrorFunc func(interface{})
 
+type StaticDir struct {
+	Dir  string `conf:"dir"`
+	Path string `conf:"path"`
+}
+
 type Option struct {
 	ginLoggerFormatter gin.LogFormatter
 	corsConfig         cors.Config
@@ -19,15 +24,15 @@ type Option struct {
 	intranetIP         string
 
 	Server struct {
-		Debug                       bool     `conf:"debug"`
-		NeedDoc                     bool     `conf:"needDoc"`
-		DocName                     string   `conf:"docName" default:"K-Api"`
-		DocDesc                     string   `conf:"docDesc" default:"K-Api"`
-		Port                        int      `conf:"port" default:"2022"`
-		DocVer                      string   `conf:"docVer" default:"v1"`
-		RedirectToDocWhenAccessRoot bool     `conf:"redirectToDocWhenAccessRoot"`
-		StaticDirs                  []string `conf:"staticDirs" default:"[static]"`
-		EnablePProf                 bool     `conf:"enablePProf"`
+		Debug                       bool        `conf:"debug"`
+		NeedDoc                     bool        `conf:"needDoc"`
+		DocName                     string      `conf:"docName" default:"K-Api"`
+		DocDesc                     string      `conf:"docDesc" default:"K-Api"`
+		Port                        int         `conf:"port" default:"2022"`
+		DocVer                      string      `conf:"docVer" default:"v1"`
+		RedirectToDocWhenAccessRoot bool        `conf:"redirectToDocWhenAccessRoot"`
+		StaticDirs                  []StaticDir `conf:"staticDirs" default:"[static]"`
+		EnablePProf                 bool        `conf:"enablePProf"`
 		Cors                        struct {
 			AllowAllOrigins     bool          `conf:"allowAllOrigins"`
 			AllowCredentials    bool          `conf:"allowCredentials"`

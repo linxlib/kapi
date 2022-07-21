@@ -130,7 +130,7 @@ func (b *KApi) handlePProf() {
 func (b *KApi) handleStatic() {
 	if len(b.option.Server.StaticDirs) > 0 && !b.genFlag {
 		for _, s := range b.option.Server.StaticDirs {
-			b.engine.Static(s, s)
+			b.engine.Static(s.Path, s.Dir)
 		}
 		internal.Log.Infof("serving static dir:%v", b.option.Server.StaticDirs)
 	}
