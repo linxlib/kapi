@@ -164,6 +164,10 @@ func (b *KApi) handleDoc() {
 	}
 }
 
+func (b *KApi) GetEngine() *gin.Engine {
+	return b.engine
+}
+
 func (b *KApi) Run() {
 	b.genRouterCode()
 	b.handleDoc()
