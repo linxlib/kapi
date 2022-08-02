@@ -28,6 +28,42 @@ type Interceptor interface {
 	After(*Context)
 }
 
+type HeaderAuth interface {
+	HeaderAuth(c *Context)
+}
+
+type BeforeBind interface {
+	BeforeBind(c *Context)
+}
+
+type AfterBind interface {
+	AfterBind(c *Context)
+}
+
+type BeforeCall interface {
+	BeforeCall(c *Context)
+}
+
+type AfterCall interface {
+	AfterCall(c *Context)
+}
+
+type OnPanic interface {
+	OnPanic(c *Context, err interface{})
+}
+
+type OnError interface {
+	OnError(c *Context, err error)
+}
+
+type OnValidationError interface {
+	OnValidationError(c *Context, err error)
+}
+
+type OnUnmarshalError interface {
+	OnUnmarshalError(c *Context, err error)
+}
+
 // ContextInvoker method like this will be FastInvoke by inject package(not use reflect)
 type ContextInvoker func(ctx *Context)
 
@@ -54,11 +90,14 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 		defer func() {
 			if err := recover(); err != nil {
 				b.option.recoverErrorFunc(err)
+				if i, ok := controller.(OnPanic); ok {
+					i.OnPanic(c, err)
+				}
 			}
 		}()
 
-		if i, ok := controller.(Interceptor); ok {
-			i.Before(c)
+		if i, ok := controller.(HeaderAuth); ok {
+			i.HeaderAuth(c)
 		}
 		if c.IsAborted() {
 			return
@@ -71,7 +110,9 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 				reqIsValue = false
 				req = reflect.New(reqType.Elem())
 			}
-
+			if i, ok := controller.(BeforeBind); ok {
+				i.BeforeBind(c)
+			}
 			if err := b.doBindReq(c, req.Interface()); err != nil {
 				b.handleUnmarshalError(c, err)
 				return
@@ -80,6 +121,12 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 				req = req.Elem()
 			}
 			c.Map(req.Interface())
+			if i, ok := controller.(AfterBind); ok {
+				i.AfterBind(c)
+			}
+		}
+		if i, ok := controller.(BeforeCall); ok {
+			i.BeforeCall(c)
 		}
 		returnValues, err := c.inj.Invoke(method)
 		if err != nil {
@@ -88,8 +135,8 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 		if c.IsAborted() {
 			return
 		}
-		if i, ok := controller.(Interceptor); ok {
-			i.After(c)
+		if i, ok := controller.(AfterCall); ok {
+			i.AfterCall(c)
 		}
 		if c.IsAborted() {
 			return
