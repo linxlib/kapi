@@ -18,7 +18,7 @@ type MethodComment struct {
 	ResultType   string //then response type name. eg. model.User or []model.User
 	Summary      string
 	Description  string
-	Methods      []string //HTTP METHOD
+	Method       string //HTTP METHOD
 	TokenHeader  string
 }
 
@@ -56,7 +56,7 @@ func init() {
 }
 
 // AddFunc add one method to method comments
-func (ri *RouteInfo) AddFunc(handlerFuncName, routerPath string, methods []string) {
+func (ri *RouteInfo) AddFunc(handlerFuncName, routerPath string, method string) {
 	ri.mu.Lock()
 	defer ri.mu.Unlock()
 	// when AddFunc called first time, init these fields (only be called in debug mode)
@@ -69,7 +69,7 @@ func (ri *RouteInfo) AddFunc(handlerFuncName, routerPath string, methods []strin
 	ri.genInfo.Methods = append(ri.genInfo.Methods, MethodComment{
 		Key:        handlerFuncName,
 		RouterPath: routerPath,
-		Methods:    methods,
+		Method:     method,
 	})
 }
 

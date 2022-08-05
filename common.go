@@ -266,12 +266,14 @@ func (b *KApi) analysisController(controller interface{}, model *doc2.Model, mod
 			if method.IsExported() {
 				mc, siReq, siResp := astDoc.ResolveMethod(method.Name)
 				if mc != nil {
-					routeInfo.AddFunc(controllerName+"/"+method.Name, mc.RouterPath, mc.Methods)
-					if b.option.Server.NeedDoc {
-						model.AddOne(controllerScheme.TagName, mc.RouterPath,
-							mc.Methods, mc.Summary, mc.Description,
-							siReq, siResp,
-							controllerScheme.TokenHeader, mc.IsDeprecated)
+					for k, v := range mc.Routes {
+						routeInfo.AddFunc(controllerName+"/"+method.Name, k, v)
+						if b.option.Server.NeedDoc {
+							model.AddOne(controllerScheme.TagName, k,
+								v, mc.Summary, mc.Description,
+								siReq, siResp,
+								controllerScheme.TokenHeader, mc.IsDeprecated)
+						}
 					}
 
 				}
@@ -450,10 +452,8 @@ func (b *KApi) addDocModel(model *doc2.Model) {
 			}
 
 			url := internal.BuildRelativePath(model.Group, tagControllerMethod.RouterPath)
-			for _, s := range tagControllerMethod.Methods {
-				p.OperationID = s + "_" + strings.ReplaceAll(tagControllerMethod.RouterPath, "/", "_")
-				b.doc.AddPatch2(url, p, s)
-			}
+			p.OperationID = tagControllerMethod.Method + "_" + strings.ReplaceAll(tagControllerMethod.RouterPath, "/", "_")
+			b.doc.AddPatch2(url, p, tagControllerMethod.Method)
 
 		}
 	}
@@ -473,17 +473,15 @@ func (b *KApi) register(router *gin.Engine, cList ...interface{}) {
 		t := reflect.Indirect(refVal).Type()
 		objName := t.Name()
 
-		// Install the Methods
+		// Install the Method
 		for m := 0; m < refTyp.NumMethod(); m++ {
 			method := refTyp.Method(m)
 			//_, _b := b.checkMethodParamCount(method.Type, true)
 			if v, ok := mp[objName+"/"+method.Name]; ok {
 				for _, v1 := range v {
-					methods := strings.Join(v1.Methods, ",")
-
-					internal.Log.Debugf("%6s  %-20s --> %s", methods, v1.RouterPath, t.PkgPath()+">"+objName+">"+method.Name)
+					internal.Log.Debugf("%6s  %-20s --> %s", v1.Method, v1.RouterPath, t.PkgPath()+">"+objName+">"+method.Name)
 					err := b.registerMethodToRouter(router,
-						v1.Methods,
+						v1.Method,
 						v1.RouterPath,
 						refVal.Interface(),
 						refVal.Method(m).Interface())
@@ -505,36 +503,36 @@ func (b *KApi) register(router *gin.Engine, cList ...interface{}) {
 //  @param method
 //
 //  @return error
-func (b *KApi) registerMethodToRouter(router *gin.Engine, httpMethod []string, relativePath string, controller, method interface{}) error {
+func (b *KApi) registerMethodToRouter(router *gin.Engine, httpMethod string, relativePath string, controller, method interface{}) error {
 	call := b.handle(controller, method)
-	for _, v := range httpMethod {
-		switch strings.ToUpper(v) {
-		case "POST":
-			router.POST(relativePath, call)
-		case "GET":
-			router.GET(relativePath, call)
-		case "DELETE":
-			router.DELETE(relativePath, call)
-		case "PATCH":
-			router.PATCH(relativePath, call)
-		case "PUT":
-			router.PUT(relativePath, call)
-		case "OPTIONS":
-			router.OPTIONS(relativePath, call)
-		case "HEAD":
-			router.HEAD(relativePath, call)
-		case "ANY":
-			router.Any(relativePath, call)
-		default:
-			return fmt.Errorf("http method:[%v --> %s] 不支持", httpMethod, relativePath)
-		}
+
+	switch strings.ToUpper(httpMethod) {
+	case "POST":
+		router.POST(relativePath, call)
+	case "GET":
+		router.GET(relativePath, call)
+	case "DELETE":
+		router.DELETE(relativePath, call)
+	case "PATCH":
+		router.PATCH(relativePath, call)
+	case "PUT":
+		router.PUT(relativePath, call)
+	case "OPTIONS":
+		router.OPTIONS(relativePath, call)
+	case "HEAD":
+		router.HEAD(relativePath, call)
+	case "ANY":
+		router.Any(relativePath, call)
+	default:
+		return fmt.Errorf("http method:[%v --> %s] 不支持", httpMethod, relativePath)
 	}
+
 	return nil
 }
 
 // genRouterCode 生成gen.gob
 func (b *KApi) genRouterCode() {
-	if !b.option.Server.Debug {
+	if !b.option.Server.Debug || b.doc == nil {
 		return
 	}
 	internal.Log.Infoln("write out gen.gob")

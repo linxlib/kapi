@@ -27,7 +27,7 @@ type StructInfo struct {
 // DocModel Model
 type DocModel struct {
 	RouterPath   string
-	Methods      []string
+	Method       string
 	Summary      string
 	Description  string
 	Req, Resp    *StructInfo

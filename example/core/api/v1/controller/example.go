@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"github.com/linxlib/kapi"
+	"strings"
 	"time"
 )
 
@@ -17,18 +18,13 @@ func (m *MyServiceImpl) Test() string {
 }
 
 type Base struct {
+	CustomData string
 }
 
-func (b *Base) Before(context *kapi.Context) {
-	context.Set("start", time.Now())
-	context.Context.Set("123456", "4444")
-}
-
-func (b *Base) After(context *kapi.Context) {
-	i, _ := context.Get("start")
-	t := i.(time.Time)
-	fmt.Println(time.Now().Sub(t).Microseconds(), "us")
-	context.Abort()
+func (b *Base) HeaderAuth(c *kapi.Context) {
+	if strings.Contains(c.Request.RequestURI, "list") {
+		b.CustomData = time.Now().Format(time.RFC3339)
+	}
 }
 
 //Example 例子
@@ -51,6 +47,7 @@ func (e *Example) GetList(
 ) {
 	fmt.Println(req.Page, req.Size)
 	fmt.Println(svc.Test())
+	fmt.Println(e.CustomData)
 	c.Success()
 }
 

@@ -1,7 +1,3 @@
-/*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
-*/
 package cmd
 
 import (
@@ -16,7 +12,7 @@ var runCmd = &cobra.Command{
 	Short: "run kapi app with live reload",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		rundaemon.Run()
+		rundaemon.Run(args...)
 	},
 }
 

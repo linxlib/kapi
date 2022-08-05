@@ -70,11 +70,14 @@ var (
 	flagPattern          string
 )
 
-func Run() {
+func Run(args ...string) {
 	flagCommand = "./" + buildOutputName
 	flagPattern = FilePattern
 	flagGracefulKill = false
-	flagBuildCommandList.Set("go build -o " + buildOutputName)
+	a := []string{"go", "build", "-o", buildOutputName}
+	a = append(a, args...)
+	s := strings.Join(a, " ")
+	flagBuildCommandList.Set(s)
 	flagCommandStop = false
 	if len(flagDirectories) == 0 {
 		flagDirectories = globList([]string{"."})
