@@ -1,7 +1,3 @@
-/*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
-*/
 package cmd
 
 import (
@@ -31,7 +27,7 @@ import (
 )
 func main() {
 	k := kapi.New()
-	//k.RegisterRouter(new(api.CategoryController))
+	//k.RegisterRouter(new(controller.CategoryController))
 	k.Run()
 }
 `
@@ -98,14 +94,20 @@ var initCmd = &cobra.Command{
 			modName = args[0]
 			exec.Command("go", "mod", "init", modName)
 		} else {
-			if utils.Exists("go.mod") {
+			if !utils.Exists("go.mod") {
 				innerlog.Log.Println("go.mod不存在")
 				return
 			}
 			modName = utils.GetMod("go.mod")
 		}
 		i := strings.LastIndex(modName, "/")
-		mod := modName[i:]
+		mod := ""
+		if i > 0 {
+			mod = modName[i:]
+		} else {
+			mod = modName
+		}
+
 		if !utils.Exists("cmd") {
 			utils.Mkdir("cmd/" + mod)
 		}
@@ -138,19 +140,25 @@ var initCmd = &cobra.Command{
 			//r := fmt.Sprintf(mainContent, modName, modName)
 			ioutil.WriteFile("main.go", []byte(mainContent), os.ModePerm)
 			innerlog.Log.Println("写出main.go")
-			output, err := exec.Command("gofmt", "-l", "-w", "./").Output()
-			if err != nil {
-				innerlog.Log.Error(err)
-				return
+			fmtcmd := exec.Command("gofmt", "-l", "-w", "./")
+			fmtcmd.Stdout = os.Stderr
+
+			if err := fmtcmd.Start(); err != nil {
+				innerlog.Log.Errorln(err)
 			}
-			innerlog.Log.Println(string(output))
-			output, err = exec.Command("go", "mod", "tidy").Output()
-			if err != nil {
-				innerlog.Log.Error(err)
-				return
+			if err := fmtcmd.Wait(); err != nil {
+				innerlog.Log.Errorln(err)
+			}
+			c := exec.Command("go", "mod", "tidy")
+			c.Stdout = os.Stderr
+
+			if err := c.Start(); err != nil {
+				innerlog.Log.Errorln(err)
+			}
+			if err := c.Wait(); err != nil {
+				innerlog.Log.Errorln(err)
 			}
 
-			innerlog.Log.Println(string(output))
 		}
 		if !utils.Exists("Dockerfile") {
 			a := strings.ReplaceAll(dockerFileContent, "<appname>", modName)

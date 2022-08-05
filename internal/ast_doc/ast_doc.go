@@ -30,13 +30,14 @@ func AddImportFile(k, v string) {
 }
 
 type methodComment struct {
-	RouterPath   string
+	Routes map[string]string
+
 	IsDeprecated bool
 	ResultType   string
 	Summary      string //方法说明
 	Description  string // 方法注释
-	Methods      []string
-	TokenHeader  string
+
+	TokenHeader string
 }
 
 type AstDoc struct {
@@ -179,6 +180,7 @@ func (a *AstDoc) ResolveMethod(methodName string) (*methodComment, *doc.StructIn
 func (a *AstDoc) resolveMethodComment(methodName string) (*ast.FuncDecl, *methodComment) {
 	if f, ok := a.controllerScheme.FuncMap[methodName]; ok {
 		gc := &methodComment{}
+		gc.Routes = make(map[string]string)
 
 		if f.Doc != nil {
 			for _, c := range f.Doc.List { // comment list
@@ -193,17 +195,18 @@ func (a *AstDoc) resolveMethodComment(methodName string) (*ast.FuncDecl, *method
 					case "@DESC":
 						gc.Description += comment + "\n" //we can have multiple @DESC to multiline description
 					case "@GET", "@POST", "@PUT", "@DELETE", "@PATCH", "@OPTION", "@HEAD":
-						gc.RouterPath = comment
-						if a.controllerScheme.Route != "" {
-							gc.RouterPath = a.controllerScheme.Route + gc.RouterPath
-							gc.RouterPath = strings.TrimSuffix(gc.RouterPath, "/")
-						}
+						httpMethod := strings.ToUpper(strings.TrimPrefix(prefix, "@"))
+						routerPath := comment
 
-						if len(gc.Methods) > 0 { //we can also have multiple @HTTPMETHOD
-							gc.Methods = append(gc.Methods, strings.ToUpper(strings.TrimPrefix(prefix, "@")))
-						} else {
-							gc.Methods = []string{strings.ToUpper(strings.TrimPrefix(prefix, "@"))}
+						if a.controllerScheme.Route != "" {
+							routerPath = a.controllerScheme.Route + routerPath
+							routerPath = strings.TrimSuffix(routerPath, "/")
 						}
+						if routerPath == "/" || strings.TrimSpace(routerPath) == "" {
+							break
+						}
+						gc.Routes[routerPath] = httpMethod
+
 						break
 					case methodName: //if prefix is equal to method name
 						gc.Summary = comment // summary can have only one

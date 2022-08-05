@@ -19,7 +19,7 @@ func NewDoc(group string) *Model {
 }
 
 // AddOne 添加一个方法
-func (m *Model) AddOne(group string, routerPath string, methods []string, summary string, description string, req, resp *StructInfo, tokenHeader string, isDeprecated bool) {
+func (m *Model) AddOne(group string, routerPath string, method string, summary string, description string, req, resp *StructInfo, tokenHeader string, isDeprecated bool) {
 	if m.TagControllers[group] == nil {
 		m.TagControllers[group] = make(map[string]DocModel)
 	}
@@ -27,10 +27,10 @@ func (m *Model) AddOne(group string, routerPath string, methods []string, summar
 	// 解析一个路由方法 并存为文档所需
 	m.analysisStructInfo(req)
 	m.analysisStructInfo(resp)
-	if len(methods) > 0 {
-		m.TagControllers[group][methods[0]+" "+myRouterPath] = DocModel{
+	if len(method) > 0 {
+		m.TagControllers[group][method+" "+myRouterPath] = DocModel{
 			RouterPath:   myRouterPath,
-			Methods:      methods,
+			Method:       method,
 			Summary:      summary,
 			Description:  description,
 			Req:          req,

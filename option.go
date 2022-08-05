@@ -56,7 +56,7 @@ func readConfig(o *Option) *Option {
 	o.Server.Cors.AllowWebSockets = true
 	o.Server.EnablePProf = false
 	_ = conf.Load(o, conf.File("config.toml"),
-		conf.Dirs("./", "./config"))
+		conf.Dirs("./", "./config/"))
 
 	corsConfig.AllowAllOrigins = o.Server.Cors.AllowAllOrigins
 	corsConfig.AllowPrivateNetwork = o.Server.Cors.AllowPrivateNetwork
