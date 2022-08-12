@@ -76,8 +76,10 @@ port = 2022
 docDomain = ""
 docVer = "v1"
 redirectToDocWhenAccessRoot = true
-staticDirs = ["static"]
 enablePProf = true
+[[staticDirs]]
+    dir = "static"
+    path = "static"
 [server.cors]
 allowHeaders = ["Origin","Content-Length","Content-Type"]
 `
