@@ -130,6 +130,20 @@ func (c *Context) GetPageSize() (int, int) {
 	return conv.Int(page) - 1, conv.Int(size)
 }
 
+// OfFormFile 获取Form File的文件名和大小
+//
+//	@param form
+//
+//	@return string
+//	@return int64
+func (c *Context) OfFormFile(form string) (string, int64) {
+	f, err := c.FormFile(form)
+	if err != nil {
+		return "", 0
+	}
+	return f.Filename, f.Size
+}
+
 // SaveFile save form file to destination
 //
 //	@param form name of form file
@@ -140,6 +154,9 @@ func (c *Context) SaveFile(form string, dst string) error {
 	f, err := c.FormFile(form)
 	if err != nil {
 		return err
+	}
+	if dst == "" {
+		dst = f.Filename
 	}
 	err = c.SaveUploadedFile(f, dst)
 	if err != nil {
