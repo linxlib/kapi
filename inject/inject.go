@@ -17,10 +17,16 @@ type Injector interface {
 	Applicator
 	Invoker
 	TypeMapper
+	Provider
 	// SetParent sets the parent of the injector. If the injector cannot find a
 	// dependency in its Type map it will check its parent before returning an
 	// error.
 	SetParent(Injector)
+	GetParent() Injector
+}
+
+type Provider interface {
+	Provide(interface{}) error
 }
 
 // Applicator represents an interface for mapping dependencies to a struct.
@@ -77,6 +83,10 @@ type TypeMapper interface {
 type injector struct {
 	values map[reflect.Type]reflect.Value
 	parent Injector
+}
+
+func (inj *injector) GetParent() Injector {
+	return inj.parent
 }
 
 // InterfaceOf dereferences a pointer to an Interface type. It panics if value
@@ -181,6 +191,30 @@ func (inj *injector) Apply(val interface{}) error {
 		}
 
 	}
+	return nil
+}
+
+func (inj *injector) Provide(val interface{}) error {
+	v := reflect.ValueOf(val)
+
+	t := v.Type()
+	for v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	if v.Kind() != reflect.Struct {
+		return fmt.Errorf("value should be Pointer") // Should not panic here ?
+	}
+
+	if v.CanSet() {
+		v1 := inj.Value(t)
+		if !v1.IsValid() {
+			return fmt.Errorf("value not found for type %v", t)
+		}
+
+		v.Set(v1.Elem())
+	}
+
 	return nil
 }
 

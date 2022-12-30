@@ -103,7 +103,7 @@ func (doc *DocSwagger) SetDefinition(m *doc2.Model, si *doc2.StructInfo) string 
 						Items: &PropertyItems{
 							Type: "array",
 							Items: map[string]string{
-								"type": GetKvType(v2.Type, false, true),
+								"type": internal.GetKvType(v2.Type, false, true),
 							},
 						},
 					}
@@ -112,8 +112,8 @@ func (doc *DocSwagger) SetDefinition(m *doc2.Model, si *doc2.StructInfo) string 
 						Type:        "array",
 						Description: v2.Note,
 						Items: &PropertyItems{
-							Type:   GetKvType(v2.Type, v2.IsArray, true),
-							Format: GetKvType(v2.Type, v2.IsArray, false),
+							Type:   internal.GetKvType(v2.Type, v2.IsArray, true),
+							Format: internal.GetKvType(v2.Type, v2.IsArray, false),
 							Ref:    doc.SetDefinition(m, v2.TypeRef),
 						},
 					}
@@ -122,8 +122,8 @@ func (doc *DocSwagger) SetDefinition(m *doc2.Model, si *doc2.StructInfo) string 
 
 			} else {
 				def.Properties[v2.Name] = Property{
-					Type:   GetKvType(v2.Type, v2.IsArray, true),
-					Format: GetKvType(v2.Type, v2.IsArray, false),
+					Type:   internal.GetKvType(v2.Type, v2.IsArray, true),
+					Format: internal.GetKvType(v2.Type, v2.IsArray, false),
 					Ref:    doc.SetDefinition(m, v2.TypeRef),
 					Items:  nil,
 				}
@@ -139,7 +139,7 @@ func (doc *DocSwagger) SetDefinition(m *doc2.Model, si *doc2.StructInfo) string 
 						Items: &PropertyItems{
 							Type: "array",
 							Items: map[string]string{
-								"type":   GetKvType(v2.Type, false, true),
+								"type":   internal.GetKvType(v2.Type, false, true),
 								"format": v2.Type,
 							},
 						},
@@ -149,8 +149,8 @@ func (doc *DocSwagger) SetDefinition(m *doc2.Model, si *doc2.StructInfo) string 
 						Type:        "array",
 						Description: v2.Note,
 						Items: &PropertyItems{
-							Type:   GetKvType(v2.Type, v2.IsArray, true),
-							Format: GetKvType(v2.Type, v2.IsArray, false),
+							Type:   internal.GetKvType(v2.Type, v2.IsArray, true),
+							Format: internal.GetKvType(v2.Type, v2.IsArray, false),
 							Ref:    doc.SetDefinition(m, v2.TypeRef),
 						},
 					}
@@ -158,16 +158,13 @@ func (doc *DocSwagger) SetDefinition(m *doc2.Model, si *doc2.StructInfo) string 
 
 				def.Properties[v2.Name] = p
 			} else {
-				if v2.IsQuery || v2.IsHeader || v2.IsPath || v2.IsFormData {
-
-				} else {
+				if !v2.IsQuery && !v2.IsHeader && !v2.IsPath && !v2.IsFormData {
 					def.Properties[v2.Name] = Property{
-						Type:        GetKvType(v2.Type, v2.IsArray, true),
-						Format:      GetKvType(v2.Type, v2.IsArray, false),
+						Type:        internal.GetKvType(v2.Type, v2.IsArray, true),
+						Format:      internal.GetKvType(v2.Type, v2.IsArray, false),
 						Description: v2.Note,
 						Items:       nil,
 					}
-
 				}
 			}
 
@@ -175,46 +172,4 @@ func (doc *DocSwagger) SetDefinition(m *doc2.Model, si *doc2.StructInfo) string 
 	}
 	doc.AddDefinitions(si.Name, def)
 	return "#/definitions/" + si.Name
-}
-
-var kvType = map[string]string{ // array, boolean, integer, number, object, string
-	"int":     "integer",
-	"uint":    "integer",
-	"byte":    "integer",
-	"rune":    "integer",
-	"int8":    "integer",
-	"int16":   "integer",
-	"int32":   "integer",
-	"int64":   "integer",
-	"uint8":   "integer",
-	"uint16":  "integer",
-	"uint32":  "integer",
-	"uint64":  "integer",
-	"uintptr": "integer",
-	"float32": "integer",
-	"float64": "integer",
-	"bool":    "boolean",
-	"map":     "object",
-	"string":  "string",
-	"Time":    "string",
-}
-
-var kvFormat = map[string]string{}
-
-// GetKvType 获取类型转换
-func GetKvType(k string, isArray, isType bool) string {
-	if isArray {
-		return "array"
-	}
-
-	if isType {
-		if kt, ok := kvType[k]; ok {
-			return kt
-		}
-		return "object"
-	}
-	if kf, ok := kvFormat[k]; ok {
-		return kf
-	}
-	return k
 }

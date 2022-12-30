@@ -18,7 +18,7 @@ func UnixToTime(timestamp int64) time.Time {
 
 // GetHour 当前时间向上取整点
 func GetHour(timestamp int64) int {
-	//	formaTime := time.Format("2006-01-02 15:04:05")
+	//	formattedTime := time.Format("2006-01-02 15:04:05")
 	tm := time.Unix(timestamp, 0)
 	return tm.Hour()
 }
@@ -63,7 +63,7 @@ func GetHour0(timestamp int64) time.Time {
 
 // GetUtcHour0 获取向上整时时间
 func GetUtcHour0(tm time.Time) int64 {
-	return tm.Unix() - int64(tm.Second()) - int64((60 * tm.Minute()))
+	return tm.Unix() - int64(tm.Second()) - int64(60*tm.Minute())
 }
 
 // GetDay0 获取给定日期的零点时间
@@ -93,8 +93,8 @@ func StrToTime(tStr, format string, timeZone *time.Location) time.Time {
 	return ti
 }
 
-// StringTimetoUnix 给定字符串时间转换成本地时间戳
-func StringTimetoUnix(timestr string) int64 {
+// StringTimeToUnix 给定字符串时间转换成本地时间戳
+func StringTimeToUnix(timestr string) int64 {
 	return StrToTime(timestr, "2006-01-02 15:04:05", time.Local).Unix()
 }
 
@@ -187,12 +187,12 @@ func (t *Time) UnmarshalJSON(data []byte) (err error) {
 }
 
 // MarshalJSON ...
-func (t Time) MarshalJSON() ([]byte, error) {
+func (t *Time) MarshalJSON() ([]byte, error) {
 	var stamp = fmt.Sprintf(`"%s"`, t.Format("2006-01-02 15:04:05"))
 	return []byte(stamp), nil
 }
 
 // String ...
-func (t Time) String() string {
+func (t *Time) String() string {
 	return t.Format("2006-01-02 15:04:05")
 }

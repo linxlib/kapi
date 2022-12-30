@@ -22,7 +22,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-//Interceptor implement this to intercept controller method
+// Interceptor implement this to intercept controller method
 type Interceptor interface {
 	Before(*Context)
 	After(*Context)
@@ -72,7 +72,7 @@ func (invoke ContextInvoker) Invoke(params []interface{}) ([]reflect.Value, erro
 	return nil, nil
 }
 
-//handle get gin.HandlerFunc of a controller method
+// handle get gin.HandlerFunc of a controller method
 func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 	typ := reflect.TypeOf(method)
 	//TODO:
@@ -172,11 +172,12 @@ func (b *KApi) handleUnmarshalError(c *Context, err error) {
 	return
 }
 
-//doBindReq bind request to multi tag field
-//  @param c
-//  @param v request param
+// doBindReq bind request to multi tag field
 //
-//  @return error
+//	@param c
+//	@param v request param
+//
+//	@return error
 func (b *KApi) doBindReq(c *Context, v interface{}) error {
 	if err := c.ShouldBindHeader(v); err != nil {
 		if err != io.EOF {
@@ -353,7 +354,7 @@ func (b *KApi) addDocModel(model *doc2.Model) {
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        swagger2.GetKvType(item.Type, false, true),
+							Type:        internal.GetKvType(item.Type, false, true),
 							Schema:      nil,
 							Default:     item.Default,
 						})
@@ -363,12 +364,12 @@ func (b *KApi) addDocModel(model *doc2.Model) {
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        swagger2.GetKvType(item.Type, false, true),
+							Type:        internal.GetKvType(item.Type, false, true),
 							Schema:      nil,
 							Default:     item.Default,
 						})
 					case doc2.ParamTypeForm:
-						t := swagger2.GetKvType(item.Type, false, true)
+						t := internal.GetKvType(item.Type, false, true)
 						if item.IsFile {
 							t = "file"
 						}
@@ -387,7 +388,7 @@ func (b *KApi) addDocModel(model *doc2.Model) {
 							Name:        item.Name,
 							Description: item.Note,
 							Required:    item.Required,
-							Type:        swagger2.GetKvType(item.Type, false, true),
+							Type:        internal.GetKvType(item.Type, false, true),
 							Schema:      nil,
 							Default:     item.Default,
 						})
@@ -472,6 +473,7 @@ func (b *KApi) register(router *gin.Engine, cList ...interface{}) {
 		refVal := reflect.ValueOf(c)
 		t := reflect.Indirect(refVal).Type()
 		objName := t.Name()
+		b.Apply(c)
 
 		// Install the Method
 		for m := 0; m < refTyp.NumMethod(); m++ {
@@ -495,14 +497,15 @@ func (b *KApi) register(router *gin.Engine, cList ...interface{}) {
 	internal.Log.Debugf("elapsed time:%s", time.Now().Sub(start).String())
 }
 
-//registerMethodToRouter register to gin router
-//  @param router
-//  @param httpMethod
-//  @param relativePath route path
-//  @param controller
-//  @param method
+// registerMethodToRouter register to gin router
 //
-//  @return error
+//	@param router
+//	@param httpMethod
+//	@param relativePath route path
+//	@param controller
+//	@param method
+//
+//	@return error
 func (b *KApi) registerMethodToRouter(router *gin.Engine, httpMethod string, relativePath string, controller, method interface{}) error {
 	call := b.handle(controller, method)
 

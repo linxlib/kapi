@@ -21,17 +21,18 @@ func newContext(c *gin.Context) *Context {
 	}
 }
 
-//Method get HTTP method
+// Method get HTTP method
 //
-//  @return string
+//	@return string
 func (c *Context) Method() string {
 	return c.Request.Method
 }
 
-//GetQueryString get query param of string
-//  @param key
+// GetQueryString get query param of string
 //
-//  @return string
+//	@param key
+//
+//	@return string
 func (c *Context) GetQueryString(key string) string {
 	tmp, b := c.GetQuery(key)
 	if b {
@@ -41,11 +42,12 @@ func (c *Context) GetQueryString(key string) string {
 	}
 }
 
-//GetQueryInt get query param of integer
-//  @param key
-//  @param def default value
+// GetQueryInt get query param of integer
 //
-//  @return int
+//	@param key
+//	@param def default value
+//
+//	@return int
 func (c *Context) GetQueryInt(key string, def ...int) int {
 	tmp, b := c.GetQuery(key)
 	if b {
@@ -58,11 +60,12 @@ func (c *Context) GetQueryInt(key string, def ...int) int {
 	}
 }
 
-//GetQueryInt64 get query param of long
-//  @param key
-//  @param def default value
+// GetQueryInt64 get query param of long
 //
-//  @return int64
+//	@param key
+//	@param def default value
+//
+//	@return int64
 func (c *Context) GetQueryInt64(key string) int64 {
 	tmp, b := c.GetQuery(key)
 	if b {
@@ -72,11 +75,12 @@ func (c *Context) GetQueryInt64(key string) int64 {
 	}
 }
 
-//GetQueryUInt64 get query param of uint64
-//  @param key
-//  @param def default value
+// GetQueryUInt64 get query param of uint64
 //
-//  @return uint64
+//	@param key
+//	@param def default value
+//
+//	@return uint64
 func (c *Context) GetQueryUInt64(key string) uint64 {
 	tmp, b := c.GetQuery(key)
 	if b {
@@ -86,11 +90,12 @@ func (c *Context) GetQueryUInt64(key string) uint64 {
 	}
 }
 
-//GetQueryUInt get query param of uint
-//  @param key
-//  @param def default value
+// GetQueryUInt get query param of uint
 //
-//  @return uint
+//	@param key
+//	@param def default value
+//
+//	@return uint
 func (c *Context) GetQueryUInt(key string) uint {
 	tmp, b := c.GetQuery(key)
 	if b {
@@ -100,11 +105,12 @@ func (c *Context) GetQueryUInt(key string) uint {
 	}
 }
 
-//GetQueryBool get query param of boolean
-//  @param key
-//  @param def default value
+// GetQueryBool get query param of boolean
 //
-//  @return bool
+//	@param key
+//	@param def default value
+//
+//	@return bool
 func (c *Context) GetQueryBool(key string) bool {
 	tmp, b := c.GetQuery(key)
 	if b {
@@ -114,21 +120,22 @@ func (c *Context) GetQueryBool(key string) bool {
 	}
 }
 
-//GetPageSize get query page and size
+// GetPageSize get query page and size
 //
-//  @return int page
-//  @return int size
+//	@return int page
+//	@return int size
 func (c *Context) GetPageSize() (int, int) {
 	page := c.GetQueryInt("page", 1)
 	size := c.GetQueryInt("size", 10)
 	return conv.Int(page) - 1, conv.Int(size)
 }
 
-//SaveFile save form file to destination
-//  @param form name of form file
-//  @param dst destination file name
+// SaveFile save form file to destination
 //
-//  @return error
+//	@param form name of form file
+//	@param dst destination file name
+//
+//	@return error
 func (c *Context) SaveFile(form string, dst string) error {
 	f, err := c.FormFile(form)
 	if err != nil {
@@ -156,10 +163,39 @@ func (c *Context) RemoteAddr() string {
 	return addr
 }
 
+// Map 注入
+//
+//	@param i
+//
+//	@return inject.TypeMapper
 func (c *Context) Map(i ...interface{}) inject.TypeMapper {
 	return c.inj.Map(i...)
 }
 
+// MapTo 注入为某个接口
+//
+//	@param i 要注入的值（指针）
+//	@param j 接口类型（指针）
+//
+//	@return inject.TypeMapper
 func (c *Context) MapTo(i interface{}, j interface{}) inject.TypeMapper {
 	return c.inj.MapTo(i, j)
+}
+
+// Apply 为一个结构注入带inject标签的Field
+//
+//	@param ctl 需要为指针
+//
+//	@return error
+func (c *Context) Apply(ctl interface{}) error {
+	return c.inj.Apply(ctl)
+}
+
+// Provide 提供已注入的实例
+//
+//	@param i 需要为指针
+//
+//	@return error
+func (c *Context) Provide(i interface{}) error {
+	return c.inj.Provide(i)
 }

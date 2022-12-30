@@ -12,9 +12,26 @@ import (
 // RecoverErrorFunc recover 错误设置
 type RecoverErrorFunc func(interface{})
 
-type StaticDir struct {
-	Dir  string `conf:"dir"`
-	Path string `conf:"path"`
+type Server struct {
+	Debug                       bool     `conf:"debug"`
+	NeedDoc                     bool     `conf:"needDoc"`
+	DocName                     string   `conf:"docName" default:"K-Api"`
+	DocDesc                     string   `conf:"docDesc" default:"K-Api"`
+	Port                        int      `conf:"port" default:"2022"`
+	DocVer                      string   `conf:"docVer" default:"v1"`
+	RedirectToDocWhenAccessRoot bool     `conf:"redirectToDocWhenAccessRoot"`
+	StaticDirs                  []string `conf:"staticDirs" default:"[static=static]"`
+	EnablePProf                 bool     `conf:"enablePProf"`
+	Cors                        struct {
+		AllowAllOrigins     bool          `conf:"allowAllOrigins"`
+		AllowCredentials    bool          `conf:"allowCredentials"`
+		MaxAge              time.Duration `conf:"maxAge"`
+		AllowWebSockets     bool          `conf:"allowWebSockets"`
+		AllowWildcard       bool          `conf:"allowWildcard"`
+		AllowPrivateNetwork bool          `conf:"allowPrivateNetwork"`
+		AllowMethods        []string      `conf:"allowMethods" d`
+		AllowHeaders        []string      `conf:"allowHeaders"`
+	} `conf:"cors"`
 }
 
 type Option struct {
@@ -22,28 +39,7 @@ type Option struct {
 	corsConfig         cors.Config
 	recoverErrorFunc   RecoverErrorFunc
 	intranetIP         string
-
-	Server struct {
-		Debug                       bool        `conf:"debug"`
-		NeedDoc                     bool        `conf:"needDoc"`
-		DocName                     string      `conf:"docName" default:"K-Api"`
-		DocDesc                     string      `conf:"docDesc" default:"K-Api"`
-		Port                        int         `conf:"port" default:"2022"`
-		DocVer                      string      `conf:"docVer" default:"v1"`
-		RedirectToDocWhenAccessRoot bool        `conf:"redirectToDocWhenAccessRoot"`
-		StaticDirs                  []StaticDir `conf:"staticDirs" default:"[static]"`
-		EnablePProf                 bool        `conf:"enablePProf"`
-		Cors                        struct {
-			AllowAllOrigins     bool          `conf:"allowAllOrigins"`
-			AllowCredentials    bool          `conf:"allowCredentials"`
-			MaxAge              time.Duration `conf:"maxAge" default:"12h"`
-			AllowWebSockets     bool          `conf:"allowWebSockets"`
-			AllowWildcard       bool          `conf:"allowWildcard"`
-			AllowPrivateNetwork bool          `conf:"allowPrivateNetwork"`
-			AllowMethods        []string      `conf:"allowMethods" default:"[GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS]"`
-			AllowHeaders        []string      `conf:"allowHeaders" default:"[Origin,Content-Length,Content-Type,Authorization,x-requested-with]"`
-		} `conf:"cors"`
-	} `conf:"server"`
+	Server             Server `conf:"server"`
 }
 
 func readConfig(o *Option) *Option {
@@ -54,6 +50,9 @@ func readConfig(o *Option) *Option {
 	o.Server.NeedDoc = true
 	o.Server.Cors.AllowPrivateNetwork = true
 	o.Server.Cors.AllowWebSockets = true
+	o.Server.Cors.MaxAge = time.Hour * 12
+	o.Server.Cors.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
+	o.Server.Cors.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	o.Server.EnablePProf = false
 	_ = conf.Load(o, conf.File("config.toml"),
 		conf.Dirs("./", "./config/"))

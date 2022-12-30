@@ -13,10 +13,11 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
-//编译时植入变量
+// 编译时植入变量
 var (
 	VERSION     string
 	BUILDTIME   string
@@ -130,7 +131,8 @@ func (b *KApi) handlePProf() {
 func (b *KApi) handleStatic() {
 	if len(b.option.Server.StaticDirs) > 0 && !b.genFlag {
 		for _, s := range b.option.Server.StaticDirs {
-			b.engine.Static(s.Path, s.Dir)
+			tmp := strings.SplitN(s, "=", 2)
+			b.engine.Static(tmp[0], tmp[1])
 		}
 		internal.Log.Infof("serving static dir:%v", b.option.Server.StaticDirs)
 	}
@@ -179,7 +181,7 @@ func (b *KApi) Run() {
 	b.handleStatic()
 	b.handlePProf()
 
-	internal.Log.Infof("sever running http://%s:%d\n", b.option.intranetIP, b.option.Server.Port)
+	internal.Log.Infof("server running http://%s:%d\n", b.option.intranetIP, b.option.Server.Port)
 	err := b.engine.Run(fmt.Sprintf(":%d", b.option.Server.Port))
 	if err != nil {
 		if e, ok := err.(*net.OpError); ok {
