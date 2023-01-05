@@ -21,31 +21,138 @@ func newContext(c *gin.Context) *Context {
 	}
 }
 
-// Method get HTTP method
+// Method return HTTP method
 //
 //	@return string
 func (c *Context) Method() string {
 	return c.Request.Method
 }
 
-// GetQueryString get query param of string
+// GetQueryString return the string value of query param
 //
 //	@param key
 //
 //	@return string
-func (c *Context) GetQueryString(key string) string {
+func (c *Context) GetQueryString(key string, def ...string) string {
 	tmp, b := c.GetQuery(key)
 	if b {
 		return tmp
 	} else {
+		if len(def) > 0 {
+			return def[0]
+		}
 		return ""
 	}
 }
 
-// GetQueryInt get query param of integer
+// GetFormString return the string value of form param
 //
 //	@param key
-//	@param def default value
+//
+//	@return string
+func (c *Context) GetFormString(key string, def ...string) string {
+	tmp, b := c.GetPostForm(key)
+	if b {
+		return tmp
+	} else {
+		if len(def) > 0 {
+			return def[0]
+		}
+		return ""
+	}
+}
+
+// GetFormInt return the int value of form param
+//
+//	@param key
+//
+//	@return string
+func (c *Context) GetFormInt(key string, def ...int) int {
+	tmp, b := c.GetPostForm(key)
+	if b {
+		return conv.Int(tmp)
+	} else {
+		if len(def) > 0 {
+			return def[0]
+		}
+		return -1
+	}
+}
+
+// GetFormInt64 return the int64 value of form param
+//
+//	@param key
+//
+//	@return string
+func (c *Context) GetFormInt64(key string, def ...int64) int64 {
+	tmp, b := c.GetPostForm(key)
+	if b {
+		return conv.Int64(tmp)
+	} else {
+		if len(def) > 0 {
+			return def[0]
+		}
+		return -1
+	}
+}
+
+// GetFormUInt return the uint value of form param
+//
+//	@param key
+//
+//	@return string
+func (c *Context) GetFormUInt(key string, def ...uint) uint {
+	tmp, b := c.GetPostForm(key)
+	if b {
+		return conv.Uint(tmp)
+	} else {
+		if len(def) > 0 {
+			return def[0]
+		}
+		return 0
+	}
+}
+
+// GetFormFloat32 return the float32 value of query param
+//
+//	@param key
+//	@param def
+//
+//	@return string
+func (c *Context) GetFormFloat32(key string, def ...float32) float32 {
+	tmp, b := c.GetPostForm(key)
+	if b {
+		return conv.Float32(tmp)
+	} else {
+		if len(def) > 0 {
+			return def[0]
+		}
+		return 0.0
+	}
+}
+
+// GetFormFloat64 return the float64 value of form param
+//
+//	@param key
+//	@param def
+//
+//	@return string
+func (c *Context) GetFormFloat64(key string, def ...float64) float64 {
+	tmp, b := c.GetPostForm(key)
+	if b {
+		return conv.Float64(tmp)
+	} else {
+		if len(def) > 0 {
+			return def[0]
+		}
+		return 0.0
+	}
+}
+
+// GetQueryInt return the int value of query param
+//
+//	@param key
+//	@param def
 //
 //	@return int
 func (c *Context) GetQueryInt(key string, def ...int) int {
@@ -60,55 +167,63 @@ func (c *Context) GetQueryInt(key string, def ...int) int {
 	}
 }
 
-// GetQueryInt64 get query param of long
+// GetQueryInt64 return the int64 value of query param
 //
 //	@param key
-//	@param def default value
+//	@param def
 //
 //	@return int64
-func (c *Context) GetQueryInt64(key string) int64 {
+func (c *Context) GetQueryInt64(key string, def ...int64) int64 {
 	tmp, b := c.GetQuery(key)
 	if b {
 		return conv.Int64(tmp)
 	} else {
+		if len(def) > 0 {
+			return def[0]
+		}
 		return -1
 	}
 }
 
-// GetQueryUInt64 get query param of uint64
+// GetQueryUInt64 return the uint64 value of query param
 //
 //	@param key
-//	@param def default value
+//	@param def
 //
 //	@return uint64
-func (c *Context) GetQueryUInt64(key string) uint64 {
+func (c *Context) GetQueryUInt64(key string, def ...uint64) uint64 {
 	tmp, b := c.GetQuery(key)
 	if b {
 		return conv.Uint64(tmp)
 	} else {
+		if len(def) > 0 {
+			return def[0]
+		}
 		return 0
 	}
 }
 
-// GetQueryUInt get query param of uint
+// GetQueryUInt return the uint value of query param
 //
 //	@param key
-//	@param def default value
+//	@param def
 //
 //	@return uint
-func (c *Context) GetQueryUInt(key string) uint {
+func (c *Context) GetQueryUInt(key string, def ...uint) uint {
 	tmp, b := c.GetQuery(key)
 	if b {
 		return conv.Uint(tmp)
 	} else {
+		if len(def) > 0 {
+			return def[0]
+		}
 		return 0
 	}
 }
 
-// GetQueryBool get query param of boolean
+// GetQueryBool return the boolean value of query param
 //
 //	@param key
-//	@param def default value
 //
 //	@return bool
 func (c *Context) GetQueryBool(key string) bool {
@@ -120,13 +235,22 @@ func (c *Context) GetQueryBool(key string) bool {
 	}
 }
 
-// GetPageSize get query page and size
+// GetPageSize return the values of "page"-1 and "size" query params
 //
-//	@return int page
+//	@param def
+//	def[0] can be the default value of "page" param and def[1] can be the default value of "size" param
+//
+//	@return int page-1
 //	@return int size
-func (c *Context) GetPageSize() (int, int) {
-	page := c.GetQueryInt("page", 1)
-	size := c.GetQueryInt("size", 10)
+func (c *Context) GetPageSize(def ...int) (int, int) {
+	defPage := 1
+	defSize := 10
+	if len(def) > 1 {
+		defPage = def[0]
+		defSize = def[1]
+	}
+	page := c.GetQueryInt("page", defPage)
+	size := c.GetQueryInt("size", defSize)
 	return conv.Int(page) - 1, conv.Int(size)
 }
 
@@ -180,7 +304,7 @@ func (c *Context) RemoteAddr() string {
 	return addr
 }
 
-// Map 注入
+// Map an instance
 //
 //	@param i
 //
@@ -189,7 +313,7 @@ func (c *Context) Map(i ...interface{}) inject.TypeMapper {
 	return c.inj.Map(i...)
 }
 
-// MapTo 注入为某个接口
+// MapTo map instance to interface
 //
 //	@param i 要注入的值（指针）
 //	@param j 接口类型（指针）

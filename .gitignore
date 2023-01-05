@@ -18,3 +18,4 @@ example/swagger.json
 example/gen.gob
 example/main*
 
+/example/cmd/example/main_reload

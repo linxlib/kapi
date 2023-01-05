@@ -75,7 +75,7 @@ func _defaultGetResult(code RESULT_CODE, msg string, count int64, data interface
 	}
 }
 
-//WriteJSON 写入json对象
+// WriteJSON 写入json对象
 func (c *Context) WriteJSON(obj interface{}) {
 	c.PureJSON(200, obj)
 }
@@ -104,6 +104,9 @@ func (c *Context) writeNotFoundMsg(msg string) {
 func (c *Context) writeUnAuthedMsg(msg string) {
 	c.PureJSON(GetResultFunc(RESULT_CODE_UNAUTHED, msg, 0, nil))
 }
+func (c *Context) writeMsgAndData(msg string, data interface{}) {
+	c.PureJSON(GetResultFunc(RESULT_CODE_SUCCESS, msg, 0, data))
+}
 
 var KAPIEXIT = "kapiexit"
 
@@ -118,6 +121,10 @@ func (c *Context) ListExit(count int64, list interface{}) {
 
 func (c *Context) DataExit(data interface{}) {
 	c.writeList(0, data)
+	c.Exit()
+}
+func (c *Context) MessageAndDataExit(message string, data interface{}) {
+	c.writeMsgAndData(message, data)
 	c.Exit()
 }
 
