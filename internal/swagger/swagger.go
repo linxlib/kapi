@@ -1,6 +1,7 @@
 package swagger
 
 import (
+	"encoding/json"
 	"github.com/linxlib/kapi/internal"
 	doc2 "github.com/linxlib/kapi/internal/doc"
 	"strings"
@@ -80,7 +81,8 @@ func (doc *DocSwagger) AddPatch2(url string, p Param, method string) {
 
 // GetAPIString 获取返回数据
 func (doc *DocSwagger) GetAPIString() string {
-	return internal.MarshalToJson(doc.Client, true)
+	b, _ := json.MarshalIndent(doc.Client, "", "     ")
+	return string(b)
 }
 
 func (doc *DocSwagger) SetDefinition(m *doc2.Model, si *doc2.StructInfo) string {

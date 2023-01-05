@@ -452,12 +452,27 @@ func (b *KApi) addDocModel(model *doc2.Model) {
 
 			}
 
-			url := internal.BuildRelativePath(model.Group, tagControllerMethod.RouterPath)
+			url := buildRelativePath(model.Group, tagControllerMethod.RouterPath)
 			p.OperationID = tagControllerMethod.Method + "_" + strings.ReplaceAll(tagControllerMethod.RouterPath, "/", "_")
 			b.doc.AddPatch2(url, p, tagControllerMethod.Method)
 
 		}
 	}
+}
+
+func buildRelativePath(prepath, routerPath string) string {
+	if strings.HasSuffix(prepath, "/") {
+		if strings.HasPrefix(routerPath, "/") {
+			return prepath + strings.TrimPrefix(routerPath, "/")
+		}
+		return prepath + routerPath
+	}
+
+	if strings.HasPrefix(routerPath, "/") {
+		return prepath + routerPath
+	}
+
+	return prepath + "/" + routerPath
 }
 
 // register 注册路由到gin

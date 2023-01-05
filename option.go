@@ -6,6 +6,8 @@ import (
 	"github.com/linxlib/conf"
 	"github.com/linxlib/kapi/internal"
 	"github.com/linxlib/kapi/internal/cors"
+	"net"
+	"os"
 	"time"
 )
 
@@ -90,11 +92,11 @@ func defaultOption() *Option {
 				param.ClientIP,
 				methodColor, param.Method, resetColor,
 				param.Path,
-				internal.ByteCountSI(int64(param.BodySize)),
+				byteCountSI(int64(param.BodySize)),
 				param.ErrorMessage,
 			)
 		},
-		intranetIP: internal.GetIntranetIp(),
+		intranetIP: getIntranetIP(),
 		recoverErrorFunc: func(err interface{}) {
 			switch err {
 			case KAPIEXIT:
@@ -105,6 +107,38 @@ func defaultOption() *Option {
 		},
 	}
 	return readConfig(o)
+}
+
+// ByteCountSI 字节数转带单位
+func byteCountSI(b int64) string {
+	const unit = 1000
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB",
+		float64(b)/float64(div), "kMGTPE"[exp])
+}
+
+func getIntranetIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		internal.Log.Errorln(err)
+		os.Exit(1)
+	}
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+
+		}
+	}
+	return "localhost"
 }
 
 func (o *Option) SetGinLoggerFormatter(formatter gin.LogFormatter) *Option {

@@ -15,7 +15,3 @@ func IsInternalType(t string) bool {
 	}
 	return false
 }
-
-func IsEnum(t string) bool {
-	return true
-}
