@@ -103,6 +103,12 @@ func InterfaceOf(value interface{}) reflect.Type {
 	return t
 }
 
+var _i = New()
+
+func Default() Injector {
+	return _i
+}
+
 // New returns a new Injector.
 func New() Injector {
 	return &injector{
