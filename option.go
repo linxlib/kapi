@@ -56,6 +56,7 @@ func readConfig(o *Option) *Option {
 	o.Server.Cors.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
 	o.Server.Cors.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	o.Server.EnablePProf = false
+
 	_ = conf.Load(o, conf.File("config.toml"),
 		conf.Dirs("./", "./config/"))
 

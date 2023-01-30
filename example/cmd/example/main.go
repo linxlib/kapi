@@ -88,7 +88,8 @@ func main() {
 	k.RegisterResultBuilder(new(MyResultBuilder))
 	// k := kapi.New() 也可以这样只使用配置文件进行配置
 	//此处解析路由和注册路由
-	k.RegisterRouter(new(controller.Example))
 	k.MapTo(&controller.MyServiceImpl{}, (*controller.MyService)(nil))
+	k.RegisterRouter(new(controller.Example))
+
 	k.Run()
 }

@@ -27,10 +27,11 @@ func (b *Base) HeaderAuth(c *kapi.Context) {
 	}
 }
 
-//Example 例子
-//@ROUTE /api/v1/example
+// Example 例子
+// @ROUTE /api/v1/example
 type Example struct {
 	Base
+	AMyService MyService `inject:""`
 }
 
 type MyReq struct {
@@ -38,8 +39,8 @@ type MyReq struct {
 	Size int `query:"size,default=15"`
 }
 
-//GetList 获取列表
-//@GET /list
+// GetList 获取列表
+// @GET /list
 func (e *Example) GetList(
 	c *kapi.Context,
 	req *MyReq,
@@ -51,7 +52,12 @@ func (e *Example) GetList(
 	c.Success()
 }
 
-//@GET /test
+// @GET /test1
+func (e *Example) TestPure1(c *kapi.Context) {
+	c.SuccessExit(e.AMyService.Test())
+}
+
+// @GET /test
 func (e *Example) TestPure(c *kapi.Context) {
 	a, _ := c.Get("123456")
 	c.SuccessExit(a)
