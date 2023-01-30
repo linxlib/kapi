@@ -84,10 +84,11 @@ func (a *AstDoc) getFileByPkgPath(objPkg string) string {
 	panic(fmt.Errorf("can not eval pkg:[%v] must include [%v]", objPkg, a.modPkg))
 }
 
-//ResolveController analysis controller
-//  @param controllerName
+// ResolveController analysis controller
 //
-//  @return *ctlScheme
+//	@param controllerName
+//
+//	@return *ctlScheme
 func (a *AstDoc) ResolveController(controllerName string) *ctlScheme {
 	comment := &ctlScheme{
 		Imports: make(map[string]string),
@@ -130,6 +131,7 @@ func (a *AstDoc) ResolveController(controllerName string) *ctlScheme {
 													commentContent = "Authorization"
 												}
 												comment.TokenHeader = commentContent
+
 											case controllerName:
 												comment.TagName = commentContent
 											default:
@@ -150,12 +152,13 @@ func (a *AstDoc) ResolveController(controllerName string) *ctlScheme {
 	return comment
 }
 
-//ResolveMethod analysis method by name
-//  @param methodName
+// ResolveMethod analysis method by name
 //
-//  @return *methodComment
-//  @return *doc.StructInfo
-//  @return *doc.StructInfo
+//	@param methodName
+//
+//	@return *methodComment
+//	@return *doc.StructInfo
+//	@return *doc.StructInfo
 func (a *AstDoc) ResolveMethod(methodName string) (*methodComment, *doc.StructInfo, *doc.StructInfo) {
 	sdl, gc := a.resolveMethodComment(methodName)
 	var docReq, docResp *doc.StructInfo
@@ -172,11 +175,12 @@ func (a *AstDoc) ResolveMethod(methodName string) (*methodComment, *doc.StructIn
 	return gc, docReq, docResp
 }
 
-//resolveMethodComment analysis method comments
-//  @param methodName
+// resolveMethodComment analysis method comments
 //
-//  @return *ast.FuncDecl
-//  @return *methodComment
+//	@param methodName
+//
+//	@return *ast.FuncDecl
+//	@return *methodComment
 func (a *AstDoc) resolveMethodComment(methodName string) (*ast.FuncDecl, *methodComment) {
 	if f, ok := a.controllerScheme.FuncMap[methodName]; ok {
 		gc := &methodComment{}
@@ -223,10 +227,11 @@ func (a *AstDoc) resolveMethodComment(methodName string) (*ast.FuncDecl, *method
 
 }
 
-//resolveMethodReqResp analysis result struct of method
-//  @param req
+// resolveMethodReqResp analysis result struct of method
 //
-//  @return *doc.StructInfo
+//	@param req
+//
+//	@return *doc.StructInfo
 func (a *AstDoc) resolveMethodReqResp(req ast.Expr) *doc.StructInfo {
 	// paramInfo 参数类型描述
 	type paramInfo struct {
@@ -281,10 +286,11 @@ func (a *AstDoc) resolveMethodReqResp(req ast.Expr) *doc.StructInfo {
 	return ant.ParseStruct(tmp, param.Type, false)
 }
 
-//resolveMethodRespByString analysis the result struct of method from method comments
-//  @param resultType eg. model.Type []model.Type
+// resolveMethodRespByString analysis the result struct of method from method comments
 //
-//  @return *doc.StructInfo
+//	@param resultType eg. model.Type []model.Type
+//
+//	@return *doc.StructInfo
 func (a *AstDoc) resolveMethodRespByString(resultType string) *doc.StructInfo {
 	aa := strings.Split(resultType, ".")
 	xx := aa[0]

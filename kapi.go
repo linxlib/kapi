@@ -1,14 +1,14 @@
 package kapi
 
 import (
-	"embed"
 	"fmt"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
-	"github.com/linxlib/kapi/inject"
+	"github.com/linxlib/inject"
 	"github.com/linxlib/kapi/internal"
 	"github.com/linxlib/kapi/internal/cors"
 	"github.com/linxlib/kapi/internal/swagger"
+	"github.com/linxlib/swagger_inject"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -41,9 +41,6 @@ var _info = `
  Version:   %s/%s
  OS/Arch:   %s/%s
  BuiltTime: %s`
-
-//go:embed swagger/*
-var swaggerFS embed.FS
 
 type KApi struct {
 	inject.Injector
@@ -160,7 +157,7 @@ func (b *KApi) handleDoc() {
 		})
 
 		b.engine.GET("/swagger/*any", func(c *gin.Context) {
-			c.FileFromFS(c.Request.URL.Path, http.FS(swaggerFS))
+			c.FileFromFS(c.Request.URL.Path, http.FS(swagger_inject.FS))
 		})
 
 	}

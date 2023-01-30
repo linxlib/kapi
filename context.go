@@ -3,21 +3,41 @@ package kapi
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/linxlib/conv"
-	"github.com/linxlib/kapi/inject"
+	"github.com/linxlib/inject"
 	"strings"
 )
 
 // Context KApi Context
 type Context struct {
 	*gin.Context
-	inj inject.Injector
+	inj           inject.Injector
+	ResultBuilder IResultBuilder `inject:""`
 }
 
 // newContext create a new custom context
-func newContext(c *gin.Context) *Context {
-	return &Context{
-		Context: c,
-		inj:     inject.New(),
+func newContext(c *gin.Context, parent ...inject.Injector) *Context {
+	if len(parent) > 0 {
+		cc := &Context{
+			Context: c,
+			inj:     inject.New(),
+		}
+		cc.inj.SetParent(parent[0])
+		err := cc.inj.Apply(cc)
+
+		if err != nil {
+			cc.ResultBuilder = &DefaultResultBuilder{}
+		}
+		return cc
+	} else {
+		cc := &Context{
+			Context: c,
+			inj:     inject.New(),
+		}
+		err := cc.inj.Apply(cc)
+		if err != nil {
+			cc.ResultBuilder = &DefaultResultBuilder{}
+		}
+		return cc
 	}
 }
 

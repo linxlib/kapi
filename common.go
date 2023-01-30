@@ -84,8 +84,7 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 		method = ContextInvoker(vt)
 	}
 	return func(context *gin.Context) {
-		c := newContext(context)
-		c.inj.SetParent(b)
+		c := newContext(context, b)
 		c.Map(c) //inject Context
 		defer func() {
 			if err := recover(); err != nil {
@@ -146,9 +145,9 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 			rerr := returnValues[1].Interface().(error)
 
 			if rerr != nil {
-				c.PureJSON(GetResultFunc(RESULT_CODE_ERROR, rerr.Error(), 0, resp))
+				c.PureJSON(c.ResultBuilder.OnErrorDetail(rerr.Error(), resp))
 			} else {
-				c.PureJSON(GetResultFunc(RESULT_CODE_SUCCESS, "", 0, resp))
+				c.PureJSON(c.ResultBuilder.OnData("", 0, resp))
 			}
 		}
 	}
@@ -168,7 +167,7 @@ func (b *KApi) handleUnmarshalError(c *Context, err error) {
 	} else {
 		fields = append(fields, err.Error())
 	}
-	c.PureJSON(GetResultFunc(RESULT_CODE_FAIL, strings.Join(fields, ";"), 0, nil))
+	c.PureJSON(c.ResultBuilder.OnFail(strings.Join(fields, ";"), fields))
 	return
 }
 
