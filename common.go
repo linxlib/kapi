@@ -3,12 +3,9 @@ package kapi
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-playground/locales/zh"
-	ut "github.com/go-playground/universal-translator"
-	zh_translations "github.com/go-playground/validator/v10/translations/zh"
+	binding3 "github.com/linxlib/binding"
 	"github.com/linxlib/kapi/internal"
 	"github.com/linxlib/kapi/internal/ast_doc"
-	binding3 "github.com/linxlib/kapi/internal/binding"
 	doc2 "github.com/linxlib/kapi/internal/doc"
 	swagger2 "github.com/linxlib/kapi/internal/swagger"
 	"io"
@@ -19,7 +16,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	binding2 "github.com/gin-gonic/gin/binding"
-	"github.com/go-playground/validator/v10"
 )
 
 // Interceptor implement this to intercept controller method
@@ -155,11 +151,8 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 
 func (b *KApi) handleUnmarshalError(c *Context, err error) {
 	var fields []string
-	if v, ok := err.(validator.ValidationErrors); ok {
-		for _, err := range v {
-			tmp := err.Translate(trans)
-			fields = append(fields, tmp)
-		}
+	if v, ok := binding3.HandleValidationErrors(err); ok {
+		fields = v
 	} else if _, ok := err.(*json.UnmarshalTypeError); ok {
 		err := err.(*json.UnmarshalTypeError)
 		tmp := fmt.Sprintf("%v:%v(but[%v])", err.Field, err.Type.String(), err.Value)
@@ -180,7 +173,7 @@ func (b *KApi) handleUnmarshalError(c *Context, err error) {
 func (b *KApi) doBindReq(c *Context, v interface{}) error {
 	if err := c.ShouldBindHeader(v); err != nil {
 		if err != io.EOF {
-			if _, ok := err.(validator.ValidationErrors); ok {
+			if _, ok := binding3.HandleValidationErrors(err); ok {
 
 			} else {
 				internal.Log.Errorln("ShouldBindHeader:", err)
@@ -191,7 +184,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 
 	if err := c.ShouldBindUri(v); err != nil {
 		if err != io.EOF {
-			if _, ok := err.(validator.ValidationErrors); ok {
+			if _, ok := binding3.HandleValidationErrors(err); ok {
 
 			} else {
 				internal.Log.Errorln("ShouldBindUri:", err)
@@ -202,7 +195,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 	}
 	if err := binding3.Path.Bind(c.Context, v); err != nil {
 		if err != io.EOF {
-			if _, ok := err.(validator.ValidationErrors); ok {
+			if _, ok := binding3.HandleValidationErrors(err); ok {
 
 			} else {
 				internal.Log.Errorln("Path.Bind:", err)
@@ -214,7 +207,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 
 	if err := c.ShouldBindWith(v, binding3.Query); err != nil {
 		if err != io.EOF {
-			if _, ok := err.(validator.ValidationErrors); ok {
+			if _, ok := binding3.HandleValidationErrors(err); ok {
 
 			} else {
 				internal.Log.Errorln("ShouldBindWith.Query:", err)
@@ -227,7 +220,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 	if c.ContentType() == "multipart/form-data" {
 		if err := c.ShouldBindWith(v, binding2.FormMultipart); err != nil {
 			if err != io.EOF {
-				if _, ok := err.(validator.ValidationErrors); ok {
+				if _, ok := binding3.HandleValidationErrors(err); ok {
 
 				} else {
 					internal.Log.Errorln("ShouldBindWith.FormMultipart:", err)
@@ -555,17 +548,4 @@ func (b *KApi) genRouterCode() {
 	internal.Log.Infoln("write out gen.gob")
 	routeInfo.SetApiBody(*b.doc.Client)
 	routeInfo.writeOut()
-}
-
-var (
-	uni   *ut.UniversalTranslator
-	trans ut.Translator
-)
-
-func init() {
-	chinese := zh.New()
-	uni = ut.New(chinese, chinese)
-	trans, _ = uni.GetTranslator("zh")
-	validate := binding3.Validator.Engine().(*validator.Validate)
-	_ = zh_translations.RegisterDefaultTranslations(validate, trans)
 }
