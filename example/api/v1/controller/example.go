@@ -57,8 +57,19 @@ func (e *Example) TestPure1(c *kapi.Context) {
 	c.SuccessExit(e.AMyService.Test())
 }
 
+type MyResult struct {
+	Name string `json:"name"`
+}
+
 // @GET /test
+// @RESP MyResult
 func (e *Example) TestPure(c *kapi.Context) {
 	a, _ := c.Get("123456")
 	c.SuccessExit(a)
+}
+
+// @POST /TestResult
+// @GET /TestResult
+func (e *Example) TestResult(c *kapi.Context) (*MyResult, error) {
+	return nil, nil
 }

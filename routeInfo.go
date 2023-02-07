@@ -73,15 +73,14 @@ func (ri *RouteInfo) AddFunc(handlerFuncName, routerPath string, method string) 
 	})
 }
 
-//SetApiBody store swagger json spec
-//  @param api
+// SetApiBody store swagger json spec
 //
+//	@param api
 func (ri *RouteInfo) SetApiBody(api swagger.APIBody) {
 	ri.genInfo.ApiBody = api
 }
 
-//writeOut write router info to gen.gob
-//
+// writeOut write router info to gen.gob
 func (ri *RouteInfo) writeOut() {
 	ri.mu.Lock()
 	defer ri.mu.Unlock()
@@ -90,15 +89,15 @@ func (ri *RouteInfo) writeOut() {
 	ri.genInfo.Tm = time.Now().Unix()
 	err := encoder.Encode(ri.genInfo)
 	if err != nil {
-		internal.Log.Error(err)
+		internal.ErrorLog.Error(err)
 		return
 	}
 	internal.WriteFile("gen.gob", buf.Bytes(), true)
 }
 
-//getInfo get router info of method comments
+// getInfo get router info of method comments
 //
-//  @return map[string][]MethodComment
+//	@return map[string][]MethodComment
 func (ri *RouteInfo) getInfo() map[string][]MethodComment {
 	ri.mu.Lock()
 	defer ri.mu.Unlock()

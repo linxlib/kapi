@@ -3,11 +3,11 @@ module github.com/linxlib/kapi
 go 1.19
 
 require (
-	github.com/gin-contrib/pprof v1.4.0
 	github.com/gin-gonic/gin v1.8.2
 	github.com/go-playground/assert/v2 v2.2.0
+	github.com/gookit/color v1.5.2
 	github.com/linxlib/binding v0.1.1
-	github.com/linxlib/conf v0.0.3
+	github.com/linxlib/config v0.1.0
 	github.com/linxlib/conv v0.0.0-20200419055849-46faf16ac98f
 	github.com/linxlib/inject v0.1.1
 	github.com/linxlib/logs v0.1.5
@@ -26,9 +26,11 @@ require (
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.6 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
+	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
+	go.uber.org/atomic v1.7.0 // indirect
+	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/crypto v0.5.0 // indirect
 	golang.org/x/net v0.5.0 // indirect
 	golang.org/x/sys v0.4.0 // indirect

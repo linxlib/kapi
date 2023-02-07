@@ -176,7 +176,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 			if _, ok := binding3.HandleValidationErrors(err); ok {
 
 			} else {
-				internal.Log.Errorln("ShouldBindHeader:", err)
+				internal.ErrorLog.Errorln("ShouldBindHeader:", err)
 				return err
 			}
 		}
@@ -187,7 +187,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 			if _, ok := binding3.HandleValidationErrors(err); ok {
 
 			} else {
-				internal.Log.Errorln("ShouldBindUri:", err)
+				internal.ErrorLog.Errorln("ShouldBindUri:", err)
 				return err
 			}
 
@@ -198,7 +198,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 			if _, ok := binding3.HandleValidationErrors(err); ok {
 
 			} else {
-				internal.Log.Errorln("Path.Bind:", err)
+				internal.ErrorLog.Errorln("Path.Bind:", err)
 				return err
 			}
 
@@ -210,7 +210,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 			if _, ok := binding3.HandleValidationErrors(err); ok {
 
 			} else {
-				internal.Log.Errorln("ShouldBindWith.Query:", err)
+				internal.ErrorLog.Errorln("ShouldBindWith.Query:", err)
 				return err
 			}
 
@@ -223,7 +223,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 				if _, ok := binding3.HandleValidationErrors(err); ok {
 
 				} else {
-					internal.Log.Errorln("ShouldBindWith.FormMultipart:", err)
+					internal.ErrorLog.Errorln("ShouldBindWith.FormMultipart:", err)
 					return err
 				}
 
@@ -234,7 +234,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 
 	if err := c.ShouldBindJSON(v); err != nil {
 		if err != io.EOF {
-			internal.Log.Errorln("body EOF:", err)
+			internal.ErrorLog.Errorln("body EOF:", err)
 			return err
 		}
 
@@ -244,7 +244,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 
 func (b *KApi) analysisController(controller interface{}, model *doc2.Model, modPkg string, modFile string) {
 	controllerRefVal := reflect.ValueOf(controller)
-	internal.Log.Debugf("%6s %s", ">", controllerRefVal.Type().String())
+	Debugf("%6s %s", ">", controllerRefVal.Type().String())
 	controllerType := reflect.Indirect(controllerRefVal).Type()
 	controllerPkgPath := controllerType.PkgPath()
 	controllerName := controllerType.Name()
@@ -279,7 +279,7 @@ func (b *KApi) analysisController(controller interface{}, model *doc2.Model, mod
 // analysisControllers
 func (b *KApi) analysisControllers(controllers ...interface{}) bool {
 	start := time.Now()
-	internal.Log.Debugf("analysis controllers...")
+	Debugf("analysis controllers...")
 	//TODO: groupPath也要加入到文档的路由中
 	modPkg, modFile, isFind := ast_doc.GetModuleInfo(2)
 	if !isFind {
@@ -295,7 +295,7 @@ func (b *KApi) analysisControllers(controllers ...interface{}) bool {
 	if b.option.Server.NeedDoc {
 		b.addDocModel(newDoc)
 	}
-	internal.Log.Debugf("elapsed time:%s", time.Now().Sub(start).String())
+	Debugf("elapsed time:%s", time.Now().Sub(start).String())
 	return true
 }
 
@@ -469,11 +469,8 @@ func buildRelativePath(prepath, routerPath string) string {
 
 // register 注册路由到gin
 func (b *KApi) register(router *gin.Engine, cList ...interface{}) {
-	if b.genFlag {
-		return
-	}
 	start := time.Now()
-	internal.Log.Debug("register controllers..")
+	Debugf("register controllers..")
 	mp := routeInfo.getInfo()
 	for _, c := range cList {
 		refTyp := reflect.TypeOf(c)
@@ -488,20 +485,20 @@ func (b *KApi) register(router *gin.Engine, cList ...interface{}) {
 			//_, _b := b.checkMethodParamCount(method.Type, true)
 			if v, ok := mp[objName+"/"+method.Name]; ok {
 				for _, v1 := range v {
-					internal.Log.Debugf("%6s  %-20s --> %s", v1.Method, v1.RouterPath, t.PkgPath()+">"+objName+">"+method.Name)
+					Debugf("%6s  %-30s --> %s", v1.Method, v1.RouterPath, t.PkgPath()+"."+objName+"."+method.Name)
 					err := b.registerMethodToRouter(router,
 						v1.Method,
 						v1.RouterPath,
 						refVal.Interface(),
 						refVal.Method(m).Interface())
 					if err != nil {
-						internal.Log.Errorln(err)
+						internal.ErrorLog.Errorln(err)
 					}
 				}
 			}
 		}
 	}
-	internal.Log.Debugf("elapsed time:%s", time.Now().Sub(start).String())
+	Debugf("elapsed time:%s", time.Now().Sub(start).String())
 }
 
 // registerMethodToRouter register to gin router
@@ -545,7 +542,7 @@ func (b *KApi) genRouterCode() {
 	if !b.option.Server.Debug || b.doc == nil {
 		return
 	}
-	internal.Log.Infoln("write out gen.gob")
+	Infof("write out gen.gob")
 	routeInfo.SetApiBody(*b.doc.Client)
 	routeInfo.writeOut()
 }
