@@ -278,12 +278,12 @@ func (c Config) parseWildcardRules() [][]string {
 // DefaultConfig returns a generic default configuration mapped to localhost.
 func DefaultConfig() Config {
 	return Config{
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"},
-		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
-		AllowAllOrigins : true,
-		AllowCredentials: false,
+		AllowMethods:        []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"},
+		AllowHeaders:        []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
+		AllowAllOrigins:     true,
+		AllowCredentials:    false,
 		AllowPrivateNetwork: true,
-		MaxAge:           12 * time.Hour,
+		MaxAge:              12 * time.Hour,
 	}
 }
 

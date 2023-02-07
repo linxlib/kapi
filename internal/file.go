@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 )
 
@@ -37,13 +36,13 @@ func GetPathDirs(absDir string) (re []string) {
 }
 
 // GetCurrentDirectory 获取exe所在目录
-func GetCurrentDirectory() string {
-	dir, _ := os.Executable()
-	exPath := filepath.Dir(dir)
-	// fmt.Println(exPath)
-
-	return exPath
-}
+//func GetCurrentDirectory() string {
+//	dir, _ := os.Executable()
+//	exPath := filepath.Dir(dir)
+//	// fmt.Println(exPath)
+//
+//	return exPath
+//}
 
 // WriteFile 写入文件
 func WriteFile(fname string, src []byte, isClear bool) bool {

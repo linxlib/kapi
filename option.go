@@ -1,96 +1,162 @@
 package kapi
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/linxlib/conf"
+	"github.com/linxlib/config"
 	"github.com/linxlib/kapi/internal"
 	"github.com/linxlib/kapi/internal/cors"
+	"net"
+	"os"
 	"time"
 )
 
+// RecoverErrorFunc recover 错误设置
+type RecoverErrorFunc func(interface{})
+
+type StaticDir struct {
+	Path string `yaml:"path"`
+	Root string `yaml:"root"`
+}
+
+type ServerOption struct {
+	Debug      bool        `yaml:"debug"`
+	NeedDoc    bool        `yaml:"needDoc"`
+	DocName    string      `yaml:"docName"`
+	DocDesc    string      `yaml:"docDesc"`
+	Port       int         `yaml:"port"`
+	DocVer     string      `yaml:"docVer"`
+	StaticDirs []StaticDir `yaml:"staticDirs"`
+	Cors       cors.Config `yaml:"cors"`
+}
+
+var _defaultServerOption = ServerOption{
+	Debug:   true,
+	NeedDoc: true,
+	DocName: "KApi",
+	DocDesc: "KApi",
+	Port:    time.Now().Year(),
+	DocVer:  "v1",
+	StaticDirs: []StaticDir{
+		{Path: "static", Root: "static"},
+	},
+	Cors: cors.DefaultConfig(),
+}
+
 type Option struct {
-	ginLoggerFormatter gin.LogFormatter
-	corsConfig         cors.Config
+	ginLoggerFormatter gin.HandlerFunc
 	recoverErrorFunc   RecoverErrorFunc
 	intranetIP         string
-
-	Server struct {
-		Debug                       bool     `conf:"debug" default:"true"`
-		NeedDoc                     bool     `conf:"needDoc" default:"true"`
-		NeedReDoc                   bool     `conf:"needReDoc" default:"false"`
-		NeedSwagger                 bool     `conf:"needSwagger" default:"true"`
-		DocName                     string   `conf:"docName" default:"K-Api"`
-		DocDesc                     string   `conf:"docDesc" default:"K-Api"`
-		Port                        int      `conf:"port" default:"2022"`
-		OpenDocInBrowser            bool     `conf:"openDocInBrowser" default:"true"`
-		DocDomain                   string   `conf:"docDomain"`
-		DocVer                      string   `conf:"docVer" default:"v1"`
-		RedirectToDocWhenAccessRoot bool     `conf:"redirectToDocWhenAccessRoot" default:"true"`
-		APIBasePath                 string   `conf:"apiBasePath" default:""`
-		StaticDirs                  []string `conf:"staticDirs" default:"[static]"`
-		EnablePProf                 bool     `conf:"enablePProf" default:"false"`
-		Cors                        struct {
-			AllowAllOrigins     bool          `conf:"allowAllOrigins" default:"true"`
-			AllowCredentials    bool          `conf:"allowCredentials" default:"false"`
-			MaxAge              time.Duration `conf:"maxAge" default:"12h"`
-			AllowWebSockets     bool          `conf:"allowWebSockets" default:"true"`
-			AllowWildcard       bool          `conf:"allowWildcard" default:"true"`
-			AllowPrivateNetwork bool          `conf:"allowPrivateNetwork" default:"true"`
-			AllowMethods        []string      `conf:"allowMethods" default:"[GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS]"`
-			AllowHeaders        []string      `conf:"allowHeaders" default:"[Origin,Content-Length,Content-Type,Authorization,x-requested-with]"`
-		} `conf:"cors"`
-	} `conf:"server"`
+	corsHandler        gin.HandlerFunc
+	y                  *config.YAML
+	Server             ServerOption
 }
 
 func readConfig(o *Option) *Option {
-	//配置cors
-	corsConfig := cors.DefaultConfig()
 
-	_ = conf.Load(o, conf.File("config.toml"),
-		conf.Dirs("./", "./config"))
+	if internal.FileIsExist("config/config.yaml") {
+		conf, err := config.NewYAML(config.File("config/config.yaml"))
+		if err != nil {
+			Errorf("%s", err)
+		}
+		err = conf.Get("server").Populate(&_defaultServerOption)
+		if err != nil {
+			Errorf("%s", err)
+		}
+		o.y = conf
+	} else {
+		Warnf("file %s not exist, use default options", "config/config.yaml")
+	}
+	o.Server = _defaultServerOption
+	o.corsHandler = cors.New(o.Server.Cors)
 
-	corsConfig.AllowAllOrigins = o.Server.Cors.AllowAllOrigins
-	corsConfig.AllowPrivateNetwork = o.Server.Cors.AllowPrivateNetwork
-	corsConfig.AllowCredentials = o.Server.Cors.AllowCredentials
-	corsConfig.MaxAge = o.Server.Cors.MaxAge
-	corsConfig.AllowWebSockets = o.Server.Cors.AllowWebSockets
-	corsConfig.AllowWildcard = o.Server.Cors.AllowWildcard
-	corsConfig.AllowMethods = o.Server.Cors.AllowMethods
-	corsConfig.AllowHeaders = o.Server.Cors.AllowHeaders
-	o.corsConfig = corsConfig
 	return o
 }
 
 func defaultOption() *Option {
-
-	gin.ForceConsoleColor()
 	o := &Option{
-		ginLoggerFormatter: defaultLogFormatter,
-		intranetIP:         internal.GetIntranetIp(),
+		ginLoggerFormatter: gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+			var statusColor, methodColor, resetColor string
+			if param.IsOutputColor() {
+				statusColor = param.StatusCodeColor()
+				methodColor = param.MethodColor()
+				resetColor = param.ResetColor()
+			}
+
+			if param.Latency > time.Minute {
+				// Truncate in a golang < 1.8 safe way
+				param.Latency = param.Latency - param.Latency%time.Second
+			}
+			return fmt.Sprintf("%v |%s %3d %s| %13v | %15s |%s %-7s %s %#v (%s)\n%s",
+				param.TimeStamp.Format("01/02 - 15:04:05"),
+				statusColor, param.StatusCode, resetColor,
+				param.Latency,
+				param.ClientIP,
+				methodColor, param.Method, resetColor,
+				param.Path,
+				byteCountSI(int64(param.BodySize)),
+				param.ErrorMessage,
+			)
+		}),
+		intranetIP: getIntranetIP(),
 		recoverErrorFunc: func(err interface{}) {
 			switch err {
 			case KAPIEXIT:
 				return
 			default:
-				internal.Log.Error(err)
+				Errorf("%s", err)
 			}
 		},
 	}
 	return readConfig(o)
 }
 
-func (o *Option) SetGinLoggerFormatter(formatter gin.LogFormatter) *Option {
-	o.ginLoggerFormatter = formatter
-	return o
+// ByteCountSI 字节数转带单位
+func byteCountSI(b int64) string {
+	const unit = 1000
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB",
+		float64(b)/float64(div), "kMGTPE"[exp])
 }
 
+func getIntranetIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		Errorf("%s", err)
+		os.Exit(1)
+	}
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+
+		}
+	}
+	return "localhost"
+}
+
+func (o *Option) SetGinLoggerFormatter(formatter gin.LogFormatter) *Option {
+	o.ginLoggerFormatter = gin.LoggerWithFormatter(formatter)
+	return o
+}
+func (o *Option) Get() *config.YAML {
+	return o.y
+}
 func (o *Option) SetRecoverFunc(f func(interface{})) *Option {
 	o.recoverErrorFunc = func(err interface{}) {
 		switch err {
 		case KAPIEXIT:
 			return
 		default:
-			internal.Log.Error(err)
+			Errorf("%s", err)
 			f(err)
 		}
 	}

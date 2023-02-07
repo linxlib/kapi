@@ -1,26 +1,456 @@
 package kapi
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/linxlib/kapi/binding"
-	"github.com/linxlib/kapi/doc"
-	ast_doc2 "github.com/linxlib/kapi/doc/ast_doc"
-	"github.com/linxlib/kapi/doc/swagger"
+	binding3 "github.com/linxlib/binding"
 	"github.com/linxlib/kapi/internal"
+	"github.com/linxlib/kapi/internal/ast_doc"
+	doc2 "github.com/linxlib/kapi/internal/doc"
+	swagger2 "github.com/linxlib/kapi/internal/swagger"
 	"io"
-	"net/http"
 	"reflect"
-	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	binding2 "github.com/gin-gonic/gin/binding"
-	"github.com/go-playground/validator/v10"
 )
+
+// Interceptor implement this to intercept controller method
+type Interceptor interface {
+	Before(*Context)
+	After(*Context)
+}
+
+type HeaderAuth interface {
+	HeaderAuth(c *Context)
+}
+
+type BeforeBind interface {
+	BeforeBind(c *Context)
+}
+
+type AfterBind interface {
+	AfterBind(c *Context)
+}
+
+type BeforeCall interface {
+	BeforeCall(c *Context)
+}
+
+type AfterCall interface {
+	AfterCall(c *Context)
+}
+
+type OnPanic interface {
+	OnPanic(c *Context, err interface{})
+}
+
+type OnError interface {
+	OnError(c *Context, err error)
+}
+
+type OnValidationError interface {
+	OnValidationError(c *Context, err error)
+}
+
+type OnUnmarshalError interface {
+	OnUnmarshalError(c *Context, err error)
+}
+
+// ContextInvoker method like this will be FastInvoke by inject package(not use reflect)
+type ContextInvoker func(ctx *Context)
+
+func (invoke ContextInvoker) Invoke(params []interface{}) ([]reflect.Value, error) {
+	invoke(params[0].(*Context))
+	return nil, nil
+}
+
+// handle get gin.HandlerFunc of a controller method
+func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
+	typ := reflect.TypeOf(method)
+	//TODO:
+	hasReq := typ.NumIn() >= 2
+	reqIsValue := true
+
+	switch vt := method.(type) {
+	case func(*Context):
+		method = ContextInvoker(vt)
+	}
+	return func(context *gin.Context) {
+		c := newContext(context, b)
+		c.Map(c) //inject Context
+		defer func() {
+			if err := recover(); err != nil {
+				b.option.recoverErrorFunc(err)
+				if i, ok := controller.(OnPanic); ok {
+					i.OnPanic(c, err)
+				}
+			}
+		}()
+
+		if i, ok := controller.(HeaderAuth); ok {
+			i.HeaderAuth(c)
+		}
+		if c.IsAborted() {
+			return
+		}
+		if hasReq {
+			var req reflect.Value
+			reqType := typ.In(1)
+			req = reflect.New(reqType)
+			if reqType.Kind() == reflect.Ptr {
+				reqIsValue = false
+				req = reflect.New(reqType.Elem())
+			}
+			if i, ok := controller.(BeforeBind); ok {
+				i.BeforeBind(c)
+			}
+			if err := b.doBindReq(c, req.Interface()); err != nil {
+				b.handleUnmarshalError(c, err)
+				return
+			}
+			if reqIsValue {
+				req = req.Elem()
+			}
+			c.Map(req.Interface())
+			if i, ok := controller.(AfterBind); ok {
+				i.AfterBind(c)
+			}
+		}
+		if i, ok := controller.(BeforeCall); ok {
+			i.BeforeCall(c)
+		}
+		returnValues, err := c.inj.Invoke(method)
+		if err != nil {
+			panic(fmt.Sprintf("unable to invoke the handler [%T]: %controller", method, err))
+		}
+		if c.IsAborted() {
+			return
+		}
+		if i, ok := controller.(AfterCall); ok {
+			i.AfterCall(c)
+		}
+		if c.IsAborted() {
+			return
+		}
+		if len(returnValues) == 2 {
+			resp := returnValues[0].Interface()
+			rerr := returnValues[1].Interface().(error)
+
+			if rerr != nil {
+				c.PureJSON(c.ResultBuilder.OnErrorDetail(rerr.Error(), resp))
+			} else {
+				c.PureJSON(c.ResultBuilder.OnData("", 0, resp))
+			}
+		}
+	}
+}
+
+func (b *KApi) handleUnmarshalError(c *Context, err error) {
+	var fields []string
+	if v, ok := binding3.HandleValidationErrors(err); ok {
+		fields = v
+	} else if _, ok := err.(*json.UnmarshalTypeError); ok {
+		err := err.(*json.UnmarshalTypeError)
+		tmp := fmt.Sprintf("%v:%v(but[%v])", err.Field, err.Type.String(), err.Value)
+		fields = append(fields, tmp)
+	} else {
+		fields = append(fields, err.Error())
+	}
+	c.PureJSON(c.ResultBuilder.OnFail(strings.Join(fields, ";"), fields))
+	return
+}
+
+// doBindReq bind request to multi tag field
+//
+//	@param c
+//	@param v request param
+//
+//	@return error
+func (b *KApi) doBindReq(c *Context, v interface{}) error {
+	if err := c.ShouldBindHeader(v); err != nil {
+		if err != io.EOF {
+			if _, ok := binding3.HandleValidationErrors(err); ok {
+
+			} else {
+				Errorf("ShouldBindHeader:%s", err)
+				return err
+			}
+		}
+	}
+
+	if err := c.ShouldBindUri(v); err != nil {
+		if err != io.EOF {
+			if _, ok := binding3.HandleValidationErrors(err); ok {
+
+			} else {
+				Errorf("ShouldBindUri: %s", err)
+				return err
+			}
+
+		}
+	}
+	if err := binding3.Path.Bind(c.Context, v); err != nil {
+		if err != io.EOF {
+			if _, ok := binding3.HandleValidationErrors(err); ok {
+
+			} else {
+				Errorf("Path.Bind:%s", err)
+				return err
+			}
+
+		}
+	}
+
+	if err := c.ShouldBindWith(v, binding3.Query); err != nil {
+		if err != io.EOF {
+			if _, ok := binding3.HandleValidationErrors(err); ok {
+
+			} else {
+				Errorf("ShouldBindWith.Query:%s", err)
+				return err
+			}
+
+		}
+
+	}
+	if c.ContentType() == "multipart/form-data" {
+		if err := c.ShouldBindWith(v, binding2.FormMultipart); err != nil {
+			if err != io.EOF {
+				if _, ok := binding3.HandleValidationErrors(err); ok {
+
+				} else {
+					Errorf("ShouldBindWith.FormMultipart:%s", err)
+					return err
+				}
+
+			}
+
+		}
+	}
+
+	if err := c.ShouldBindJSON(v); err != nil {
+		if err != io.EOF {
+			Errorf("body EOF:%s", err)
+			return err
+		}
+
+	}
+	return nil
+}
+
+func (b *KApi) analysisController(controller interface{}, model *doc2.Model, modPkg string, modFile string) {
+	controllerRefVal := reflect.ValueOf(controller)
+	Debugf("%6s %s", ">", controllerRefVal.Type().String())
+	controllerType := reflect.Indirect(controllerRefVal).Type()
+	controllerPkgPath := controllerType.PkgPath()
+	controllerName := controllerType.Name()
+	astDoc := ast_doc.NewAstDoc(modPkg, modFile)
+	if astDoc.FillPackage(controllerPkgPath) == nil {
+		controllerScheme := astDoc.ResolveController(controllerName)
+		refTyp := reflect.TypeOf(controller)
+		// 遍历controller方法
+		for m := 0; m < refTyp.NumMethod(); m++ {
+			method := refTyp.Method(m)
+			//_, _b := b.checkMethodParamCount(method.Type, true)
+			if method.IsExported() {
+				mc, siReq, siResp := astDoc.ResolveMethod(method.Name)
+				if mc != nil {
+					for k, v := range mc.Routes {
+						routeInfo.AddFunc(controllerName+"/"+method.Name, k, v)
+						if b.option.Server.NeedDoc {
+							model.AddOne(controllerScheme.TagName, k,
+								v, mc.Summary, mc.Description,
+								siReq, siResp,
+								controllerScheme.TokenHeader, mc.IsDeprecated)
+						}
+					}
+
+				}
+
+			}
+		}
+	}
+}
+
+// analysisControllers
+func (b *KApi) analysisControllers(controllers ...interface{}) bool {
+	start := time.Now()
+	Debugf("analysis controllers...")
+	//TODO: groupPath也要加入到文档的路由中
+	modPkg, modFile, isFind := ast_doc.GetModuleInfo(2)
+	if !isFind {
+		return false
+	}
+
+	groupPath := b.engine.BasePath()
+	newDoc := doc2.NewDoc(groupPath)
+	for _, c := range controllers {
+		b.analysisController(c, newDoc, modPkg, modFile)
+	}
+
+	if b.option.Server.NeedDoc {
+		b.addDocModel(newDoc)
+	}
+	Debugf("elapsed time:%s", time.Now().Sub(start).String())
+	return true
+}
+
+func (b *KApi) addDocModel(model *doc2.Model) {
+	var tags []string
+	for k, v := range model.TagControllers {
+		for _, v1 := range v {
+			b.doc.SetDefinition(model, v1.Req)
+			b.doc.SetDefinition(model, v1.Resp)
+		}
+		tags = append(tags, k)
+	}
+	sort.Strings(tags)
+
+	for _, theTag := range tags {
+		tagControllers := model.TagControllers[theTag]
+		tag := swagger2.Tag{Name: theTag}
+		b.doc.AddTag(tag)
+		//TODO: 重名方法 但是 METHOD不一样的情况
+		for _, tagControllerMethod := range tagControllers {
+			var p swagger2.Param
+			p.Tags = []string{theTag}
+			p.Summary = tagControllerMethod.Summary
+			p.Description = tagControllerMethod.Description
+
+			myreqRef := ""
+			p.Parameters = make([]swagger2.Element, 0)
+			p.Deprecated = tagControllerMethod.IsDeprecated
+
+			if tagControllerMethod.TokenHeader != "" {
+				p.Parameters = append(p.Parameters, swagger2.Element{
+					In:          "header",
+					Name:        tagControllerMethod.TokenHeader,
+					Description: tagControllerMethod.TokenHeader,
+					Required:    true,
+					Type:        "string",
+					Schema:      nil,
+					Default:     "",
+				})
+			}
+
+			if tagControllerMethod.Req != nil {
+				for _, item := range tagControllerMethod.Req.Items {
+					switch item.ParamType {
+					case doc2.ParamTypeHeader:
+						p.Parameters = append(p.Parameters, swagger2.Element{
+							In:          "header",
+							Name:        item.Name,
+							Description: item.Note,
+							Required:    item.Required,
+							Type:        internal.GetKvType(item.Type, false, true),
+							Schema:      nil,
+							Default:     item.Default,
+						})
+					case doc2.ParamTypeQuery:
+						p.Parameters = append(p.Parameters, swagger2.Element{
+							In:          "query",
+							Name:        item.Name,
+							Description: item.Note,
+							Required:    item.Required,
+							Type:        internal.GetKvType(item.Type, false, true),
+							Schema:      nil,
+							Default:     item.Default,
+						})
+					case doc2.ParamTypeForm:
+						t := internal.GetKvType(item.Type, false, true)
+						if item.IsFile {
+							t = "file"
+						}
+						p.Parameters = append(p.Parameters, swagger2.Element{
+							In:          "formData",
+							Name:        item.Name,
+							Description: item.Note,
+							Required:    item.Required,
+							Type:        t,
+							Schema:      nil,
+							Default:     item.Default,
+						})
+					case doc2.ParamTypePath:
+						p.Parameters = append(p.Parameters, swagger2.Element{
+							In:          "path",
+							Name:        item.Name,
+							Description: item.Note,
+							Required:    item.Required,
+							Type:        internal.GetKvType(item.Type, false, true),
+							Schema:      nil,
+							Default:     item.Default,
+						})
+					default:
+						myreqRef = "#/definitions/" + tagControllerMethod.Req.Name
+						exist := false
+						for _, parameter := range p.Parameters {
+							if parameter.Name == tagControllerMethod.Req.Name {
+								exist = true
+							}
+						}
+						if !exist {
+							p.Parameters = append(p.Parameters, swagger2.Element{
+								In:          "body",
+								Name:        tagControllerMethod.Req.Name,
+								Description: item.Note,
+								Required:    true,
+								Schema: &swagger2.Schema{
+									Ref: myreqRef,
+								},
+							})
+						}
+
+					}
+
+				}
+
+			}
+
+			if tagControllerMethod.Resp != nil {
+				p.Responses = make(map[string]swagger2.Resp)
+				if len(tagControllerMethod.Resp.Items) > 0 {
+					for _, item := range tagControllerMethod.Resp.Items {
+						if tagControllerMethod.Resp.IsArray || item.IsArray {
+							p.Responses["200"] = swagger2.Resp{
+								Description: "成功返回",
+								Schema: map[string]interface{}{
+									"type": "array",
+									"items": map[string]string{
+										"$ref": "#/definitions/" + tagControllerMethod.Resp.Name,
+									},
+								},
+							}
+						} else {
+							p.Responses["200"] = swagger2.Resp{
+								Description: "成功返回",
+								Schema: map[string]interface{}{
+									"$ref": "#/definitions/" + tagControllerMethod.Resp.Name,
+								},
+							}
+						}
+					}
+				} else {
+					p.Responses["200"] = swagger2.Resp{
+						Description: "成功返回",
+						Schema: map[string]interface{}{
+							"type": tagControllerMethod.Resp.Name,
+						},
+					}
+				}
+
+			}
+
+			url := buildRelativePath(model.Group, tagControllerMethod.RouterPath)
+			p.OperationID = tagControllerMethod.Method + "_" + strings.ReplaceAll(tagControllerMethod.RouterPath, "/", "_")
+			b.doc.AddPatch2(url, p, tagControllerMethod.Method)
+
+		}
+	}
+}
 
 func buildRelativePath(prepath, routerPath string) string {
 	if strings.HasSuffix(prepath, "/") {
@@ -37,592 +467,82 @@ func buildRelativePath(prepath, routerPath string) string {
 	return prepath + "/" + routerPath
 }
 
-// checkMethodParamCount 检查路由方法是否符合 第一个参数是正确的Context 同时s返回参数个数
-// isObj表示方法是否是struct下的方法 如果是则 typ.In(0) 是struct本身
-func (b *KApi) checkMethodParamCount(typ reflect.Type, isObj bool) (int, bool) {
-	offset := 0
-	if isObj {
-		offset = 1
-	}
-	paramCount := typ.NumIn() - offset
-	if paramCount == 1 || paramCount == 2 { // 参数检查
-		ctxType := typ.In(0 + offset)
-
-		// go-gin 框架的默认方法
-		if ctxType == reflect.TypeOf(&gin.Context{}) {
-			return paramCount, true
-		}
-
-		// Customized context . 自定义的context
-		if ctxType == b.customContextType {
-			return paramCount, true
-		}
-
-		// maybe interface
-		if b.customContextType.ConvertibleTo(ctxType) {
-			return paramCount, true
-		}
-
-	}
-	return paramCount, false
-}
-
-// handlerFuncObj Get and filter the parameters to be bound (object call type)
-func (b *KApi) handlerFuncObj(tvl, obj reflect.Value, methodName string) gin.HandlerFunc { // 获取并过滤要绑定的参数(obj 对象类型)
-	typ := tvl.Type()
-	if typ.NumIn() == 2 { //1个参数的方法 *kapi.Context
-		ctxType := typ.In(1)
-
-		apiFun := func(c *gin.Context) interface{} { return c }
-		if ctxType == b.customContextType { // Customized context . 自定义的context
-			apiFun = b.apiFun
-		} else if !(ctxType == reflect.TypeOf(&gin.Context{})) {
-			internal.Log.Errorln("方法不受支持 " + runtime.FuncForPC(tvl.Pointer()).Name() + " !")
-		}
-
-		return func(c *gin.Context) {
-			//加入recover处理
-			defer func() {
-				if err := recover(); err != nil {
-					b.option.recoverErrorFunc(err)
-				}
-			}()
-
-			bainfo, is := b.preCall(c, obj, nil, methodName)
-			if !is {
-				c.JSON(bainfo.RespCode, bainfo.Resp)
-				return
-			}
-
-			var returnValues []reflect.Value
-			returnValues = tvl.Call([]reflect.Value{obj, reflect.ValueOf(apiFun(c))})
-
-			if returnValues != nil {
-				bainfo.Resp = returnValues[0].Interface()
-				rerr := returnValues[1].Interface()
-				if rerr != nil {
-					bainfo.Error = rerr.(error)
-				}
-
-				is = b.afterCall(bainfo, obj)
-				if is {
-					if bainfo.Error != nil {
-						c.JSON(GetResultFunc(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
-					} else {
-						c.JSON(GetResultFunc(RESULT_CODE_SUCCESS, "", 0, bainfo.Resp))
-					}
-				} else {
-					if bainfo.Error != nil {
-						c.JSON(GetResultFunc(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
-					} else {
-						c.JSON(GetResultFunc(RESULT_CODE_ERROR, "", 0, bainfo.Resp))
-					}
-				}
-			}
-
-		}
-	}
-
-	// 自定义的context类型,带request 请求参数
-	call, err := b.changeToGinHandlerFunc(tvl, obj, methodName)
-	if err != nil { // Direct reporting error.
-		panic(err)
-	}
-
-	return call
-}
-
-//preCall 调用前处理
-func (b *KApi) preCall(c *gin.Context, obj reflect.Value, req interface{}, methodName string) (*InterceptorContext, bool) {
-	info := &InterceptorContext{
-		C:        &Context{c},
-		FuncName: fmt.Sprintf("%v.%v", reflect.Indirect(obj).Type().Name(), methodName), // 函数名
-		Req:      req,                                                                   // 调用前的请求参数
-		Context:  context.Background(),                                                  // 占位参数，可用于存储其他参数，前后连接可用
-	}
-	//处理控制器的拦截器
-	is := true
-
-	if preObj, ok := obj.Interface().(Interceptor); ok { // 本类型
-		is = preObj.Before(info)
-	}
-	//处理全局的拦截器
-	if is && b.beforeAfter != nil {
-		is = b.beforeAfter.Before(info)
-	}
-	return info, is
-}
-
-//afterCall 调用后处理
-func (b *KApi) afterCall(info *InterceptorContext, obj reflect.Value) bool {
-	is := true
-	if bfobj, ok := obj.Interface().(Interceptor); ok { // 本类型
-		is = bfobj.After(info)
-	}
-	if is && b.beforeAfter != nil {
-		is = b.beforeAfter.After(info)
-	}
-	return is
-}
-
-// Custom context type with request parameters
-func (b *KApi) changeToGinHandlerFunc(tvl, obj reflect.Value, methodName string) (func(*gin.Context), error) {
-	typ := tvl.Type()
-
-	if typ.NumOut() != 0 {
-		if typ.NumOut() == 2 {
-			if returnType := typ.Out(1); returnType != typeOfError {
-				return nil, fmt.Errorf("方法 : %v , 第二返回值 %v 不是 error",
-					runtime.FuncForPC(tvl.Pointer()).Name(), returnType.String())
-			}
-		} else {
-			return nil, fmt.Errorf("方法 : %v 不受支持, 只支持两个返回值 (obj, error) 的方法", runtime.FuncForPC(tvl.Pointer()).Name())
-		}
-	}
-
-	ctxType, reqType := typ.In(1), typ.In(2)
-
-	reqIsGinCtx := false
-	if ctxType == reflect.TypeOf(&gin.Context{}) {
-		reqIsGinCtx = true
-	}
-
-	if !reqIsGinCtx && ctxType != b.customContextType && !b.customContextType.ConvertibleTo(ctxType) {
-		return nil, errors.New("方法 " + runtime.FuncForPC(tvl.Pointer()).Name() + " 第一个参数不受支持!")
-	}
-
-	reqIsValue := true
-	if reqType.Kind() == reflect.Ptr {
-		reqIsValue = false
-	}
-	apiFun := func(c *gin.Context) interface{} { return c }
-	if !reqIsGinCtx {
-		apiFun = b.apiFun
-	}
-
-	return func(c *gin.Context) {
-		defer func() {
-			if err := recover(); err != nil {
-				b.option.recoverErrorFunc(err)
-			}
-		}()
-
-		req := reflect.New(reqType)
-		if !reqIsValue {
-			req = reflect.New(reqType.Elem())
-		}
-		if err := b.unmarshal(c, req.Interface()); err != nil { // Return error message.返回错误信息
-			b.handleErrorString(c, req, err)
-			return
-		}
-
-		if reqIsValue {
-			req = req.Elem()
-		}
-
-		bainfo, is := b.preCall(c, obj, req.Interface(), methodName)
-		if !is {
-			c.JSON(bainfo.RespCode, bainfo.Resp)
-			return
-		}
-
-		var returnValues []reflect.Value
-		returnValues = tvl.Call([]reflect.Value{obj, reflect.ValueOf(apiFun(c)), req})
-
-		if returnValues != nil {
-			bainfo.Resp = returnValues[0].Interface()
-			rerr := returnValues[1].Interface()
-			if rerr != nil {
-				bainfo.Error = rerr.(error)
-			}
-
-			is = b.afterCall(bainfo, obj)
-			if is {
-				if bainfo.Error != nil {
-					c.JSON(GetResultFunc(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
-				} else {
-					c.JSON(GetResultFunc(RESULT_CODE_SUCCESS, "", 0, bainfo.Resp))
-				}
-			} else {
-				if bainfo.Error != nil {
-					c.JSON(GetResultFunc(RESULT_CODE_ERROR, bainfo.Error.Error(), 0, bainfo.Resp))
-				} else {
-					c.JSON(GetResultFunc(RESULT_CODE_ERROR, "", 0, bainfo.Resp))
-				}
-			}
-		}
-	}, nil
-}
-
-func (b *KApi) handleErrorString(c *gin.Context, req reflect.Value, err error) {
-	var fields []string
-	if _, ok := err.(validator.ValidationErrors); ok {
-		for _, err := range err.(validator.ValidationErrors) {
-			//TODO: 增加翻译选项
-			tmp := fmt.Sprintf("%v:%v", internal.FindTag(req.Interface(), err.Field(), "json"), err.Tag())
-			if len(err.Param()) > 0 {
-				tmp += fmt.Sprintf("[%v](but[%v])", err.Param(), err.Value())
-			}
-			fields = append(fields, tmp)
-		}
-	} else if _, ok := err.(*json.UnmarshalTypeError); ok {
-		err := err.(*json.UnmarshalTypeError)
-		tmp := fmt.Sprintf("%v:%v(but[%v])", err.Field, err.Type.String(), err.Value)
-		fields = append(fields, tmp)
-
-	} else {
-		fields = append(fields, err.Error())
-	}
-
-	c.JSON(GetResultFunc(RESULT_CODE_FAIL, fmt.Sprintf("req param : %v", strings.Join(fields, ";")), 0, nil))
-	return
-}
-
-func (b *KApi) unmarshal(c *gin.Context, v interface{}) error {
-	if err := c.ShouldBindHeader(v); err != nil {
-		if err != io.EOF {
-			if _, ok := err.(validator.ValidationErrors); ok {
-
-			} else {
-				internal.Log.Errorln("ShouldBindHeader:", err)
-				return err
-			}
-		}
-	}
-
-	if err := c.ShouldBindUri(v); err != nil {
-		if err != io.EOF {
-			if _, ok := err.(validator.ValidationErrors); ok {
-
-			} else {
-				internal.Log.Errorln("ShouldBindUri:", err)
-				return err
-			}
-
-		}
-	}
-	if err := binding.Path.Bind(c, v); err != nil {
-		if err != io.EOF {
-			if _, ok := err.(validator.ValidationErrors); ok {
-
-			} else {
-				internal.Log.Errorln("Path.Bind:", err)
-				return err
-			}
-
-		}
-	}
-
-	if err := c.ShouldBindWith(v, binding.Query); err != nil {
-		if err != io.EOF {
-			if _, ok := err.(validator.ValidationErrors); ok {
-
-			} else {
-				internal.Log.Errorln("ShouldBindWith.Query:", err)
-				return err
-			}
-
-		}
-
-	}
-	if c.ContentType() == "multipart/form-data" {
-		if err := c.ShouldBindWith(v, binding2.FormMultipart); err != nil {
-			if err != io.EOF {
-				if _, ok := err.(validator.ValidationErrors); ok {
-
-				} else {
-					internal.Log.Errorln("ShouldBindWith.FormMultipart:", err)
-					return err
-				}
-
-			}
-
-		}
-	}
-
-	if err := c.ShouldBindJSON(v); err != nil {
-		if err != io.EOF {
-			internal.Log.Errorln("body EOF:", err)
-			return err
-		}
-
-	}
-	return nil
-}
-
-func (b *KApi) analysisController(controller interface{}, model *doc.Model, modPkg string, modFile string) {
-	controllerRefVal := reflect.ValueOf(controller)
-	internal.Log.Debugf("解析 --> %s", controllerRefVal.Type().String())
-	controllerType := reflect.Indirect(controllerRefVal).Type()
-	controllerPkgPath := controllerType.PkgPath()
-	controllerName := controllerType.Name()
-	astDoc := ast_doc2.NewAstDoc(modPkg, modFile)
-	if astDoc.FillPackage(controllerPkgPath) == nil {
-		controllerScheme := astDoc.ResolveController(controllerName)
-		refTyp := reflect.TypeOf(controller)
-		// 遍历controller方法
-		for m := 0; m < refTyp.NumMethod(); m++ {
-			method := refTyp.Method(m)
-			_, _b := b.checkMethodParamCount(method.Type, true)
-			if _b && method.IsExported() {
-				mc, siReq, siResp := astDoc.ResolveMethod(method.Name)
-				if mc != nil {
-					routeInfo.AddFunc(controllerName+"/"+method.Name, mc.RouterPath, mc.Methods)
-					if b.option.Server.NeedDoc {
-						model.AddOne(controllerScheme.TagName, mc.RouterPath,
-							mc.Methods, mc.Summary, mc.Description,
-							siReq, siResp,
-							controllerScheme.TokenHeader, mc.IsDeprecated)
-					}
-
-				}
-
-			}
-		}
-	}
-}
-
-// analysisControllers gen out the Registered config info  by struct object,[prepath + objname.]
-func (b *KApi) analysisControllers(router gin.IRoutes, controllers ...interface{}) bool {
-	//TODO: groupPath也要加入到文档的路由中
-	modPkg, modFile, isFind := ast_doc2.GetModuleInfo(2)
-	if !isFind {
-		return false
-	}
-
-	groupPath := b.BasePath(router)
-	newDoc := doc.NewDoc(groupPath)
-	for _, c := range controllers {
-		b.analysisController(c, newDoc, modPkg, modFile)
-	}
-
-	if b.option.Server.NeedDoc {
-		b.addDocModel(newDoc)
-	}
-	return true
-}
-
-func (b *KApi) addDocModel(model *doc.Model) {
-	var tags []string
-	for k, v := range model.TagControllers {
-		for _, v1 := range v {
-			b.doc.SetDefinition(model, v1.Req)
-			b.doc.SetDefinition(model, v1.Resp)
-		}
-		tags = append(tags, k)
-	}
-	sort.Strings(tags)
-
-	for _, theTag := range tags {
-		tagControllers := model.TagControllers[theTag]
-		tag := swagger.Tag{Name: theTag}
-		b.doc.AddTag(tag)
-		//TODO: 重名方法 但是 METHOD不一样的情况
-		for _, tagControllerMethod := range tagControllers {
-			var p swagger.Param
-			p.Tags = []string{theTag}
-			p.Summary = tagControllerMethod.Summary
-			p.Description = tagControllerMethod.Description
-
-			myreqRef := ""
-			p.Parameters = make([]swagger.Element, 0)
-			p.Deprecated = tagControllerMethod.IsDeprecated
-
-			if tagControllerMethod.TokenHeader != "" {
-				p.Parameters = append(p.Parameters, swagger.Element{
-					In:          "header",
-					Name:        tagControllerMethod.TokenHeader,
-					Description: tagControllerMethod.TokenHeader,
-					Required:    true,
-					Type:        "string",
-					Schema:      nil,
-					Default:     "",
-				})
-			}
-
-			if tagControllerMethod.Req != nil {
-				for _, item := range tagControllerMethod.Req.Items {
-					switch item.ParamType {
-					case doc.ParamTypeHeader:
-						p.Parameters = append(p.Parameters, swagger.Element{
-							In:          "header",
-							Name:        item.Name,
-							Description: item.Note,
-							Required:    item.Required,
-							Type:        swagger.GetKvType(item.Type, false, true),
-							Schema:      nil,
-							Default:     item.Default,
-						})
-					case doc.ParamTypeQuery:
-						p.Parameters = append(p.Parameters, swagger.Element{
-							In:          "query",
-							Name:        item.Name,
-							Description: item.Note,
-							Required:    item.Required,
-							Type:        swagger.GetKvType(item.Type, false, true),
-							Schema:      nil,
-							Default:     item.Default,
-						})
-					case doc.ParamTypeForm:
-						t := swagger.GetKvType(item.Type, false, true)
-						if item.IsFile {
-							t = "file"
-						}
-						p.Parameters = append(p.Parameters, swagger.Element{
-							In:          "formData",
-							Name:        item.Name,
-							Description: item.Note,
-							Required:    item.Required,
-							Type:        t,
-							Schema:      nil,
-							Default:     item.Default,
-						})
-					case doc.ParamTypePath:
-						p.Parameters = append(p.Parameters, swagger.Element{
-							In:          "path",
-							Name:        item.Name,
-							Description: item.Note,
-							Required:    item.Required,
-							Type:        swagger.GetKvType(item.Type, false, true),
-							Schema:      nil,
-							Default:     item.Default,
-						})
-					default:
-						myreqRef = "#/definitions/" + tagControllerMethod.Req.Name
-						exist := false
-						for _, parameter := range p.Parameters {
-							if parameter.Name == tagControllerMethod.Req.Name {
-								exist = true
-							}
-						}
-						if !exist {
-							p.Parameters = append(p.Parameters, swagger.Element{
-								In:          "body",
-								Name:        tagControllerMethod.Req.Name,
-								Description: item.Note,
-								Required:    true,
-								Schema: &swagger.Schema{
-									Ref: myreqRef,
-								},
-							})
-						}
-
-					}
-
-				}
-
-			}
-
-			if tagControllerMethod.Resp != nil {
-				p.Responses = make(map[string]swagger.Resp)
-				if len(tagControllerMethod.Resp.Items) > 0 {
-					for _, item := range tagControllerMethod.Resp.Items {
-						if tagControllerMethod.Resp.IsArray || item.IsArray {
-							p.Responses["200"] = swagger.Resp{
-								Description: "成功返回",
-								Schema: map[string]interface{}{
-									"type": "array",
-									"items": map[string]string{
-										"$ref": "#/definitions/" + tagControllerMethod.Resp.Name,
-									},
-								},
-							}
-						} else {
-							p.Responses["200"] = swagger.Resp{
-								Description: "成功返回",
-								Schema: map[string]interface{}{
-									"$ref": "#/definitions/" + tagControllerMethod.Resp.Name,
-								},
-							}
-						}
-					}
-				} else {
-					p.Responses["200"] = swagger.Resp{
-						Description: "成功返回",
-						Schema: map[string]interface{}{
-							"type": tagControllerMethod.Resp.Name,
-						},
-					}
-				}
-
-			}
-
-			url := buildRelativePath(model.Group, tagControllerMethod.RouterPath)
-			for _, s := range tagControllerMethod.Methods {
-				p.OperationID = s + "_" + strings.ReplaceAll(tagControllerMethod.RouterPath, "/", "_")
-				b.doc.AddPatch2(url, p, s)
-			}
-
-		}
-	}
-}
-
-func (b *KApi) BasePath(router gin.IRoutes) string {
-	switch r := router.(type) {
-	case *gin.RouterGroup:
-		return r.BasePath()
-	case *gin.Engine:
-		return r.BasePath()
-	}
-	return ""
-}
-
 // register 注册路由到gin
-func (b *KApi) register(router gin.IRoutes, cList ...interface{}) bool {
-	if b.genFlag {
-		return true
-	}
+func (b *KApi) register(router *gin.Engine, cList ...interface{}) {
+	start := time.Now()
+	Debugf("register controllers..")
 	mp := routeInfo.getInfo()
 	for _, c := range cList {
 		refTyp := reflect.TypeOf(c)
 		refVal := reflect.ValueOf(c)
 		t := reflect.Indirect(refVal).Type()
 		objName := t.Name()
+		b.Apply(c)
 
-		// Install the methods
+		// Install the Method
 		for m := 0; m < refTyp.NumMethod(); m++ {
 			method := refTyp.Method(m)
-			_, _b := b.checkMethodParamCount(method.Type, true)
-			if _b {
-				if v, ok := mp[objName+"/"+method.Name]; ok {
-					for _, v1 := range v {
-						methods := strings.Join(v1.GenComment.Methods, ",")
-						internal.Log.Debugf("%6s  %-20s --> %s", methods, v1.GenComment.RouterPath, t.PkgPath()+".(*"+objName+")."+method.Name)
-						_ = b.registerHandlerObj(router, v1.GenComment.Methods, v1.GenComment.RouterPath, method.Name, method.Func, refVal)
+			//_, _b := b.checkMethodParamCount(method.Type, true)
+			if v, ok := mp[objName+"/"+method.Name]; ok {
+				for _, v1 := range v {
+					Debugf("%6s  %-30s --> %s", v1.Method, v1.RouterPath, t.PkgPath()+"."+objName+"."+method.Name)
+					err := b.registerMethodToRouter(router,
+						v1.Method,
+						v1.RouterPath,
+						refVal.Interface(),
+						refVal.Method(m).Interface())
+					if err != nil {
+						Errorf("%s", err)
 					}
 				}
 			}
 		}
 	}
-	return true
+	Debugf("elapsed time:%s", time.Now().Sub(start).String())
 }
 
-// registerHandlerObj 注册路由方法
-func (b *KApi) registerHandlerObj(router gin.IRoutes, httpMethod []string, relativePath, methodName string, tvl, obj reflect.Value) error {
-	call := b.handlerFuncObj(tvl, obj, methodName)
+// registerMethodToRouter register to gin router
+//
+//	@param router
+//	@param httpMethod
+//	@param relativePath route path
+//	@param controller
+//	@param method
+//
+//	@return error
+func (b *KApi) registerMethodToRouter(router *gin.Engine, httpMethod string, relativePath string, controller, method interface{}) error {
+	call := b.handle(controller, method)
 
-	for _, v := range httpMethod {
-		switch strings.ToUpper(v) {
-		case http.MethodPost:
-			router.POST(relativePath, call)
-		case http.MethodGet:
-			router.GET(relativePath, call)
-		case http.MethodDelete:
-			router.DELETE(relativePath, call)
-		case http.MethodPatch:
-			router.PATCH(relativePath, call)
-		case http.MethodPut:
-			router.PUT(relativePath, call)
-		case http.MethodOptions:
-			router.OPTIONS(relativePath, call)
-		case http.MethodHead:
-			router.HEAD(relativePath, call)
-		case "ANY":
-			router.Any(relativePath, call)
-		default:
-			return fmt.Errorf("请求方式:[%v] 不支持", httpMethod)
-		}
+	switch strings.ToUpper(httpMethod) {
+	case "POST":
+		router.POST(relativePath, call)
+	case "GET":
+		router.GET(relativePath, call)
+	case "DELETE":
+		router.DELETE(relativePath, call)
+	case "PATCH":
+		router.PATCH(relativePath, call)
+	case "PUT":
+		router.PUT(relativePath, call)
+	case "OPTIONS":
+		router.OPTIONS(relativePath, call)
+	case "HEAD":
+		router.HEAD(relativePath, call)
+	case "ANY":
+		router.Any(relativePath, call)
+	default:
+		return fmt.Errorf("http method:[%v --> %s] 不支持", httpMethod, relativePath)
 	}
 
 	return nil
+}
+
+// genRouterCode 生成gen.gob
+func (b *KApi) genRouterCode() {
+	if !b.option.Server.Debug || b.doc == nil {
+		return
+	}
+	Infof("write out gen.gob")
+	routeInfo.SetApiBody(*b.doc.Client)
+	routeInfo.writeOut()
 }

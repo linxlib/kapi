@@ -1,7 +1,0 @@
-# 编译配置
-[k]
-   name = "test_kapi" # 编译的可执行文件名
-   version = "1.0.0" # 版本
-   arch = "amd64"  # 平台
-   system = "windows,linux" # 系统
-   path = "./bin" # 输出目录
