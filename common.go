@@ -176,7 +176,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 			if _, ok := binding3.HandleValidationErrors(err); ok {
 
 			} else {
-				internal.ErrorLog.Errorln("ShouldBindHeader:", err)
+				Errorf("ShouldBindHeader:%s", err)
 				return err
 			}
 		}
@@ -187,7 +187,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 			if _, ok := binding3.HandleValidationErrors(err); ok {
 
 			} else {
-				internal.ErrorLog.Errorln("ShouldBindUri:", err)
+				Errorf("ShouldBindUri: %s", err)
 				return err
 			}
 
@@ -198,7 +198,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 			if _, ok := binding3.HandleValidationErrors(err); ok {
 
 			} else {
-				internal.ErrorLog.Errorln("Path.Bind:", err)
+				Errorf("Path.Bind:%s", err)
 				return err
 			}
 
@@ -210,7 +210,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 			if _, ok := binding3.HandleValidationErrors(err); ok {
 
 			} else {
-				internal.ErrorLog.Errorln("ShouldBindWith.Query:", err)
+				Errorf("ShouldBindWith.Query:%s", err)
 				return err
 			}
 
@@ -223,7 +223,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 				if _, ok := binding3.HandleValidationErrors(err); ok {
 
 				} else {
-					internal.ErrorLog.Errorln("ShouldBindWith.FormMultipart:", err)
+					Errorf("ShouldBindWith.FormMultipart:%s", err)
 					return err
 				}
 
@@ -234,7 +234,7 @@ func (b *KApi) doBindReq(c *Context, v interface{}) error {
 
 	if err := c.ShouldBindJSON(v); err != nil {
 		if err != io.EOF {
-			internal.ErrorLog.Errorln("body EOF:", err)
+			Errorf("body EOF:%s", err)
 			return err
 		}
 
@@ -492,7 +492,7 @@ func (b *KApi) register(router *gin.Engine, cList ...interface{}) {
 						refVal.Interface(),
 						refVal.Method(m).Interface())
 					if err != nil {
-						internal.ErrorLog.Errorln(err)
+						Errorf("%s", err)
 					}
 				}
 			}

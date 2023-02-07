@@ -9,7 +9,7 @@ require (
 	github.com/linxlib/binding v0.1.1
 	github.com/linxlib/config v0.1.0
 	github.com/linxlib/conv v0.0.0-20200419055849-46faf16ac98f
-	github.com/linxlib/inject v0.1.1
+	github.com/linxlib/inject v0.1.2
 	github.com/linxlib/logs v0.1.5
 	github.com/linxlib/swagger_inject v0.1.1
 )

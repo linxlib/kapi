@@ -48,22 +48,24 @@ type Option struct {
 	recoverErrorFunc   RecoverErrorFunc
 	intranetIP         string
 	corsHandler        gin.HandlerFunc
+	y                  *config.YAML
 	Server             ServerOption
 }
 
 func readConfig(o *Option) *Option {
 
-	if internal.FileIsExist("config/config.yml") {
-		conf, err := config.NewYAML(config.File("config/config.yml"))
+	if internal.FileIsExist("config/config.yaml") {
+		conf, err := config.NewYAML(config.File("config/config.yaml"))
 		if err != nil {
-			internal.ErrorLog.Error(err)
+			Errorf("%s", err)
 		}
 		err = conf.Get("server").Populate(&_defaultServerOption)
 		if err != nil {
-			internal.ErrorLog.Error(err)
+			Errorf("%s", err)
 		}
+		o.y = conf
 	} else {
-		Warnf("file %s not exist, use default options", "config/config.yml")
+		Warnf("file %s not exist, use default options", "config/config.yaml")
 	}
 	o.Server = _defaultServerOption
 	o.corsHandler = cors.New(o.Server.Cors)
@@ -102,7 +104,7 @@ func defaultOption() *Option {
 			case KAPIEXIT:
 				return
 			default:
-				internal.ErrorLog.Error(err)
+				Errorf("%s", err)
 			}
 		},
 	}
@@ -127,7 +129,7 @@ func byteCountSI(b int64) string {
 func getIntranetIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		internal.ErrorLog.Errorln(err)
+		Errorf("%s", err)
 		os.Exit(1)
 	}
 	for _, address := range addrs {
@@ -145,14 +147,16 @@ func (o *Option) SetGinLoggerFormatter(formatter gin.LogFormatter) *Option {
 	o.ginLoggerFormatter = gin.LoggerWithFormatter(formatter)
 	return o
 }
-
+func (o *Option) Get() *config.YAML {
+	return o.y
+}
 func (o *Option) SetRecoverFunc(f func(interface{})) *Option {
 	o.recoverErrorFunc = func(err interface{}) {
 		switch err {
 		case KAPIEXIT:
 			return
 		default:
-			internal.ErrorLog.Error(err)
+			Errorf("%s", err)
 			f(err)
 		}
 	}

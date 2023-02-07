@@ -3,6 +3,7 @@ package kapi
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/linxlib/config"
 	"github.com/linxlib/inject"
 	"github.com/linxlib/kapi/internal"
 	"github.com/linxlib/kapi/internal/swagger"
@@ -76,6 +77,7 @@ func New(f ...func(*Option)) *KApi {
 	if len(f) > 0 {
 		f[0](b.option)
 	}
+	b.Map(b.option.y)
 	gin.SetMode(gin.ReleaseMode) //we don't need gin's debug output
 	b.engine = gin.New()
 	b.engine.Use(b.option.ginLoggerFormatter)
@@ -88,7 +90,15 @@ func New(f ...func(*Option)) *KApi {
 	}
 	return b
 }
-
+func (b *KApi) Settings() *config.YAML {
+	a := new(config.YAML)
+	err := b.Provide(a)
+	if err != nil {
+		Errorf("%s", err)
+		return a
+	}
+	return a
+}
 func (b *KApi) serverdown() {
 	if internal.FileIsExist("./.serverdown") {
 		b.serverDown = true
@@ -173,8 +183,7 @@ func (b *KApi) Run() {
 	})
 	b.serverdown()
 	b.handleStatic()
-
-	OKf("server running http://%s:%d\n", b.option.intranetIP, b.option.Server.Port)
+	Infof("server running http://%s:%d\n", b.option.intranetIP, b.option.Server.Port)
 	err := b.engine.Run(fmt.Sprintf(":%d", b.option.Server.Port))
 	if err != nil {
 		if e, ok := err.(*net.OpError); ok {

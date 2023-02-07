@@ -17,7 +17,7 @@ require (
 	github.com/linxlib/binding v0.1.1 // indirect
 	github.com/linxlib/config v0.1.0 // indirect
 	github.com/linxlib/conv v0.0.0-20200419055849-46faf16ac98f // indirect
-	github.com/linxlib/inject v0.1.1 // indirect
+	github.com/linxlib/inject v0.1.2 // indirect
 	github.com/linxlib/logs v0.1.5 // indirect
 	github.com/linxlib/swagger_inject v0.1.1 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect

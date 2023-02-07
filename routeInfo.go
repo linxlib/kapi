@@ -89,7 +89,7 @@ func (ri *RouteInfo) writeOut() {
 	ri.genInfo.Tm = time.Now().Unix()
 	err := encoder.Encode(ri.genInfo)
 	if err != nil {
-		internal.ErrorLog.Error(err)
+		Errorf("%s", err)
 		return
 	}
 	internal.WriteFile("gen.gob", buf.Bytes(), true)
