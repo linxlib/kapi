@@ -301,7 +301,6 @@ k.RegisterResultBuilder(new(MyResultBuilder))
 import "github.com/gin-contrib/pprof"
 
 pprof.Register(k.GetEngine(), "/pprof")
-
 ```
 
 
