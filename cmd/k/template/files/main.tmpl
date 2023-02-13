@@ -1,0 +1,12 @@
+package main
+
+import (
+	"github.com/linxlib/kapi"
+	"{{.ModName}}/api/controllers"
+)
+
+func main() {
+	k := kapi.New()
+	k.RegisterRouter(new(controllers.HealthController))
+	k.Run()
+}

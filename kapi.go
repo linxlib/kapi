@@ -19,6 +19,8 @@ var (
 	VERSION     string
 	BUILDTIME   string
 	GOVERSION   string
+	BUILDOS     string
+	BUILDARCH   string
 	OS          string
 	ARCH        string
 	PACKAGENAME string
@@ -37,7 +39,8 @@ var _info = `
 
  Version:   %s/%s
  OS/Arch:   %s/%s
- BuiltTime: %s`
+ BuiltTime: %s
+ Built OS/Arch: %s/%s`
 
 type KApi struct {
 	inject.Injector
@@ -56,7 +59,7 @@ type KApi struct {
 //	@return *KApi
 func New(f ...func(*Option)) *KApi {
 	if VERSION != "" {
-		Infof(_banner, fmt.Sprintf(_info, VERSION, GOVERSION, OS, ARCH, BUILDTIME))
+		Infof(_banner, fmt.Sprintf(_info, VERSION, GOVERSION, OS, ARCH, BUILDTIME, BUILDOS, BUILDARCH))
 	} else {
 		Infof(_banner, "")
 	}
