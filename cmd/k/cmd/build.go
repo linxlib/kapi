@@ -17,14 +17,11 @@ import (
 var buildCmd = &cobra.Command{
 	Use:   "build",
 	Short: "build",
-	Long: `build the project with configs or flags. make executable files for many platforms with only one line command. 
-eg. 
-k build windows amd64 example  #make windows executable
-k build windows,darwin amd64 example  #make windows and Mac OS X executables
-k build windows amd64 example -v 1.2.0 #make windows executable with kapi.VERSION and other variables be set, which will be printed out when running.
-
-see wiki for more details.
-`,
+	Example: `
+k build windows amd64 example                //make windows executable
+k build windows,darwin amd64 example         //make windows and Mac OS X executables
+k build windows amd64 example -v 1.2.0       //make windows executable with kapi.VERSION and other variables be set, which will be printed out when running`,
+	Long: `build the project with configs or flags. make executable files for many platforms with only one line command.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		modName := utils.GetMod("go.mod")
 		// TODO: validate parameters
@@ -143,8 +140,8 @@ func doBuild(obj buildObject) error {
 	for _, s := range obj.system {
 		for _, arch := range obj.arch {
 			logs.Infof("building %s_%s", s, arch)
-			os.Setenv("GOOS", s)
-			os.Setenv("GOARCH", arch)
+			_ = os.Setenv("GOOS", s)
+			_ = os.Setenv("GOARCH", arch)
 			outPath := fmt.Sprintf("%s/%s_%s/%s%s%s", obj.out, s, arch, obj.version+"/", obj.name, ext)
 			cmd = append(cmd, outPath)
 			cmd = append(cmd, "-ldflags="+obj.ldflags)

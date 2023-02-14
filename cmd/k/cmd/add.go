@@ -23,13 +23,36 @@ var addCmd = &cobra.Command{
 	},
 }
 
+func ifNotEmpty(v string, f string) string {
+	if v != "" {
+		if strings.Contains(f, "%") {
+			return fmt.Sprintf(f, v)
+		}
+		return f
+	}
+	return ""
+}
+
 var controllerCmd = &cobra.Command{
 	Use:   "controller",
 	Short: "add controller",
-	Long:  "",
+	Long:  "add controller and method",
+	Example: `
+k add controller -n Hello
+k add controller -n Hello -m World
+k add controller -n Hello -m World -b MyBody -r MyResult`,
 	Run: func(cmd *cobra.Command, args []string) {
 		controllerName := cmd.Flag("name").Value.String()
 		methodName := cmd.Flag("method").Value.String()
+		body := cmd.Flag("request").Value.String()
+		result := cmd.Flag("response").Value.String()
+		action := strings.ToUpper(cmd.Flag("action").Value.String())
+		switch action {
+		case "GET", "POST", "PUT", "DELETE", "PATCH":
+		default:
+			action = "GET"
+			logs.Warn("flag action not provided use GET instead")
+		}
 		if controllerName == "" {
 			logs.Error("please specify controller name with -n or --name=?")
 			return
@@ -54,9 +77,11 @@ var controllerCmd = &cobra.Command{
 				"MethodName":     methodName,
 				"ControllerName": controllerName,
 				"ControllerID":   strings.ToLower(string(controllerName[0])),
-				"ToLower": func(ori string) string {
-					return strings.ToLower(ori)
-				},
+				"Body":           ifNotEmpty(body, ", req *%s"),
+				"RESP":           ifNotEmpty(result, "\n// @RESP %s"),
+				"BodyStruct":     ifNotEmpty(body, "type %s struct {}\n"),
+				"ResultStruct":   ifNotEmpty(result, "type %s struct {}\n\n"),
+				"ACTION":         ifNotEmpty(action, action),
 			})
 			if err != nil {
 				logs.Error(err)
@@ -90,6 +115,11 @@ var controllerCmd = &cobra.Command{
 				"MethodName":     methodName,
 				"ControllerName": controllerName,
 				"ControllerID":   strings.ToLower(string(controllerName[0])),
+				"Body":           ifNotEmpty(body, ", req *%s"),
+				"RESP":           ifNotEmpty(result, "\n// @RESP %s"),
+				"BodyStruct":     ifNotEmpty(body, "type %s struct {}\n"),
+				"ResultStruct":   ifNotEmpty(result, "type %s struct {}\n\n"),
+				"ACTION":         ifNotEmpty(action, action),
 			})
 			if err != nil {
 				logs.Error(err)
@@ -101,9 +131,27 @@ var controllerCmd = &cobra.Command{
 	},
 }
 
+var configCmd = &cobra.Command{
+	Use:     "config",
+	Short:   "add or set config",
+	Long:    "add or set config",
+	Example: `k add config <key> <value>`,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) != 2 {
+			logs.Errorln("you should provide 2 flags")
+			return
+		}
+		logs.Errorln("not implemented yet")
+		//key := args[0]
+		//value := args[1]
+
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(addCmd)
 	addCmd.AddCommand(controllerCmd)
+	addCmd.AddCommand(configCmd)
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
@@ -113,5 +161,8 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	controllerCmd.Flags().StringP("name", "n", "", "controller name. required ")
+	controllerCmd.Flags().StringP("action", "a", "", "http method")
 	controllerCmd.Flags().StringP("method", "m", "", "method name. if controller exist, this command will append method at the end of file")
+	controllerCmd.Flags().StringP("request", "b", "", "request Body struct name")
+	controllerCmd.Flags().StringP("response", "r", "", "response Body struct name")
 }

@@ -16,6 +16,8 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "initialize KAPI project directory",
 	Long:  `this command will create some directories on the current directory`,
+	Example: `
+k init github.com/linxlib/example`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
 			logs.Error("you should specify a module name, only one parameter is supported. eg. k init github.com/linxlib/kapi/example")
