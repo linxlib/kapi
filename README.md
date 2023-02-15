@@ -203,7 +203,7 @@ func (e *Example) GetList(
 
 ```json
 {
-  "code":"SUCCESS"
+  "code":"SUCCESS",
   "count": count,
   "data":[{},{}]
 }
@@ -302,9 +302,9 @@ pprof.Register(k.GetEngine(), "/pprof")
 
 ```
 
-## 部署
+## deploy
 
-the build tool is re-developing. build project just use `go build` 
+The "k" cli tool provides release feature, see "k" section below.
 
 
 ## TODOList
@@ -313,5 +313,32 @@ see README_CN.md for details.
 ## Thanks
 
 the initial version is from `https://github.com/xxjwxc/ginrpc`
+
+
+# k
+### Description
+a cli tool for KAPI.
+
+### Features
+1. initialize project struct
+2. run project and restart project on file changed
+3. build project
+4. generate some codes
+
+### Installation
+
+```shell
+go install github.com/linxlib/kapi/cmd/k@latest
+```
+
+### Usage
+
+```bash
+k -h 
+k add -h
+k build -h
+k init -h
+k run -h
+```
 
 

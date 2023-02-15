@@ -354,10 +354,30 @@ pprof.Register(k.GetEngine(), "/pprof")
 而且也很难在基础上进行PR(改动较大, 并可能无法适应比较大众化的框架需求), 才有了魔改一顿的想法
 
 # k
-#### 介绍
-这是本框架提供的命令行工具, 代码基本来自 `github.com/gogf/gf-cli`, 目前包含 安装、运行、编译三个部分， 后续会加入其它功能.
+### 介绍
+这是本框架提供的命令行工具。
 
-使用kapi进行开发, 建议同时使用k-cli, 由于kapi的swagger文档以及路由注册需要在开发环境运行后才会生成, 使用go自带的编译可能无法正常使用文档和注册路由
+### 功能
+1. 初始化项目代码、目录结构等
+2. 运行项目并在监测到文件更改时重启
+3. 编译项目到多平台
+4. 代码生成
 
-**目前移动到 https://github.com/linxlib/k** 仓库
+### 安装
+
+```shell
+go install github.com/linxlib/kapi/cmd/k@latest
+```
+
+### 使用
+
+```shell
+k -h 
+k add -h
+k build -h
+k init -h
+k run -h
+```
+
+
 
