@@ -1,5 +1,5 @@
 /*
-Copyright © 2023 linx slk1133@qq.com
+Copyright © 2023 linx sulinke1133@gmail.com
 */
 package cmd
 
@@ -9,7 +9,10 @@ import (
 	"github.com/linxlib/kapi/cmd/k/utils"
 	"github.com/linxlib/logs"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"os"
+	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -137,13 +140,42 @@ var configCmd = &cobra.Command{
 	Long:    "add or set config",
 	Example: `k add config <key> <value>`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 2 {
-			logs.Errorln("you should provide 2 flags")
-			return
+		switch len(args) {
+		case 1: // just return value of key
+			logs.Infof("config[%s]=%+v", args[0], viper.Get(args[0]))
+		case 2: // write config key's value
+			i := viper.Get(args[0])
+			rt := reflect.TypeOf(i)
+			kind := rt.Kind()
+
+			logs.Warnf("modify config[%s]=%+v", args[0], args[1])
+			fmt.Print("input y to confirm(y/n):")
+			var y string
+			_, _ = fmt.Scan(&y)
+			if strings.ToLower(y) != "y" && strings.ToLower(y) != "yes" {
+				logs.Infoln("canceled~!")
+				return
+			}
+			switch kind {
+			case reflect.Int, reflect.Int64, reflect.Uint, reflect.Uint64:
+				v, _ := strconv.Atoi(args[1])
+				viper.Set(args[0], v)
+			case reflect.Float32, reflect.Float64:
+				v, _ := strconv.ParseFloat(args[1], 64)
+				viper.Set(args[0], v)
+			case reflect.Bool:
+				v, _ := strconv.ParseBool(args[1])
+				viper.Set(args[0], v)
+			default:
+				viper.Set(args[0], args[1])
+			}
+
+			err := viper.WriteConfig()
+			if err != nil {
+				logs.Error(err)
+				return
+			}
 		}
-		logs.Errorln("not implemented yet")
-		//key := args[0]
-		//value := args[1]
 
 	},
 }
