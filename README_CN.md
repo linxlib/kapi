@@ -347,6 +347,7 @@ pprof.Register(k.GetEngine(), "/pprof")
 - [ ] 加入markdown形式的文档
 - [ ] 拦截器实现多个顺序执行机制（栈）
 - [ ] 加入枚举支持
+- [ ] 文档可解析泛型类型
 
 ## 感谢
 

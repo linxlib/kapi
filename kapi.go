@@ -6,12 +6,11 @@ import (
 	"github.com/linxlib/config"
 	"github.com/linxlib/inject"
 	"github.com/linxlib/kapi/internal"
-	"github.com/linxlib/kapi/internal/swagger"
+	"github.com/linxlib/kapi/internal/openapi"
 	"github.com/linxlib/swagger_inject"
 	"net"
 	"net/http"
 	"os"
-	"time"
 )
 
 // 编译时植入变量
@@ -44,12 +43,12 @@ var _info = `
 
 type KApi struct {
 	inject.Injector
-
 	engine     *gin.Engine
-	doc        *swagger.DocSwagger
 	option     *Option
 	genFlag    bool
 	serverDown bool
+	doc        *openapi.Builder
+	routeInfo  *internal.RouteInfo
 }
 
 // New 创建新的KApi实例
@@ -72,6 +71,7 @@ func New(f ...func(*Option)) *KApi {
 	b := &KApi{
 		Injector: inject.New(),
 	}
+
 	if len(os.Args) > 1 && os.Args[1] == "-g" {
 		b.genFlag = true
 	}
@@ -81,6 +81,12 @@ func New(f ...func(*Option)) *KApi {
 		f[0](b.option)
 	}
 	b.Map(b.option.y)
+	b.routeInfo = internal.NewRouteInfo()
+	if internal.FileIsExist("go.mod") {
+		b.routeInfo.Clean()
+	}
+	b.doc = openapi.NewBuilder()
+	b.doc.WithInfo(b.option.Server.DocName, b.option.Server.DocVer, b.option.Server.DocDesc)
 	gin.SetMode(gin.ReleaseMode) //we don't need gin's debug output
 	b.engine = gin.New()
 	b.engine.Use(b.option.ginLoggerFormatter)
@@ -124,7 +130,8 @@ func (b *KApi) serverdown() {
 
 func (b *KApi) RegisterRouter(cList ...interface{}) {
 	if b.option.Server.Debug {
-		b.doc = swagger.New(b.option.Server.DocName, b.option.Server.DocVer, b.option.Server.DocDesc)
+		//b.routeInfo.Clean()
+		//b.doc = swagger.New(b.option.Server.DocName, b.option.Server.DocVer, b.option.Server.DocDesc)
 		b.analysisControllers(cList...)
 	}
 	if b.genFlag {
@@ -148,13 +155,20 @@ func (b *KApi) handleDoc() {
 		Infof("swagger: http://%s:%d/swagger/index.html", b.option.intranetIP, b.option.Server.Port)
 
 		b.engine.GET("/swagger.json", func(c *gin.Context) {
-			routeInfo.genInfo.ApiBody.Host = c.Request.Host
-			//TODO:
-			routeInfo.genInfo.ApiBody.Info.Description += "\n" + time.Unix(routeInfo.genInfo.Tm, 0).String()
-			routeInfo.genInfo.ApiBody.Info.Description += "\n" + BUILDTIME
-			routeInfo.genInfo.ApiBody.Info.Description += "\n" + VERSION
-			routeInfo.genInfo.ApiBody.Info.Description += "\n" + GOVERSION
-			c.PureJSON(200, routeInfo.genInfo.ApiBody)
+			b.routeInfo.GetGenInfo().Swagger.Host = c.Request.Host
+			if c.Request.URL.Scheme == "" {
+				b.routeInfo.GetGenInfo().Swagger.Schemes = []string{"http"}
+			} else {
+				b.routeInfo.GetGenInfo().Swagger.Schemes = []string{c.Request.URL.Scheme}
+			}
+			c.PureJSON(200, b.routeInfo.GetGenInfo().Swagger)
+			//routeInfo.genInfo.Swagger.Host = c.Request.Host
+			////TODO:
+			//routeInfo.genInfo.Swagger.Info.Description += "\n" + time.Unix(routeInfo.genInfo.Timestamp, 0).String()
+			//routeInfo.genInfo.Swagger.Info.Description += "\n" + BUILDTIME
+			//routeInfo.genInfo.Swagger.Info.Description += "\n" + VERSION
+			//routeInfo.genInfo.Swagger.Info.Description += "\n" + GOVERSION
+			//c.PureJSON(200, routeInfo.genInfo.Swagger)
 		})
 
 		b.engine.GET("/swagger/*any", func(c *gin.Context) {

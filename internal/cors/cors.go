@@ -332,7 +332,7 @@ func generatePreflightHeaders(c Config) http.Header {
 	if len(c.AllowMethods) > 0 {
 		allowMethods := convert(normalize(c.AllowMethods), strings.ToUpper)
 		value := strings.Join(allowMethods, ",")
-		headers.Set("Access-Control-Allow-Methods", value)
+		headers.Set("Access-Control-Allow-Routes", value)
 	}
 	if len(c.AllowHeaders) > 0 {
 		allowHeaders := convert(normalize(c.AllowHeaders), http.CanonicalHeaderKey)
