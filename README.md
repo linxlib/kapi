@@ -341,4 +341,4 @@ k init -h
 k run -h
 ```
 
-
+![JetBrains Logo (Main) logo](https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png)
