@@ -41,7 +41,9 @@ func (t *TestController) CreateOne(c *kapi.Context, req *MyRequest) {
 
 }
 
-type MyRequest1 struct{}
+type MyRequest1 struct {
+	Result sub.MyResult5
+}
 type MyResult1 struct{}
 
 // GetList
@@ -52,9 +54,9 @@ func (t *TestController) GetList(c *kapi.Context, req *MyRequest1) (*MyResult1, 
 }
 
 // GetList2
-// @GET /getlist2
+// @POST /getlist2
 // @RESP MyResult2
-func (t *TestController) GetList2(c *kapi.Context, req *MyRequest2) (*MyResult2, error) {
+func (t *TestController) GetList2(c *kapi.Context, req MyRequest2) (*MyResult2, error) {
 	return nil, nil
 }
 
@@ -67,8 +69,34 @@ func (t *TestController) GetList3(c *kapi.Context, req *model2.MyRequest3) (*mod
 }
 
 // GetList5
-// @GET /getlist5
+// @GET /getlist5/:c
 // @RESP sub.MyResult5
 func (t *TestController) GetList5(c *kapi.Context, req *model2.MyRequest3) (*sub.MyResult5, error) {
 	return nil, nil
+}
+
+// GetList6
+// @GET /getlist6/:c
+// @RESP string
+func (t *TestController) GetList6(c *kapi.Context, req *model2.MyRequest3) {
+	return
+}
+
+type Name string
+
+const (
+	AA Name = "ijiji" //uuuu
+	//BB iijhg
+	BB Name = "sdds" ///hhhh
+	OO Name = "ydgydf"
+)
+const (
+	U1 Name = "edfed"
+)
+
+// GetList7
+// @GET /getlist7/:c
+// @RESP Name
+func (t *TestController) GetList7(c *kapi.Context, req model2.MyRequest3) {
+	return
 }

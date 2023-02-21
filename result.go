@@ -61,7 +61,7 @@ type DefaultResultBuilder struct {
 
 func (d DefaultResultBuilder) OnData(msg string, count int64, data any) (statusCode int, result any) {
 	return 200, messageBody{
-		Code:  "SUCCESS",
+		Code:  0,
 		Msg:   msg,
 		Count: count,
 		Data:  data,
@@ -70,7 +70,7 @@ func (d DefaultResultBuilder) OnData(msg string, count int64, data any) (statusC
 
 func (d DefaultResultBuilder) OnErrorDetail(msg string, err any) (statusCode int, result any) {
 	return 500, messageBody{
-		Code: "FAIL",
+		Code: -1,
 		Msg:  msg,
 		Data: err,
 	}
@@ -78,7 +78,7 @@ func (d DefaultResultBuilder) OnErrorDetail(msg string, err any) (statusCode int
 
 func (d DefaultResultBuilder) OnSuccess(msg string, data any) (statusCode int, result any) {
 	return 200, messageBody{
-		Code: "SUCCESS",
+		Code: -1,
 		Msg:  msg,
 		Data: data,
 	}
@@ -86,7 +86,7 @@ func (d DefaultResultBuilder) OnSuccess(msg string, data any) (statusCode int, r
 
 func (d DefaultResultBuilder) OnFail(msg string, data any) (statusCode int, result any) {
 	return 400, messageBody{
-		Code: "FAIL",
+		Code: -1,
 		Msg:  msg,
 		Data: data,
 	}
@@ -94,7 +94,7 @@ func (d DefaultResultBuilder) OnFail(msg string, data any) (statusCode int, resu
 
 func (d DefaultResultBuilder) OnError(msg string, err error) (statusCode int, result any) {
 	return 500, messageBody{
-		Code: "FAIL",
+		Code: -1,
 		Msg:  msg,
 		Data: err.Error(),
 	}
@@ -102,28 +102,28 @@ func (d DefaultResultBuilder) OnError(msg string, err error) (statusCode int, re
 
 func (d DefaultResultBuilder) OnUnAuthed(msg string) (statusCode int, result any) {
 	return 401, messageBody{
-		Code: "FAIL",
+		Code: -1,
 		Msg:  msg,
 	}
 }
 
 func (d DefaultResultBuilder) OnNoPermission(msg string) (statusCode int, result any) {
 	return 403, messageBody{
-		Code: "FAIL",
+		Code: -1,
 		Msg:  msg,
 	}
 }
 
 func (d DefaultResultBuilder) OnNotFound(msg string) (statusCode int, result any) {
 	return 404, messageBody{
-		Code: "FAIL",
+		Code: -1,
 		Msg:  msg,
 	}
 }
 
 // messageBody 自定义的响应body类型
 type messageBody struct {
-	Code  interface{} `json:"code"`
+	Code  int         `json:"code"`
 	Msg   string      `json:"msg"`
 	Count int64       `json:"count,omitempty"`
 	Data  interface{} `json:"data"`

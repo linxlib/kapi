@@ -20,21 +20,29 @@ type File struct {
 
 // Struct 结构体
 type Struct struct {
-	Name    string    //结构名称
-	PkgPath string    //包路径
-	Fields  []*Field  //字段
-	Methods []*Method //方法
-	Docs    []string  //上方文档注释
+	Name     string    //结构名称
+	PkgPath  string    //包路径
+	Fields   []*Field  //字段
+	Methods  []*Method //方法
+	Docs     []string  //上方文档注释
+	IsEnum   bool
+	EnumType string
 }
 
 func (t *Struct) GetAllFieldsByTag(tag string) []*Field {
 	rtn := make([]*Field, 0)
 	for _, field := range t.Fields {
 		if !field.hasTag && tag == "json" { //if no tag presents, act as json tag
+			field.CurrentTag = field.Name
 			rtn = append(rtn, field)
 			continue
 		}
-		if _, ok := field.Tag.Lookup(tag); ok {
+		if tag, ok := field.Tag.Lookup(tag); ok {
+			if tag == "" {
+				field.CurrentTag = field.Name
+			} else {
+				field.CurrentTag = tag
+			}
 			rtn = append(rtn, field)
 		}
 	}
@@ -49,8 +57,8 @@ type Method struct {
 	Private   bool
 	Signature string //方法签名
 	Docs      []string
-	Params    []*Param //函数参数
-	Results   []*Param //函数返回值
+	Params    []*Field //函数参数
+	Results   []*Field //函数返回值
 }
 
 // Receiver 接收器
@@ -60,28 +68,24 @@ type Receiver struct {
 	Type    string
 }
 
-type Param struct {
-	Name        string
+type Field struct {
+	Name        string //字段名
 	PkgPath     string //包路径
-	Pointer     bool
-	Slice       bool
-	Type        string
+	Type        string //类型
+	hasTag      bool
+	CurrentTag  string //main tag value
 	typeString  string
 	ignoreParse bool
-	Struct      *Struct //字段
-}
-
-type Field struct {
-	Name    string //字段名
-	PkgPath string //包路径
-	Type    string //类型
-	hasTag  bool
-	Tag     reflect.StructTag //标签
-	Private bool              //私有
-	Pointer bool              //指针
-	Slice   bool              //slice
-	Docs    []string          //上方文档注释
-	Comment string            //末尾的注释
+	innerType   bool
+	Struct      *Struct
+	Tag         reflect.StructTag //标签
+	Private     bool              //私有
+	Pointer     bool              //指针
+	Slice       bool              //slice
+	IsStruct    bool
+	Docs        []string //上方文档注释
+	Comment     string   //末尾的注释
+	EnumValue   any
 }
 
 func (f *Field) GetTag(tag string) string {

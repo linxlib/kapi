@@ -137,12 +137,12 @@ func (cors *cors) handleNormal(c *gin.Context) {
 
 // Config represents all available options for the middleware.
 type Config struct {
-	AllowAllOrigins bool
+	AllowAllOrigins bool `yaml:"allowAllOrigins"`
 
 	// AllowOrigins is a list of origins a cross-domain request can be executed from.
 	// If the special "*" value is present in the list, all origins will be allowed.
 	// Default value is []
-	AllowOrigins []string
+	AllowOrigins []string `yaml:"allowOrigins"`
 
 	// AllowOriginFunc is a custom function to validate the origin. It take the origin
 	// as argument and returns true if allowed or false otherwise. If this option is
@@ -151,37 +151,37 @@ type Config struct {
 
 	// AllowMethods is a list of methods the client is allowed to use with
 	// cross-domain requests. Default value is simple methods (GET and POST)
-	AllowMethods []string
+	AllowMethods []string `yaml:"allowMethods"`
 
 	// AllowHeaders is list of non simple headers the client is allowed to use with
 	// cross-domain requests.
-	AllowHeaders []string
+	AllowHeaders []string `yaml:"allowHeaders"`
 
 	// AllowCredentials indicates whether the request can include user credentials like
 	// cookies, HTTP authentication or client side SSL certificates.
-	AllowCredentials bool
+	AllowCredentials bool `yaml:"allowCredentials"`
 
 	// ExposedHeaders indicates which headers are safe to expose to the API of a CORS
 	// API specification
-	ExposeHeaders []string
+	ExposeHeaders []string `yaml:"exposeHeaders"`
 
 	// MaxAge indicates how long (in seconds) the results of a preflight request
 	// can be cached
-	MaxAge time.Duration
+	MaxAge time.Duration `yaml:"maxAge"`
 
 	// Allows to add origins like http://some-domain/*, https://api.* or http://some.*.subdomain.com
-	AllowWildcard bool
+	AllowWildcard bool `yaml:"allowWildcard"`
 
 	// Allows usage of popular browser extensions schemas
-	AllowBrowserExtensions bool
+	AllowBrowserExtensions bool `yaml:"allowBrowserExtensions"`
 
 	// Allows usage of WebSocket protocol
-	AllowWebSockets bool
+	AllowWebSockets bool `yaml:"allowWebSockets"`
 
 	// Allows usage of file:// schema (dangerous!) use it only when you 100% sure it's needed
-	AllowFiles bool
+	AllowFiles bool `yaml:"allowFiles"`
 
-	AllowPrivateNetwork bool
+	AllowPrivateNetwork bool `yaml:"allowPrivateNetwork"`
 }
 
 // AddAllowMethods is allowed to add custom methods

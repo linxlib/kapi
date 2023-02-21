@@ -1,40 +1,32 @@
 package comment_parser
 
 import (
+	"github.com/linxlib/kapi/internal/parser_logger"
 	"regexp"
 	"strings"
 )
 
-type ParserLogger interface {
-	Error(...any)
-	Info(...any)
-	Infof(string, ...any)
-}
-type _logger struct {
-}
-
-func (_ _logger) Error(a ...any) {
-	//log.Println(a...)
-}
-
-func (_ _logger) Info(a ...any) {
-	//log.Println(a...)
-}
-
-func (_ _logger) Infof(s string, a ...any) {
-	//log.Printf(s+"\n", a...)
-}
-
 type Parser struct {
 	comments []string
 	name     string
-	logger   ParserLogger
+	logger   parser_logger.ParserLogger
 }
 
+// NewParser returns a new comment parser instance for parsing struct
+//
+//	@param name struct name
+//	@param comments struct docs
+//
+//	@return *Parser
 func NewParser(name string, comments []string) *Parser {
-	return &Parser{name: name, comments: comments, logger: &_logger{}}
+	return &Parser{name: name, comments: comments, logger: parser_logger.NewEmptyLogger()}
 }
 
+// Parse will parse the struct and return Comment type
+//
+//	@param groupRoute route prefix
+//
+//	@return *Comment
 func (p *Parser) Parse(groupRoute string) *Comment {
 	mc := &Comment{
 		Deprecated:  false,
@@ -47,8 +39,9 @@ func (p *Parser) Parse(groupRoute string) *Comment {
 		Anonymous:   false,
 		Tag:         "",
 	}
+
 	for _, comment := range p.comments {
-		prefix, comment := getCommentAfterPrefixRegex(comment, p.name)
+		prefix, comment := parseComment(comment, p.name)
 		switch prefix {
 		case "@DEPRECATED":
 			mc.Deprecated = true
@@ -68,9 +61,8 @@ func (p *Parser) Parse(groupRoute string) *Comment {
 			mc.HasResp = true
 			mc.ResultType = strings.Split(comment, ".")
 		case "@DESC":
-
 			mc.Description = append(mc.Description, comment) //we can have multiple @DESC to multiline description
-		case "@GET", "@POST", "@PUT", "@DELETE", "@PATCH", "@OPTION", "@HEAD":
+		case "@GET", "@POST", "@PUT", "@DELETE", "@PATCH", "@OPTIONS", "@HEAD":
 			httpMethod := strings.ToUpper(strings.TrimPrefix(prefix, "@"))
 			routerPath := comment
 
@@ -83,7 +75,7 @@ func (p *Parser) Parse(groupRoute string) *Comment {
 			}
 			mc.Routes[routerPath] = httpMethod
 		case p.name: //if prefix is equal to method name
-			mc.Summary = comment // summary can have only one
+			mc.Summary = comment //one summary only
 		default: //not defined comments
 			mc.Description = append(mc.Description, comment)
 		}
@@ -92,8 +84,8 @@ func (p *Parser) Parse(groupRoute string) *Comment {
 	return mc
 }
 
-// getCommentAfterPrefixRegex 解析注释 分离前缀和注释内容
-func getCommentAfterPrefixRegex(lineComment string, name string) (prefix string, comment string) {
+// parseComment 解析注释 分离前缀和注释内容
+func parseComment(lineComment string, name string) (prefix string, comment string) {
 	var myRegex = regexp.MustCompile(`\s*(` + name + `|@\w+)\s*(.*)|(.*)`)
 
 	matches := myRegex.FindStringSubmatch(lineComment)

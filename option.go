@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// RecoverErrorFunc recover 错误设置
-type RecoverErrorFunc func(interface{})
+// RecoverFunc recover 错误设置
+type RecoverFunc func(interface{})
 
 type StaticDir struct {
 	Path string `yaml:"path"`
@@ -20,7 +20,6 @@ type StaticDir struct {
 }
 
 type ServerOption struct {
-	Debug      bool        `yaml:"debug"`
 	NeedDoc    bool        `yaml:"needDoc"`
 	DocName    string      `yaml:"docName"`
 	DocDesc    string      `yaml:"docDesc"`
@@ -31,7 +30,6 @@ type ServerOption struct {
 }
 
 var _defaultServerOption = ServerOption{
-	Debug:   true,
 	NeedDoc: true,
 	DocName: "KApi",
 	DocDesc: "KApi",
@@ -45,7 +43,7 @@ var _defaultServerOption = ServerOption{
 
 type Option struct {
 	ginLoggerFormatter gin.HandlerFunc
-	recoverErrorFunc   RecoverErrorFunc
+	recoverErrorFunc   RecoverFunc
 	intranetIP         string
 	corsHandler        gin.HandlerFunc
 	y                  *config.YAML
@@ -53,19 +51,18 @@ type Option struct {
 }
 
 func readConfig(o *Option) *Option {
-
 	if internal.FileIsExist("config/config.yaml") {
 		conf, err := config.NewYAML(config.File("config/config.yaml"))
 		if err != nil {
-			Errorf("%s", err)
+			internal.Errorf("%s", err)
 		}
 		err = conf.Get("server").Populate(&_defaultServerOption)
 		if err != nil {
-			Errorf("%s", err)
+			internal.Errorf("%s", err)
 		}
 		o.y = conf
 	} else {
-		Warnf("file %s not exist, use default options", "config/config.yaml")
+		internal.Warnf("file %s not exist, use default options", "config/config.yaml")
 	}
 	o.Server = _defaultServerOption
 	o.corsHandler = cors.New(o.Server.Cors)
@@ -104,7 +101,7 @@ func defaultOption() *Option {
 			case KAPIEXIT:
 				return
 			default:
-				Errorf("%s", err)
+				internal.Errorf("%s", err)
 			}
 		},
 	}
@@ -129,7 +126,7 @@ func byteCountSI(b int64) string {
 func getIntranetIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		Errorf("%s", err)
+		internal.Errorf("%s", err)
 		os.Exit(1)
 	}
 	for _, address := range addrs {
@@ -156,7 +153,7 @@ func (o *Option) SetRecoverFunc(f func(interface{})) *Option {
 		case KAPIEXIT:
 			return
 		default:
-			Errorf("%s", err)
+			internal.Errorf("%s", err)
 			f(err)
 		}
 	}

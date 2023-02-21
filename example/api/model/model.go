@@ -1,7 +1,7 @@
 package model
 
 type MyRequest3 struct {
-	A string
+	A int      `json:"ii" v:"required" default:"1"`
 	B []string `query:"bn"`
 	C int      `path:"c"`
 }

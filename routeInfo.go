@@ -1,9 +1,10 @@
-package internal
+package kapi
 
 import (
 	"bytes"
 	"encoding/gob"
-	"github.com/go-openapi/spec"
+	"github.com/linxlib/kapi/internal"
+	"github.com/linxlib/kapi/internal/openapi"
 	"sync"
 	"time"
 )
@@ -20,12 +21,11 @@ type RouteItem struct {
 
 type genInfo struct {
 	Routes    []RouteItem
-	Swagger   *spec.Swagger
+	Swagger   *openapi.Spec
 	Timestamp int64 //timestamp of this
 }
 
 type RouteInfo struct {
-	once    sync.Once
 	mu      sync.Mutex
 	genInfo *genInfo
 }
@@ -34,7 +34,7 @@ func NewRouteInfo() *RouteInfo {
 	ri := &RouteInfo{}
 	ri.genInfo = &genInfo{
 		Routes:    []RouteItem{},
-		Swagger:   &spec.Swagger{},
+		Swagger:   openapi.NewSpec(),
 		Timestamp: time.Now().Unix(),
 	}
 	ri.load()
@@ -62,7 +62,7 @@ func (ri *RouteInfo) GetGenInfo() *genInfo {
 // SetApiBody store swagger json spec
 //
 //	@param api
-func (ri *RouteInfo) SetApiBody(api *spec.Swagger) {
+func (ri *RouteInfo) SetApiBody(api *openapi.Spec) {
 	ri.genInfo.Swagger = api
 }
 
@@ -75,10 +75,9 @@ func (ri *RouteInfo) WriteOut() {
 	ri.genInfo.Timestamp = time.Now().Unix()
 	err := encoder.Encode(ri.genInfo)
 	if err != nil {
-		//kapi.Errorf("%s", err)
 		return
 	}
-	WriteFile("gen.gob", buf.Bytes(), true)
+	internal.WriteFile("gen.gob", buf.Bytes(), true)
 }
 
 // GetRouteItems get router info of method comments
@@ -98,13 +97,13 @@ func (ri *RouteInfo) GetRouteItems() map[string][]RouteItem {
 func (ri *RouteInfo) Clean() {
 	ri.genInfo = &genInfo{
 		Routes:    []RouteItem{},
-		Swagger:   &spec.Swagger{},
+		Swagger:   openapi.NewSpec(),
 		Timestamp: time.Now().Unix(),
 	}
 }
 func (ri *RouteInfo) load() {
-	if FileIsExist("gen.gob") {
-		data := ReadFile("gen.gob")
+	if internal.FileIsExist("gen.gob") {
+		data := internal.ReadFile("gen.gob")
 		var buf = bytes.NewBuffer(data)
 		dec := gob.NewDecoder(buf)
 		_ = dec.Decode(ri.genInfo)

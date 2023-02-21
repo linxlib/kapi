@@ -47,8 +47,9 @@ type KApi struct {
 	option     *Option
 	genFlag    bool
 	serverDown bool
-	doc        *openapi.Builder
-	routeInfo  *internal.RouteInfo
+	doc        *openapi.Spec
+	routeInfo  *RouteInfo
+	inSource   bool
 }
 
 // New 创建新的KApi实例
@@ -58,15 +59,11 @@ type KApi struct {
 //	@return *KApi
 func New(f ...func(*Option)) *KApi {
 	if VERSION != "" {
-		Infof(_banner, fmt.Sprintf(_info, VERSION, GOVERSION, OS, ARCH, BUILDTIME, BUILDOS, BUILDARCH))
+		internal.Infof(_banner, fmt.Sprintf(_info, VERSION, GOVERSION, OS, ARCH, BUILDTIME, BUILDOS, BUILDARCH))
 	} else {
-		Infof(_banner, "")
+		internal.Infof(_banner, "")
 	}
-	if PACKAGENAME != "" {
-		Infof("start[%s]", PACKAGENAME)
-	} else {
-		Infof("start..")
-	}
+	internal.Info("start", PACKAGENAME)
 
 	b := &KApi{
 		Injector: inject.New(),
@@ -81,33 +78,37 @@ func New(f ...func(*Option)) *KApi {
 		f[0](b.option)
 	}
 	b.Map(b.option.y)
-	b.routeInfo = internal.NewRouteInfo()
+	b.routeInfo = NewRouteInfo()
 	if internal.FileIsExist("go.mod") {
+		b.inSource = true
 		b.routeInfo.Clean()
 	}
-	b.doc = openapi.NewBuilder()
+	b.doc = openapi.NewSpec()
 	b.doc.WithInfo(b.option.Server.DocName, b.option.Server.DocVer, b.option.Server.DocDesc)
 	gin.SetMode(gin.ReleaseMode) //we don't need gin's debug output
 	b.engine = gin.New()
 	b.engine.Use(b.option.ginLoggerFormatter)
 	b.engine.Use(b.option.corsHandler)
 	if b.genFlag {
-		Infof("generate mode")
-		b.option.Server.Debug = true
+		internal.Infof("generate mode")
+		b.inSource = true
 	} else {
-		Infof("IP:%s Swagger:%s Port:%d", b.option.intranetIP, b.option.Server.DocName, b.option.Server.Port)
+		internal.Infof("IP:%s Swagger:%s Port:%d", b.option.intranetIP, b.option.Server.DocName, b.option.Server.Port)
 	}
+	// inject myself
+	b.Map(b)
 	return b
 }
 func (b *KApi) Settings() *config.YAML {
 	a := new(config.YAML)
 	err := b.Provide(a)
 	if err != nil {
-		Errorf("%s", err)
+		internal.Errorf("%s", err)
 		return a
 	}
 	return a
 }
+
 func (b *KApi) serverdown() {
 	if internal.FileIsExist("./.serverdown") {
 		b.serverDown = true
@@ -128,31 +129,37 @@ func (b *KApi) serverdown() {
 	})
 }
 
-func (b *KApi) RegisterRouter(cList ...interface{}) {
-	if b.option.Server.Debug {
-		//b.routeInfo.Clean()
-		//b.doc = swagger.New(b.option.Server.DocName, b.option.Server.DocVer, b.option.Server.DocDesc)
-		b.analysisControllers(cList...)
+func (b *KApi) AddControllers(cList ...interface{}) bool {
+	return b.RegisterRouter(cList...)
+}
+
+func (b *KApi) RegisterRouter(cList ...interface{}) bool {
+	if b.inSource {
+		if !b.analysisControllers(cList...) {
+			return false
+		}
 	}
 	if b.genFlag {
-		return
+		return true
 	}
-	b.register(b.engine, cList...)
+	return b.register(cList...)
+
 }
 
 func (b *KApi) handleStatic() {
 	if len(b.option.Server.StaticDirs) > 0 && !b.genFlag {
 		for i, s := range b.option.Server.StaticDirs {
 			b.engine.Static(s.Path, s.Root)
-			Infof("serving static dir[%d]: %s --> %s", i, s.Path, s.Root)
+			internal.Infof("serving static dir[%d]: %s --> %s", i, s.Path, s.Root)
 		}
 
 	}
 }
 
 func (b *KApi) handleDoc() {
+	defer internal.Spend("handle doc")()
 	if b.option.Server.NeedDoc {
-		Infof("swagger: http://%s:%d/swagger/index.html", b.option.intranetIP, b.option.Server.Port)
+		internal.Infof("swagger: http://%s:%d/swagger/index.html", b.option.intranetIP, b.option.Server.Port)
 
 		b.engine.GET("/swagger.json", func(c *gin.Context) {
 			b.routeInfo.GetGenInfo().Swagger.Host = c.Request.Host
@@ -162,13 +169,6 @@ func (b *KApi) handleDoc() {
 				b.routeInfo.GetGenInfo().Swagger.Schemes = []string{c.Request.URL.Scheme}
 			}
 			c.PureJSON(200, b.routeInfo.GetGenInfo().Swagger)
-			//routeInfo.genInfo.Swagger.Host = c.Request.Host
-			////TODO:
-			//routeInfo.genInfo.Swagger.Info.Description += "\n" + time.Unix(routeInfo.genInfo.Timestamp, 0).String()
-			//routeInfo.genInfo.Swagger.Info.Description += "\n" + BUILDTIME
-			//routeInfo.genInfo.Swagger.Info.Description += "\n" + VERSION
-			//routeInfo.genInfo.Swagger.Info.Description += "\n" + GOVERSION
-			//c.PureJSON(200, routeInfo.genInfo.Swagger)
 		})
 
 		b.engine.GET("/swagger/*any", func(c *gin.Context) {
@@ -192,7 +192,7 @@ func (b *KApi) Run() {
 		b.handleDoc()
 	}
 	if b.genFlag {
-		OKf("generate mode complete!")
+		internal.OKf("generate mode complete!")
 		return
 	}
 	b.engine.GET("/healthz", func(context *gin.Context) {
@@ -200,13 +200,13 @@ func (b *KApi) Run() {
 	})
 	b.serverdown()
 	b.handleStatic()
-	Infof("server running http://%s:%d\n", b.option.intranetIP, b.option.Server.Port)
+	internal.Infof("server running http://%s:%d\n", b.option.intranetIP, b.option.Server.Port)
 	err := b.engine.Run(fmt.Sprintf(":%d", b.option.Server.Port))
 	if err != nil {
 		if e, ok := err.(*net.OpError); ok {
 			if e1, ok := e.Err.(*os.SyscallError); ok {
 				if e.Op == "listen" && e1.Syscall == "bind" {
-					Errorf("server start failed, binding :%d failed, please check if the port is in use", e.Addr.(*net.TCPAddr).Port)
+					internal.Errorf("server start failed, binding :%d failed, please check if the port is in use", e.Addr.(*net.TCPAddr).Port)
 				}
 			}
 

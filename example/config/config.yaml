@@ -1,0 +1,6 @@
+server:
+  staticDirs:
+    - path: /config
+      root: ./config
+    - path: /config2
+      root: ./config

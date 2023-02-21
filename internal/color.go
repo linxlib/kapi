@@ -1,4 +1,4 @@
-package kapi
+package internal
 
 import (
 	"fmt"
@@ -35,12 +35,18 @@ func format(tag string) string {
 func Infof(fmt string, args ...any) {
 	color.Printf(format(tinfo)+white(fmt)+"\n", args...)
 }
+func Info(args ...any) {
+	color.Print(format(tinfo), white(args...)+"\n")
+}
 
 func Whitef(fmt string, args ...any) {
 	color.Printf(format(tnone)+white(fmt)+"\n", args...)
 }
 func Errorf(fmt string, args ...any) {
 	color.Printf(format(terr)+red(fmt)+"\n", args...)
+}
+func Error(fmt string, args ...any) {
+	color.Printf(format(terr), red(args...)+"\n")
 }
 func Redf(fmt string, args ...any) {
 	color.Printf(format(tnone)+red(fmt)+"\n", args...)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/linxlib/kapi/internal"
+	"github.com/linxlib/kapi/internal/parser_logger"
 	"go/ast"
 	"go/doc"
 	"go/parser"
@@ -13,27 +14,6 @@ import (
 	"strings"
 	"sync"
 )
-
-type ParserLogger interface {
-	Error(...any)
-	Info(...any)
-	Infof(string, ...any)
-}
-
-type _logger struct {
-}
-
-func (_ _logger) Error(a ...any) {
-	//log.Println(a...)
-}
-
-func (_ _logger) Info(a ...any) {
-	//log.Println(a...)
-}
-
-func (_ _logger) Infof(s string, a ...any) {
-	//log.Printf(s+"\n", a...)
-}
 
 type Parser struct {
 	dir         string                   //当前结构所在目录
@@ -44,7 +24,7 @@ type Parser struct {
 	imports     map[string][]*importItem //包对应的所有导入信息，每个包一组，即包下所有文件的导入会在一组中
 	lock        sync.RWMutex
 	ignoreList  map[string]string
-	logger      ParserLogger
+	logger      parser_logger.ParserLogger
 }
 
 // getPkgDir returns the absolute directory path of a package
@@ -80,7 +60,7 @@ func NewParser(modPkg, modFile string) (p *Parser) {
 		ignoreList: map[string]string{
 			"github.com/linxlib/kapi": "Context",
 		},
-		logger: &_logger{},
+		logger: parser_logger.NewEmptyLogger(),
 	}
 	return p
 }
@@ -141,7 +121,7 @@ var errIgnored = errors.New("ignored")
 //
 //	@return *Param
 //	@return error
-func (p *Parser) handleParam(v *ast.Field, importMP []*importItem) (*Param, error) {
+func (p *Parser) handleParam(v *ast.Field, pkg string, importMP []*importItem) (*Field, error) {
 	a, isSlice, isPointer, err := getType(v.Type)
 	if err != nil {
 		return nil, err
@@ -150,10 +130,10 @@ func (p *Parser) handleParam(v *ast.Field, importMP []*importItem) (*Param, erro
 	if v.Names != nil {
 		n = v.Names[0].Name
 	}
-	param := &Param{
+	param := &Field{
 		Name:       n,
 		typeString: a,
-		PkgPath:    p.pkg,
+		PkgPath:    pkg,
 		Pointer:    isPointer,
 		Slice:      isSlice,
 		Type:       strings.Trim(a, "*"),
@@ -171,9 +151,13 @@ func (p *Parser) handleParam(v *ast.Field, importMP []*importItem) (*Param, erro
 			}
 		}
 	} else {
+		param.innerType = true
 		param.ignoreParse = true
 	}
 	return param, nil
+}
+func (p *Parser) SetLogger(logger parser_logger.ParserLogger) {
+	p.logger = logger
 }
 
 // Parse a type in a package
@@ -182,16 +166,16 @@ func (p *Parser) handleParam(v *ast.Field, importMP []*importItem) (*Param, erro
 //	@param s type name
 //
 //	@return error
-func (p *Parser) Parse(pkg, s string) (*File, error) {
+func (p *Parser) Parse(pkg, s string) (f *File, err error) {
 	//TODO: 内置类型的解析
-	if internal.IsInternalType(pkg) {
+	if internal.IsInternalType(s) {
 		f := &File{
 			Name:    "",
 			Imports: nil,
 			PkgPath: "",
 			Structs: []*Struct{
-				&Struct{
-					Name:    pkg,
+				{
+					Name:    s,
 					PkgPath: "",
 					Fields:  nil,
 					Methods: nil,
@@ -210,7 +194,7 @@ func (p *Parser) Parse(pkg, s string) (*File, error) {
 	//获取包和目录
 	p.pkg = pkg
 	p.dir = p.getPkgDir(pkg)
-	k := p.pkg + "_" + p.dir
+	k := pkg + "_" + p.dir
 	//这里作为缓存，相同包下不会重复解析
 	var apkg *ast.Package
 	if tmpAstPkg, ok := p.astPackages[k]; !ok {
@@ -220,8 +204,8 @@ func (p *Parser) Parse(pkg, s string) (*File, error) {
 		if err != nil {
 			return nil, nil
 		}
-		i := strings.LastIndex(p.pkg, "/")
-		p.astPackages[k] = dir[p.pkg[i+1:]]
+		i := strings.LastIndex(pkg, "/")
+		p.astPackages[k] = dir[pkg[i+1:]]
 		apkg = p.astPackages[k]
 	} else {
 		p.logger.Info(s, "[cache]")
@@ -229,7 +213,7 @@ func (p *Parser) Parse(pkg, s string) (*File, error) {
 	}
 	//相同包不会多次处理
 	var importMP []*importItem
-	if tmpImportMP, ok := p.imports[p.pkg]; !ok {
+	if tmpImportMP, ok := p.imports[pkg]; !ok {
 		for _, f := range apkg.Files {
 			for _, p1 := range f.Imports {
 				importMP = p.handleImportSpec(p1, importMP)
@@ -238,7 +222,7 @@ func (p *Parser) Parse(pkg, s string) (*File, error) {
 	} else {
 		importMP = tmpImportMP
 	}
-	f := new(File)
+	f = new(File)
 	tmp := doc.New(apkg, "", doc.AllDecls|doc.AllMethods)
 	for _, t := range tmp.Types {
 		if t == nil || t.Decl == nil {
@@ -247,65 +231,130 @@ func (p *Parser) Parse(pkg, s string) (*File, error) {
 		if t.Name != s {
 			continue
 		}
-
-		for _, spec := range t.Decl.Specs {
-			typeSpec, ok := spec.(*ast.TypeSpec)
-			if !ok {
-				return nil, errors.New("not a *ast.TypeSpec")
+		if len(t.Consts) > 0 {
+			// handle enum type
+			fieldCount := 0
+			for _, value := range t.Consts {
+				fieldCount += len(value.Names)
 			}
-			structType, ok := typeSpec.Type.(*ast.StructType)
-			if !ok {
-				return nil, errors.New("not a *ast.StructType")
+			enumStruct := &Struct{
+				Name:     t.Name,
+				PkgPath:  pkg,
+				Fields:   make([]*Field, 0, fieldCount),
+				Methods:  make([]*Method, 0),
+				Docs:     getDocsForStruct(t.Doc),
+				IsEnum:   true,
+				EnumType: t.Decl.Specs[0].(*ast.TypeSpec).Type.(*ast.Ident).Name,
 			}
+			for _, value := range t.Consts {
+				aiot := 0
+				for i, name := range value.Names {
+					field := &Field{
+						Name:    name,
+						PkgPath: pkg,
+						Type:    t.Name,
+						Tag:     "",
+						Pointer: false,
+						Slice:   false,
+					}
+					spec := value.Decl.Specs[i].(*ast.ValueSpec)
+					field.Docs = getDocsForField(spec.Doc)
+					field.Comment = strings.Join(getDocsForField(spec.Comment), "\n")
+					if spec.Values != nil {
+						switch s := spec.Values[0].(type) {
+						case *ast.Ident:
+							vname := spec.Values[0].(*ast.Ident).Name
+							//TODO:
+							if vname == "iota" || strings.Contains(vname, "iota") {
+								field.EnumValue = 0
+							} else {
 
-			f.Name = tmp.Name
-			f.Imports = importMP
-			f.PkgPath = p.pkg
+							}
 
-			parsedStruct := &Struct{
-				Name:    t.Name,
-				PkgPath: p.pkg,
-				Fields:  make([]*Field, 0, len(structType.Fields.List)),
-				Docs:    getDocsForStruct(t.Doc), //结构体注释
-				Methods: make([]*Method, 0),
+						case *ast.BasicLit:
+							//TODO:
+							//s.Kind
+							field.EnumValue = strings.Trim(s.Value, `"`)
+						}
+
+					} else {
+						aiot++
+						field.EnumValue = aiot
+					}
+
+					enumStruct.Fields = append(enumStruct.Fields, field)
+				}
+
 			}
-			for _, fvalue := range structType.Fields.List {
-				name := ""
-				if len(fvalue.Names) > 0 {
-					name = fvalue.Names[0].Obj.Name
+			f.Structs = append(f.Structs, enumStruct)
+		} else {
+			for _, spec := range t.Decl.Specs {
+				typeSpec, ok := spec.(*ast.TypeSpec)
+				if !ok {
+					return nil, errors.New("not a *ast.TypeSpec")
 				}
-				field := &Field{
-					Name:    name,
-					PkgPath: p.pkg,
-					Type:    "",
-					Tag:     "",
-					Pointer: false,
-					Slice:   false,
-				}
-				if len(field.Name) > 0 {
-					field.Private = strings.ToLower(string(field.Name[0])) == string(field.Name[0])
+				structType, ok := typeSpec.Type.(*ast.StructType)
+				if !ok {
+					return nil, errors.New("not a *ast.StructType")
 				}
 
-				if fvalue.Doc != nil {
-					field.Docs = getDocsForField(fvalue.Doc)
-				}
-				if fvalue.Comment != nil {
-					field.Comment = cleanDocText(fvalue.Comment.Text())
-				}
-				if fvalue.Tag != nil {
-					field.Tag = reflect.StructTag(strings.Trim(fvalue.Tag.Value, "`"))
-					field.hasTag = true
-				}
-				var err error
-				field.Type, field.Slice, field.Pointer, err = getType(fvalue.Type)
-				if err != nil {
-					return nil, err
-				}
+				f.Name = tmp.Name
+				f.Imports = importMP
+				f.PkgPath = pkg
 
-				parsedStruct.Fields = append(parsedStruct.Fields, field)
+				parsedStruct := &Struct{
+					Name:    t.Name,
+					PkgPath: pkg,
+					Fields:  make([]*Field, 0, len(structType.Fields.List)),
+					Docs:    getDocsForStruct(t.Doc), //结构体注释
+					Methods: make([]*Method, 0),
+				}
+				for _, fvalue := range structType.Fields.List {
+					name := ""
+					if len(fvalue.Names) > 0 {
+						name = fvalue.Names[0].Obj.Name
+					}
+					field := &Field{
+						Name:    name,
+						PkgPath: pkg,
+						Type:    "",
+						Tag:     "",
+						Pointer: false,
+						Slice:   false,
+					}
+					if len(field.Name) > 0 {
+						field.Private = strings.ToLower(string(field.Name[0])) == string(field.Name[0])
+					}
+
+					if fvalue.Doc != nil {
+						field.Docs = getDocsForField(fvalue.Doc)
+					}
+					if fvalue.Comment != nil {
+						field.Comment = cleanDocText(fvalue.Comment.Text())
+					}
+					if fvalue.Tag != nil {
+						field.Tag = reflect.StructTag(strings.Trim(fvalue.Tag.Value, "`"))
+						field.hasTag = true
+					}
+					var err error
+					field.Type, field.Slice, field.Pointer, err = getType(fvalue.Type)
+					if err != nil {
+						return nil, err
+					}
+					//if field is Struct, need parse it
+					//logs.Info(field.Type)
+					if !internal.IsInternalType(field.Type) {
+						f5, _ := p.handleParam(fvalue, pkg, importMP)
+						field.IsStruct = !f5.innerType
+						field.Struct = f5.Struct
+					}
+
+					parsedStruct.Fields = append(parsedStruct.Fields, field)
+				}
+				f.Structs = append(f.Structs, parsedStruct)
 			}
-			f.Structs = append(f.Structs, parsedStruct)
 		}
+
 		//结构体方法
 		for _, spec := range t.Methods {
 			funcDecl := spec.Decl
@@ -313,22 +362,22 @@ func (p *Parser) Parse(pkg, s string) (*File, error) {
 			receiver, _, isPointer, _ := getType(funcDecl.Recv.List[0].Type)
 			method := &Method{
 				Name:    funcDecl.Name.Name,
-				PkgPath: p.pkg,
+				PkgPath: pkg,
 				Receiver: &Receiver{
 					Name:    funcDecl.Recv.List[0].Names[0].Name,
 					Pointer: isPointer,
 					Type:    receiver,
 				},
 				Private: strings.ToLower(string(funcDecl.Name.Name[0])) == string(funcDecl.Name.Name[0]),
-				Params:  []*Param{},
-				Results: []*Param{},
+				Params:  []*Field{},
+				Results: []*Field{},
 				Docs:    getDocsForStruct(spec.Doc),
 			}
 
 			//参数
 			var tmpArgs []string
 			for _, v := range funcDecl.Type.Params.List {
-				param, err := p.handleParam(v, importMP)
+				param, err := p.handleParam(v, pkg, importMP)
 				if err != nil {
 					return nil, err
 				}
@@ -345,7 +394,7 @@ func (p *Parser) Parse(pkg, s string) (*File, error) {
 			var tmpReturns []string
 			if funcDecl != nil && funcDecl.Type != nil && funcDecl.Type.Results != nil && funcDecl.Type.Results.List != nil {
 				for _, v := range funcDecl.Type.Results.List {
-					param, err := p.handleParam(v, importMP)
+					param, err := p.handleParam(v, pkg, importMP)
 					if err != nil {
 						return nil, err
 					}
@@ -470,6 +519,9 @@ func getImportAndType(fullTypeString string, currentPkg string, currentImportLis
 	tmp, _ := strings.CutPrefix(fullTypeString, "*")
 	tmp1 := strings.Split(tmp, ".")
 	var checkBuiltIn = func(s string) bool {
+		if strings.HasPrefix(s, "[]") {
+			return internal.IsInternalType(strings.TrimPrefix(s, "[]"))
+		}
 		return internal.IsInternalType(s)
 	}
 
