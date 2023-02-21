@@ -123,7 +123,7 @@ func Run(args ...string) {
 // Run `go build` and print the output if something's gone wrong.
 func build() bool {
 	t := time.Now()
-	color.Print("building...")
+	color.Print("building...\n")
 
 	for _, c := range flagBuildCommandList.commands {
 		err := runBuildCommand(c)
