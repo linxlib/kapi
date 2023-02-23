@@ -13,7 +13,7 @@
 2. 使用类似Asp .Net Core的Controller开发形式
 3. 使用 `https://github.com/linxlib/inject` 来进行依赖注入
 4. 无需写一堆注释来生成swagger文档
-5. 内置一个改造过得swagger界面（可复制请求path）
+5. ~~内置一个改造过得swagger界面（可复制请求path）~~ 新版本SwaggerUI加入了复制功能，已更新到新版本
 
 
 ## 版本要求
@@ -21,6 +21,13 @@
 
 
 ## 快速开始
+
+```shell
+go install github.com/linxlib/kapi/cmd/k@latest
+mkdir kapi_example && cd kapi_example
+k init kapi_example
+k run
+```
 
 
 
@@ -203,7 +210,7 @@ func (e *Example) GetList(
 
 ```json
 {
-  "code":"SUCCESS"
+  "code":0,
   "count": count,
   "data":[{},{}]
 }
@@ -304,17 +311,6 @@ pprof.Register(k.GetEngine(), "/pprof")
 ```
 
 
-
-
-
-
-
-
-
-
-
-
-
 ## 部署
 `k build`后 `./bin/版本/系统_架构/`目录下的文件即为全部, 如果是自行编译, 则需要同时拷贝swagger.json和gen.gob以及config.toml.
 
@@ -338,15 +334,17 @@ pprof.Register(k.GetEngine(), "/pprof")
 - [x] 新的参数默认值，废弃旧的 default tag，改为使用gin的 `query:"name,default=hello"`
 - [x] 增加一个注解用于注释返回结构类型, 特指只有一个Context的方法 @RESP
 - [x] 增加multipart.FileHeader的支持
-- [ ] 部分功能提取为单独包
+- [x] 部分功能提取为单独包
 - [ ] k编译打包时增加进度显示, 优化打包速度
 - [ ] 精简引用包，减小体积
-- [ ] 调整配置的读取
+- [x] 调整配置的读取
 - [ ] 异常日志需要打印行数
-- [ ] 注解加入可空默认的设定
-- [ ] 加入markdown形式的文档
+- [x] 注解加入可空默认的设定
 - [ ] 拦截器实现多个顺序执行机制（栈）
-- [ ] 加入枚举支持
+- [x] 加入枚举支持
+- [ ] 文档可解析泛型类型
+- [ ] 添加漂亮清晰的错误输出
+- [ ] 调整binding的逻辑
 
 ## 感谢
 

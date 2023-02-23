@@ -1,36 +1,12 @@
 package internal
 
 import (
-	"github.com/linxlib/logs"
-	"os"
+	"time"
 )
 
-var Log logs.FieldLogger = &logs.Logger{
-	Out:   os.Stdout,
-	Hooks: make(logs.LevelHooks),
-	Formatter: &logs.TextFormatter{
-		ForceColors:      true,
-		FullTimestamp:    true,
-		TimestampFormat:  "01-02 15:04:05",
-		QuoteEmptyFields: false,
-		CallerPrettifier: nil,
-		HideLevelText:    true,
-	},
-	ReportCaller: false,
-	Level:        logs.DebugLevel,
-}
-
-var ErrorLog logs.FieldLogger = &logs.Logger{
-	Out:   os.Stdout,
-	Hooks: make(logs.LevelHooks),
-	Formatter: &logs.TextFormatter{
-		ForceColors:      true,
-		FullTimestamp:    true,
-		TimestampFormat:  "01-02 15:04:05",
-		QuoteEmptyFields: false,
-		CallerPrettifier: nil,
-		HideLevelText:    true,
-	},
-	ReportCaller: true,
-	Level:        logs.DebugLevel,
+func Spend(name string) func() {
+	t := time.Now()
+	return func() {
+		Infof("[%s] consume: %s", name, time.Since(t).String())
+	}
 }

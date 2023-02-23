@@ -90,6 +90,7 @@ k add controller -n Hello -m World -b MyBody -r MyResult`,
 				logs.Error(err)
 				return
 			}
+			logs.Infof("method api/controllers/%sController.go => %s created!", controllerName, methodName)
 		} else {
 			fs, err := utils.T.ParseFS(template2.Files, "files/*")
 			if err != nil {
@@ -103,6 +104,7 @@ k add controller -n Hello -m World -b MyBody -r MyResult`,
 			}
 			err = fs.ExecuteTemplate(w, "Controller.tmpl", map[string]any{
 				"ControllerName": controllerName,
+				"BaseRoute":      strings.ToLower(controllerName),
 			})
 			if err != nil {
 				logs.Error(err)
@@ -128,7 +130,7 @@ k add controller -n Hello -m World -b MyBody -r MyResult`,
 				logs.Error(err)
 				return
 			}
-			logs.Infof("api/controllers/%sController.go:7 => %s created! \nadd kapi.RegisterRouter(new(controllers.%sController)) to main.go to enable it.", controllerName, methodName, controllerName)
+			logs.Infof("api/controllers/%sController.go => %s created! \nadd kapi.RegisterRouter(new(controllers.%sController)) to main.go to enable it.", controllerName, methodName, controllerName)
 		}
 
 	},

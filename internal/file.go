@@ -1,11 +1,9 @@
 package internal
 
 import (
-	"bufio"
 	"io/ioutil"
 	"os"
 	"path"
-	"strings"
 )
 
 // FileIsExist 检查目录是否存在
@@ -22,31 +20,9 @@ func BuildDir(absDir string) error {
 	return os.MkdirAll(path.Dir(absDir), os.ModePerm) //生成多级目录
 }
 
-// GetPathDirs 获取目录所有文件夹
-func GetPathDirs(absDir string) (re []string) {
-	if FileIsExist(absDir) {
-		files, _ := ioutil.ReadDir(absDir)
-		for _, f := range files {
-			if f.IsDir() {
-				re = append(re, f.Name())
-			}
-		}
-	}
-	return
-}
-
-// GetCurrentDirectory 获取exe所在目录
-//func GetCurrentDirectory() string {
-//	dir, _ := os.Executable()
-//	exPath := filepath.Dir(dir)
-//	// fmt.Println(exPath)
-//
-//	return exPath
-//}
-
 // WriteFile 写入文件
 func WriteFile(fname string, src []byte, isClear bool) bool {
-	BuildDir(fname)
+	_ = BuildDir(fname)
 	flag := os.O_CREATE | os.O_WRONLY | os.O_TRUNC
 	if !isClear {
 		flag = os.O_CREATE | os.O_RDWR | os.O_APPEND
@@ -55,9 +31,8 @@ func WriteFile(fname string, src []byte, isClear bool) bool {
 	if err != nil {
 		return false
 	}
-	defer f.Close()
-	f.Write(src)
-
+	_, _ = f.Write(src)
+	_ = f.Close()
 	return true
 }
 
@@ -65,22 +40,4 @@ func WriteFile(fname string, src []byte, isClear bool) bool {
 func ReadFile(fname string) []byte {
 	src, _ := ioutil.ReadFile(fname)
 	return src
-}
-
-func GetMod(fileName string) string {
-	file, err := os.Open(fileName)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		m := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(m, "module") {
-			m = strings.TrimPrefix(m, "module")
-			m = strings.TrimSpace(m)
-			return m
-		}
-	}
-	return ""
 }

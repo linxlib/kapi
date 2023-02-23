@@ -1,6 +1,6 @@
 module github.com/linxlib/kapi/cmd/k
 
-go 1.20
+go 1.18
 
 require (
 	github.com/gookit/color v1.5.2
