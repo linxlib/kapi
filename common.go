@@ -307,8 +307,8 @@ func (b *KApi) analysisController(controller interface{}, modPkg string, modFile
 
 // analysisControllers
 func (b *KApi) analysisControllers(controllers ...interface{}) bool {
-	defer internal.Spend("analysisControllers")()
-	internal.Debugf("analysis controllers...")
+	defer internal.Spend("analysis")()
+	internal.Debugf("analysis...")
 	modPkg, modFile, isFind := internal.GetModuleInfo(2)
 	if !isFind {
 		return false
@@ -324,7 +324,7 @@ func (b *KApi) analysisControllers(controllers ...interface{}) bool {
 // register 注册路由到gin
 func (b *KApi) register(cList ...interface{}) bool {
 	defer internal.Spend("register routes")()
-	internal.Debugf("register controllers..")
+	internal.Debugf("register routes..")
 	mp := b.routeInfo.GetGenInfo().Routes
 	for _, c := range cList {
 		refTyp := reflect.TypeOf(c)

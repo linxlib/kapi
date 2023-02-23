@@ -22,6 +22,13 @@
 
 ## 快速开始
 
+```shell
+go install github.com/linxlib/kapi/cmd/k@latest
+mkdir kapi_example && cd kapi_example
+k init kapi_example
+k run
+```
+
 
 
 ## 注解支持

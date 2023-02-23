@@ -104,6 +104,7 @@ k add controller -n Hello -m World -b MyBody -r MyResult`,
 			}
 			err = fs.ExecuteTemplate(w, "Controller.tmpl", map[string]any{
 				"ControllerName": controllerName,
+				"BaseRoute":      strings.ToLower(controllerName),
 			})
 			if err != nil {
 				logs.Error(err)

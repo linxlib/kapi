@@ -150,16 +150,16 @@ func (b *KApi) handleStatic() {
 	if len(b.option.Server.StaticDirs) > 0 && !b.genFlag {
 		for i, s := range b.option.Server.StaticDirs {
 			b.engine.Static(s.Path, s.Root)
-			internal.Infof("serving static dir[%d]: %s --> %s", i, s.Path, s.Root)
+			internal.Infof("serve static dir[%d]: %s --> %s", i, s.Path, s.Root)
 		}
 
 	}
 }
 
 func (b *KApi) handleDoc() {
-	defer internal.Spend("handle doc")()
+	defer internal.Spend("serve doc")()
 	if b.option.Server.NeedDoc {
-		internal.Infof("swagger: http://%s:%d/swagger/index.html", b.option.intranetIP, b.option.Server.Port)
+		internal.Infof("Swagger Doc: http://%s:%d/swagger/index.html", b.option.intranetIP, b.option.Server.Port)
 
 		b.engine.GET("/swagger.json", func(c *gin.Context) {
 			b.routeInfo.GetGenInfo().Swagger.Host = c.Request.Host

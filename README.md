@@ -19,8 +19,14 @@ PS: not stable now, use it in caution
 golang > 1.18
 
 
-## start
+## quick start
 
+```shell
+go install github.com/linxlib/kapi/cmd/k@latest
+mkdir kapi_example && cd kapi_example
+k init kapi_example
+k run
+```
 
 
 ## comments support
