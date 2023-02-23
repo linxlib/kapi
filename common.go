@@ -263,7 +263,7 @@ func (b *KApi) analysisController(controller interface{}, modPkg string, modFile
 		}
 		//parse method comments
 		p := comment_parser.NewParser(method.Name, method.Docs)
-		methodComment := p.Parse(cp.Route) //base route
+		methodComment := p.Parse(b.option.Server.BasePath + cp.Route) //base route
 
 		for m, r := range methodComment.Routes {
 			//add routes. which will be registered later
@@ -345,7 +345,7 @@ func (b *KApi) register(cList ...interface{}) bool {
 			k := objName + "/" + method.Name
 			for _, item := range mp {
 				if item.Key == k {
-					internal.Debugf("%6s  %-30s --> %s", item.Method, item.RouterPath, t.PkgPath()+".(*"+objName+")."+method.Name)
+					internal.Debugf("%6s  %-30s --> %s", item.Method, b.option.Server.BasePath+item.RouterPath, t.PkgPath()+".(*"+objName+")."+method.Name)
 					err := b.registerMethodToRouter(item.Method,
 						item.RouterPath,
 						refVal.Interface(),
@@ -372,6 +372,7 @@ func (b *KApi) register(cList ...interface{}) bool {
 //
 //	@return error
 func (b *KApi) registerMethodToRouter(httpMethod string, relativePath string, controller, method interface{}) error {
+	relativePath = b.option.Server.BasePath + relativePath
 	call := b.handle(controller, method)
 	switch strings.ToUpper(httpMethod) {
 	case "POST":

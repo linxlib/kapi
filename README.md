@@ -12,7 +12,7 @@ PS: not stable now, use it in caution
 2. write codes just like Asp .Net Core's Controller
 3. Dependency Inject using `https://github.com/linxlib/inject`
 4. less comments to generate swagger doc
-5. a built-in modified swagger ui(api path can be copied one-click)
+5. ~~a built-in modified swagger ui(api path can be copied one-click)~~ now use the latest version of Swagger UI
 
 
 ## golang version 

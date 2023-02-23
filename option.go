@@ -23,6 +23,7 @@ type ServerOption struct {
 	NeedDoc    bool        `yaml:"needDoc"`
 	DocName    string      `yaml:"docName"`
 	DocDesc    string      `yaml:"docDesc"`
+	BasePath   string      `yaml:"basePath"`
 	Port       int         `yaml:"port"`
 	DocVer     string      `yaml:"docVer"`
 	StaticDirs []StaticDir `yaml:"staticDirs"`
@@ -30,11 +31,12 @@ type ServerOption struct {
 }
 
 var _defaultServerOption = ServerOption{
-	NeedDoc: true,
-	DocName: "KApi",
-	DocDesc: "KApi",
-	Port:    time.Now().Year(),
-	DocVer:  "v1",
+	NeedDoc:  true,
+	DocName:  "KApi",
+	DocDesc:  "KApi",
+	BasePath: "",
+	Port:     time.Now().Year(),
+	DocVer:   "v1",
 	StaticDirs: []StaticDir{
 		{Path: "static", Root: "static"},
 	},

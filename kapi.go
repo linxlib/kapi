@@ -163,6 +163,7 @@ func (b *KApi) handleDoc() {
 
 		b.engine.GET("/swagger.json", func(c *gin.Context) {
 			b.routeInfo.GetGenInfo().Swagger.Host = c.Request.Host
+			b.routeInfo.GetGenInfo().Swagger.BasePath = b.option.Server.BasePath
 			if c.Request.URL.Scheme == "" {
 				b.routeInfo.GetGenInfo().Swagger.Schemes = []string{"http"}
 			} else {
