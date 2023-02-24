@@ -3,7 +3,7 @@ module github.com/linxlib/kapi
 go 1.19
 
 require (
-	github.com/gin-gonic/gin v1.8.2
+	github.com/gin-gonic/gin v1.9.0
 	github.com/go-openapi/spec v0.20.8
 	github.com/gookit/color v1.5.2
 	github.com/linxlib/binding v0.1.1

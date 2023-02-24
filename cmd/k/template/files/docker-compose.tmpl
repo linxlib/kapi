@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+  api:
+    image: {{.IMAGE}}:{{.VERSION}}
+    container_name: {{.APPNAME}}
+    ports:
+      - {{.PORT}}:{{.PORT}}
+    environment:
+      - {{.APPNAME | ToUpper }}_SERVER_PORT={{.PORT}}
+      - {{.APPNAME | ToUpper }}_SERVER_NEEDOC=false
+      - {{.APPNAME | ToUpper }}_SERVER_DOCNAME={{.DOCNAME}}
+      - {{.APPNAME | ToUpper }}_SERVER_DOCDESC={{.DOCDESC}}
+      - {{.APPNAME | ToUpper }}_SERVER_BASEPATH={{.BASEPATH}}

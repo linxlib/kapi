@@ -9,4 +9,7 @@ var T = template.New("").Funcs(template.FuncMap{
 	"ToLower": func(ori string) string {
 		return strings.ToLower(ori)
 	},
+	"ToUpper": func(ori string) string {
+		return strings.ToUpper(ori)
+	},
 })

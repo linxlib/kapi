@@ -1,0 +1,29 @@
+FROM golang:1.19 as build
+MAINTAINER {{.MAINTAINER}}
+ENV CGO_ENABLED=0 \
+    TZ=Asia/Shanghai \
+    GOOS=linux \
+    GOARCH=amd64 \
+    GOPROXY="https://goproxy.cn" \
+    GOPRIVATE="gitee.com"
+
+RUN mkdir /src
+WORKDIR /src
+ADD go.* .
+RUN go mod download
+
+COPY . .
+RUN go build -o {{.APPNAME}} main.go
+
+FROM saranraj/alpine-tz-ca-certificates as prod
+ENV TZ=Asia/Shanghai
+RUN mkdir /app && mkdir /app/config
+WORKDIR /app
+
+COPY --from=build /src/{{.APPNAME}} .
+COPY --from=build /src/config/config.yaml ./config/config.yaml
+RUN ln -fs /app/{{.APPNAME}} /usr/bin/{{.APPNAME}}
+
+EXPOSE {{.PORT}}
+
+CMD ["{{.APPNAME}}"]
