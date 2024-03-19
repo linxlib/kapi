@@ -1,5 +1,10 @@
 package daemon
 
+import (
+	"errors"
+	"os"
+)
+
 var fatalSignals = []os.Signal{
 	os.Interrupt,
 	os.Kill,
