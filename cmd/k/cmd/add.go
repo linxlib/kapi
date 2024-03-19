@@ -155,7 +155,7 @@ var configCmd = &cobra.Command{
 			fmt.Print("input y to confirm(y/n):")
 			var y string
 			_, _ = fmt.Scan(&y)
-			if strings.ToLower(y) != "y" && strings.ToLower(y) != "yes" {
+			if strings.ToLower(y) != "y" || strings.ToLower(y) != "yes" {
 				logs.Infoln("canceled~!")
 				return
 			}
