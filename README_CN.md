@@ -13,7 +13,7 @@
 2. 使用类似Asp .Net Core的Controller开发形式
 3. 使用 `https://github.com/linxlib/inject` 来进行依赖注入
 4. 无需写一堆注释来生成swagger文档
-5. 内置一个改造过得swagger界面（可复制请求path）
+5. ~~内置一个改造过得swagger界面（可复制请求path）~~ 新版本SwaggerUI加入了复制功能，已更新到新版本
 
 
 ## 版本要求
@@ -21,6 +21,13 @@
 
 
 ## 快速开始
+
+```shell
+go install github.com/linxlib/kapi/cmd/k@latest
+mkdir kapi_example && cd kapi_example
+k init kapi_example
+k run
+```
 
 
 

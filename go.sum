@@ -17,7 +17,6 @@ github.com/go-openapi/swag v0.19.5/go.mod h1:POnQmlKehdgb5mhVOsnJFsivZCEZ/vjK9gh
 github.com/go-openapi/swag v0.19.15 h1:D2NRCBzS9/pEY3gP9Nl8aDqGUcPFrwG2p+CNFrLyrCM=
 github.com/go-openapi/swag v0.19.15/go.mod h1:QYRuS/SOXUCsnplDa677K7+DxSOj6IPNl/eQntq43wQ=
 github.com/go-playground/assert/v2 v2.2.0 h1:JvknZsQTYeFEAhQwI4qEt9cyV5ONwRHC+lYKSsYSR8s=
-github.com/go-playground/assert/v2 v2.2.0/go.mod h1:VDjEfimB/XKnb+ZQfWdccd7VUvScMdVu0Titje2rxJ4=
 github.com/go-playground/locales v0.14.1 h1:EWaQ/wswjilfKLTECiXz7Rh+3BjFhfDFKv/oXslEjJA=
 github.com/go-playground/locales v0.14.1/go.mod h1:hxrqLVvrK65+Rwrd5Fc6F2O76J/NuW9t0sjnWqG1slY=
 github.com/go-playground/universal-translator v0.18.1 h1:Bcnm0ZwsGyWbCzImXv+pAJnYK9S473LQFuzCbDbfSFY=
@@ -53,10 +52,8 @@ github.com/linxlib/conv v0.0.0-20200419055849-46faf16ac98f h1:A+0Iprv8RxCVdoiEZA
 github.com/linxlib/conv v0.0.0-20200419055849-46faf16ac98f/go.mod h1:3aUH0sipVf0h+/zRBfwuP7g/ni+55TQ1RLFpscdnpco=
 github.com/linxlib/inject v0.1.2 h1:5wZ1XSLsfx+RQ0yRV10xyR8qlasZAszMlz9QIUfJq5w=
 github.com/linxlib/inject v0.1.2/go.mod h1:PzW1J2Itu/OCTyG0szYPAejsBoo7+qTC3Kt7F96K934=
-github.com/linxlib/logs v0.1.5 h1:QyzE71DWiXxnlTZSrlpulv5Rm6NKNtesDJMnd8+AUCI=
-github.com/linxlib/logs v0.1.5/go.mod h1:a2IkOlWtfecU5K5a+GVdED6EpRkFsbtFPYWCBtcE1Tg=
-github.com/linxlib/swagger_inject v0.1.1 h1:UsG4AzszZofRA6GWzwEwR0tI20wcpiiGELzbckIkiCc=
-github.com/linxlib/swagger_inject v0.1.1/go.mod h1:KRjsXJ+JQ1wHfHNW+8+bsEreG6Ffl/Ow5uHXwOeounY=
+github.com/linxlib/swagger_inject v0.2.0 h1:C7xafileWSuCUhUSU5T2FeT9O5sgw97PaWENh78yWRk=
+github.com/linxlib/swagger_inject v0.2.0/go.mod h1:KRjsXJ+JQ1wHfHNW+8+bsEreG6Ffl/Ow5uHXwOeounY=
 github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=
 github.com/mailru/easyjson v0.7.6 h1:8yTIVnZgCoiM1TgqoeTl+LfU5Jg6/xL3QhGQnimLYnA=

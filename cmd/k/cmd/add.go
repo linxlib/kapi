@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
+	"os/user"
 	"reflect"
 	"strconv"
 	"strings"
@@ -104,6 +105,7 @@ k add controller -n Hello -m World -b MyBody -r MyResult`,
 			}
 			err = fs.ExecuteTemplate(w, "Controller.tmpl", map[string]any{
 				"ControllerName": controllerName,
+				"BaseRoute":      strings.ToLower(controllerName),
 			})
 			if err != nil {
 				logs.Error(err)
@@ -180,11 +182,110 @@ var configCmd = &cobra.Command{
 
 	},
 }
+var dockerCmd = &cobra.Command{
+	Use:     "docker",
+	Short:   "create something for docker",
+	Long:    "create something for docker",
+	Example: `k add docker`,
+	//Run: func(cmd *cobra.Command, args []string) {
+	//
+	//},
+}
+
+var dockerFileCmd = &cobra.Command{
+	Use:     "file",
+	Short:   "create Dockerfile",
+	Long:    "create Dockerfile",
+	Example: `k add docker file`,
+	Run: func(cmd *cobra.Command, args []string) {
+		if utils.FileIsExist("Dockerfile") || utils.FileIsExist("dockerfile") {
+			logs.Error("Dockerfile exists")
+			return
+		}
+		fs, err := utils.T.ParseFS(template2.Files, "files/*")
+		if err != nil {
+			logs.Error(err)
+			return
+		}
+		w, err := os.OpenFile("Dockerfile", os.O_CREATE|os.O_WRONLY, os.ModePerm)
+		if err != nil {
+			logs.Error(err)
+			return
+		}
+		u, _ := user.Current()
+		appName := utils.GetMod("go.mod")
+		appNameIndex := strings.LastIndex(appName, "/")
+		appName = appName[appNameIndex+1:]
+		viper.SetDefault("server.port", 2023)
+		err = fs.ExecuteTemplate(w, "Dockerfile.tmpl", map[string]any{
+			"MAINTAINER": u.Name,
+			"APPNAME":    appName,
+			"PORT":       viper.Get("server.port"),
+		})
+		if err != nil {
+			logs.Error(err)
+		}
+		logs.Info("Dockerfile created!")
+	},
+}
+
+var dockerComposeCmd = &cobra.Command{
+	Use:     "compose",
+	Short:   "create docker-compose.yml",
+	Long:    "create docker-compose.yml",
+	Example: `k add docker compose`,
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) <= 0 {
+			logs.Error("specify a docker image url")
+			return
+		}
+		if utils.FileIsExist("docker-compose.yml") || utils.FileIsExist("docker-compose.yaml") {
+			logs.Error("docker-compose.yaml exists")
+			return
+		}
+		fs, err := utils.T.ParseFS(template2.Files, "files/*")
+		if err != nil {
+			logs.Error(err)
+			return
+		}
+		w, err := os.OpenFile("docker-compose.yaml", os.O_CREATE|os.O_WRONLY, os.ModePerm)
+		if err != nil {
+			logs.Error(err)
+			return
+		}
+		appName := utils.GetMod("go.mod")
+		appNameIndex := strings.LastIndex(appName, "/")
+		appName = appName[appNameIndex+1:]
+		viper.SetDefault("server.docVer", "latest")
+		viper.SetDefault("server.docName", appName)
+		viper.SetDefault("server.docDesc", appName)
+		viper.SetDefault("server.basePath", "")
+		viper.SetDefault("server.port", 2023)
+		err = fs.ExecuteTemplate(w, "docker-compose.tmpl", map[string]any{
+			"IMAGE":    args[0],
+			"VERSION":  viper.GetString("server.docVer"),
+			"DOCNAME":  viper.GetString("server.docName"),
+			"DOCDESC":  viper.GetString("server.docDesc"),
+			"BASEPATH": viper.GetString("server.basePath"),
+			"APPNAME":  appName,
+			"PORT":     viper.GetInt("server.port"),
+		})
+		if err != nil {
+			logs.Error(err)
+			return
+		}
+		logs.Info("docker-compose.yaml created!")
+	},
+}
 
 func init() {
 	rootCmd.AddCommand(addCmd)
 	addCmd.AddCommand(controllerCmd)
 	addCmd.AddCommand(configCmd)
+	dockerCmd.AddCommand(dockerFileCmd)
+	dockerCmd.AddCommand(dockerComposeCmd)
+	addCmd.AddCommand(dockerCmd)
+
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command

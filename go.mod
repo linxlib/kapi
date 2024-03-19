@@ -3,16 +3,14 @@ module github.com/linxlib/kapi
 go 1.19
 
 require (
-	github.com/gin-gonic/gin v1.8.2
+	github.com/gin-gonic/gin v1.9.0
 	github.com/go-openapi/spec v0.20.8
-	github.com/go-playground/assert/v2 v2.2.0
 	github.com/gookit/color v1.5.2
 	github.com/linxlib/binding v0.1.1
 	github.com/linxlib/config v0.1.0
 	github.com/linxlib/conv v0.0.0-20200419055849-46faf16ac98f
 	github.com/linxlib/inject v0.1.2
-	github.com/linxlib/logs v0.1.5
-	github.com/linxlib/swagger_inject v0.1.1
+	github.com/linxlib/swagger_inject v0.2.0
 )
 
 require (

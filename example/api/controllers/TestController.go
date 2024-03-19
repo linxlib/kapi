@@ -19,7 +19,6 @@ var (
 )
 
 // TestController 测试
-// @ROUTE /api
 // @AUTH
 type TestController struct{}
 

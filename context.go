@@ -360,3 +360,12 @@ func (c *Context) Apply(ctl interface{}) error {
 func (c *Context) Provide(i interface{}) error {
 	return c.inj.Provide(i)
 }
+
+// File returns a file
+//
+//	@param fileName
+//	@param fileData
+func (c *Context) File(fileName string, fileData []byte) {
+	c.Header("Content-Disposition", "attachment; filename=\""+fileName+"\"")
+	c.Data(200, "application/octet-stream", fileData)
+}
