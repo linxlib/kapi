@@ -97,9 +97,9 @@ func (b *KApi) handle(controller, method interface{}) gin.HandlerFunc {
 			rerr := returnValues[1].Interface()
 
 			if rerr != nil {
-				c.PureJSON(c.ResultBuilder.OnErrorDetail(rerr.(error).Error(), resp))
+				c.PureJSON(c.OnErrorDetail(rerr.(error).Error(), resp))
 			} else {
-				c.PureJSON(c.ResultBuilder.OnData("", 0, resp))
+				c.PureJSON(c.OnData("", 0, resp))
 			}
 		}
 	}
@@ -116,7 +116,7 @@ func (b *KApi) handleUnmarshalError(c *Context, err error) {
 	} else {
 		fields = append(fields, err.Error())
 	}
-	c.PureJSON(c.ResultBuilder.OnFail(strings.Join(fields, ";"), fields))
+	c.PureJSON(c.OnFail(strings.Join(fields, ";"), fields))
 	return
 }
 
