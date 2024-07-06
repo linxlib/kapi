@@ -1,6 +1,9 @@
 package controllers
 
-import "github.com/linxlib/kapi"
+import (
+	"fmt"
+	"github.com/linxlib/kapi"
+)
 
 type HealthController struct {
 }
@@ -12,7 +15,8 @@ func (h *HealthController) Health(c *kapi.Context) {
 }
 
 // World
-// @GET /hello
+// @GET /ip
 func (h *HealthController) World(c *kapi.Context) {
-	c.String(200, "hello kapi!")
+	fmt.Println(c.RemoteAddr())
+	c.String(200, c.RemoteAddr())
 }

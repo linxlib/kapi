@@ -34,16 +34,21 @@ k build windows amd64 example -v 1.2.0       //make windows executable with kapi
 			systemStr := args[0]
 			archStr := "amd64"
 			i := strings.LastIndex(modName, "/")
-			name := modName[i:]
+			var name string
+			if i < 0 {
+				name = modName
+			} else {
+				name = modName[i:]
+			}
 			out := cmd.Flag("out").Value.String()
 			version := cmd.Flag("version").Value.String()
 			tags := cmd.Flag("tags").Value.String()
-			ldflags := cmd.Flag("ldflags").Value.String()
+			//ldflags := cmd.Flag("ldflags").Value.String()
 
 			obj := buildObject{
-				system:  strings.Split(systemStr, ","),
-				arch:    strings.Split(archStr, ","),
-				ldflags: ldflags,
+				system: strings.Split(systemStr, ","),
+				arch:   strings.Split(archStr, ","),
+				//ldflags: ldflags,
 				name:    name,
 				out:     out,
 				tags:    tags,
@@ -61,18 +66,24 @@ k build windows amd64 example -v 1.2.0       //make windows executable with kapi
 			archStr := args[1]
 
 			i := strings.LastIndex(modName, "/")
-			name := modName[i:]
+			var name string
+			if i < 0 {
+				name = modName
+			} else {
+				name = modName[i:]
+			}
+
 			out := cmd.Flag("out").Value.String()
 			version := cmd.Flag("version").Value.String()
 			tags := cmd.Flag("tags").Value.String()
-			ldflags := cmd.Flag("ldflags").Value.String()
+			//ldflags := cmd.Flag("ldflags").Value.String()
 
 			obj := buildObject{
-				system:  strings.Split(systemStr, ","),
-				arch:    strings.Split(archStr, ","),
-				name:    name,
-				out:     out,
-				ldflags: ldflags,
+				system: strings.Split(systemStr, ","),
+				arch:   strings.Split(archStr, ","),
+				name:   name,
+				out:    out,
+				//ldflags: ldflags,
 				tags:    tags,
 				modName: modName,
 				version: version,
@@ -94,13 +105,13 @@ k build windows amd64 example -v 1.2.0       //make windows executable with kapi
 			out := cmd.Flag("out").Value.String()
 			version := cmd.Flag("version").Value.String()
 			tags := cmd.Flag("tags").Value.String()
-			ldflags := cmd.Flag("ldflags").Value.String()
+			//ldflags := cmd.Flag("ldflags").Value.String()
 			obj := buildObject{
-				system:  strings.Split(systemStr, ","),
-				arch:    strings.Split(archStr, ","),
-				name:    name,
-				out:     out,
-				ldflags: ldflags,
+				system: strings.Split(systemStr, ","),
+				arch:   strings.Split(archStr, ","),
+				name:   name,
+				out:    out,
+				//ldflags: ldflags,
 				modName: modName,
 				tags:    tags,
 				version: version,
@@ -144,20 +155,24 @@ func doBuild(obj buildObject) error {
 			_ = os.Setenv("GOARCH", arch)
 			outPath := fmt.Sprintf("%s/%s_%s/%s%s%s", obj.out, s, arch, obj.version+"/", obj.name, ext)
 			cmd = append(cmd, outPath)
-			cmd = append(cmd, "-ldflags="+obj.ldflags)
+			//cmd = append(cmd, "-ldflags="+obj.ldflags)
 			if obj.tags != "" {
 				cmd = append(cmd, "-tags="+obj.tags)
 			}
 
 			if obj.version != "" {
-				cmd = append(cmd, "-X", "github.com/linxlib/kapi.VERSION="+obj.version)
-				cmd = append(cmd, "-X", "github.com/linxlib/kapi.BUILDTIME="+time.Now().Format(time.DateTime))
-				cmd = append(cmd, "-X", "github.com/linxlib/kapi.GOVERSION="+hostVersion)
-				cmd = append(cmd, "-X", "github.com/linxlib/kapi.BUILDOS="+hostSystem)
-				cmd = append(cmd, "-X", "github.com/linxlib/kapi.BUILDARCH="+hostArch)
-				cmd = append(cmd, "-X", "github.com/linxlib/kapi.OS="+s)
-				cmd = append(cmd, "-X", "github.com/linxlib/kapi.ARCH="+arch)
-				cmd = append(cmd, "-X", "github.com/linxlib/kapi.PACKAGENAME="+obj.modName)
+				cmd = append(cmd, "-ldflags")
+				var tmp string
+				tmp += fmt.Sprintf("-X 'github.com/linxlib/kapi.VERSION=%s'", obj.version)
+				tmp += fmt.Sprintf(" -X 'github.com/linxlib/kapi.BUILDTIME=%s'", time.Now().Format(time.DateTime))
+				tmp += fmt.Sprintf(" -X 'github.com/linxlib/kapi.GOVERSION=%s'", hostVersion)
+				tmp += fmt.Sprintf(" -X 'github.com/linxlib/kapi.BUILDOS=%s'", hostSystem)
+				tmp += fmt.Sprintf(" -X 'github.com/linxlib/kapi.BUILDARCH=%s'", hostArch)
+				tmp += fmt.Sprintf(" -X 'github.com/linxlib/kapi.OS=%s'", s)
+				tmp += fmt.Sprintf(" -X 'github.com/linxlib/kapi.ARCH=%s'", arch)
+				tmp += fmt.Sprintf(" -X 'github.com/linxlib/kapi.PACKAGENAME=%s'", obj.modName)
+				cmd = append(cmd, tmp)
+
 			}
 			err := utils.RunCommand("go", cmd...)
 			if err != nil {
