@@ -32,7 +32,7 @@ k init github.com/linxlib/example`,
 		if err != nil {
 			return
 		}
-		err = utils.BuildDir("api/controllers/")
+		err = utils.BuildDir("controllers/")
 		if err != nil {
 			logs.Error(err)
 			return
@@ -42,7 +42,7 @@ k init github.com/linxlib/example`,
 			logs.Error(err)
 			return
 		}
-		w, err := os.OpenFile("api/controllers/HealthController.go", os.O_CREATE|os.O_WRONLY, os.ModePerm)
+		w, err := os.OpenFile("controllers/HealthController.go", os.O_CREATE|os.O_WRONLY, os.ModePerm)
 		if err != nil {
 			logs.Error(err)
 			return

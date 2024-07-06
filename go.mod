@@ -7,7 +7,7 @@ require (
 	github.com/go-openapi/spec v0.21.0
 	github.com/gookit/color v1.5.4
 	github.com/linxlib/binding v0.1.2
-	github.com/linxlib/config v0.1.0
+	github.com/linxlib/config v0.1.1
 	github.com/linxlib/conv v0.0.0-20200419055849-46faf16ac98f
 	github.com/linxlib/inject v0.1.3
 	github.com/linxlib/swagger_inject v0.2.0
@@ -39,7 +39,7 @@ require (
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
-	go.uber.org/multierr v1.9.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.19.0 // indirect
 	golang.org/x/net v0.21.0 // indirect

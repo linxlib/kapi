@@ -3,7 +3,7 @@ module github.com/linxlib/kapi/cmd/k
 go 1.18
 
 require (
-	github.com/gookit/color v1.5.2
+	github.com/gookit/color v1.5.4
 	github.com/linxlib/logs v0.1.5
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.15.0
@@ -22,7 +22,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
-	golang.org/x/sys v0.3.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/text v0.5.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

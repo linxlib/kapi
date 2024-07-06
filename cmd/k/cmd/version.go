@@ -1,5 +1,5 @@
 /*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
+Copyright © 2023 linx sulinke1133@gmail.com
 */
 package cmd
 
@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	version = "v0.2.0"
+	version = "v0.1.8"
 )
 
 // versionCmd represents the version command

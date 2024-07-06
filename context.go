@@ -10,35 +10,39 @@ import (
 // Context KApi Context
 type Context struct {
 	*gin.Context
-	inj           inject.Injector
-	ResultBuilder IResultBuilder `inject:""`
+	inj            inject.Injector
+	OnSuccess      IOnSuccess      `inject:""`
+	OnFail         IOnFail         `inject:""`
+	OnNotFound     IOnNotFound     `inject:""`
+	OnNoPermission IOnNoPermission `inject:""`
+	OnError        IOnError        `inject:""`
+	OnErrorDetail  IOnErrorDetail  `inject:""`
+	OnUnAuthed     IOnUnAuthed     `inject:""`
+	OnData         IOnData         `inject:""`
 }
 
 // newContext create a new custom context
 func newContext(c *gin.Context, parent ...inject.Injector) *Context {
-	if len(parent) > 0 {
-		cc := &Context{
-			Context: c,
-			inj:     inject.New(),
-		}
-		cc.inj.SetParent(parent[0])
-		err := cc.inj.Apply(cc)
-
-		if err != nil {
-			cc.ResultBuilder = &DefaultResultBuilder{}
-		}
-		return cc
-	} else {
-		cc := &Context{
-			Context: c,
-			inj:     inject.New(),
-		}
-		err := cc.inj.Apply(cc)
-		if err != nil {
-			cc.ResultBuilder = &DefaultResultBuilder{}
-		}
-		return cc
+	cc := &Context{
+		Context: c,
+		inj:     inject.New(),
 	}
+	if len(parent) > 0 {
+		cc.inj.SetParent(parent[0])
+	}
+	err := cc.inj.Apply(cc)
+	if err != nil {
+		var builder = NewDefaultBuilder()
+		cc.OnSuccess = builder.OnSuccess
+		cc.OnFail = builder.OnFail
+		cc.OnNotFound = builder.OnNotFound
+		cc.OnNoPermission = builder.OnNoPermission
+		cc.OnError = builder.OnError
+		cc.OnUnAuthed = builder.OnUnAuthed
+		cc.OnData = builder.OnData
+		cc.OnErrorDetail = builder.OnErrorDetail
+	}
+	return cc
 }
 
 // Method return HTTP method
